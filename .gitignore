@@ -1,0 +1,19 @@
+# dot folders (with '.' as prefix)
+.*
+!.gitignore
+
+# Folders that get built during runtime
+/extras
+/log
+/mirror
+/snippets
+/subs
+/tmp
+/config/*
+!/config/sample.cfg
+
+# Additional files and folders for local use
+makedistro.sh
+/archive
+/temp
+

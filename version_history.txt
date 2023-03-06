@@ -1,0 +1,764 @@
+##########################################################################
+#
+# MakeStaticSite --- a shell script to create and deploy static websites 
+# Copyright 2022-2023 Paul Trafford <pt@ptworld.net>
+#
+# version_history.txt - version history (or changelog) for MakeStaticSite
+# This file is part of MakeStaticSite.
+#
+# MakeStaticSite is free software: you can redistribute it and/or modify 
+# it under the terms of the GNU Affero General Public License as published 
+# by the Free Software Foundation, either version 3 of the License, or 
+# (at your option) any later version. MakeStaticSite is distributed in the 
+# hope that it will be useful, but WITHOUT ANY WARRANTY; without even the
+# implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. 
+# See the GNU Affero General Public License for more details.
+# You should have received a copy of the GNU General Public License along 
+# with MakeStaticSite. If not, see <https://www.gnu.org/licenses/>.
+#
+##########################################################################
+
+
+0.22.2 (released on 2023-03-06)
+       * documentation and minor enhancement *
+       [README.md]
+        Substantial update to text to bring it into line with website
+        and in anticipation of establishing GitHub repository
+       [lib/constants.sh]
+        Added constant, wp_remove_rsd_link
+       [lib/mod_wp.sh]
+        Added support for removing Really Simple Discovery link
+
+0.22.1.3 (released on 2023-02-28)
+         * maintenance *
+          HTML output tidy
+         [lib/constants.sh]
+          HTML Tidy settings: added explanation of options, plus --wrap
+          option
+         [lib/constants.sh]
+          Removed temporary echo statements
+         [makestaticsite.sh]
+          clean_mirror(): added search and replace to wrap lines that end 
+          in '='; and ensure <title> tag on one line
+
+0.22.1.2 (released on 2023-02-24)
+         * maintenance *
+          Code tidy - removed trailing whitespace from lines
+         [lib/constants.sh]
+          wget_extra_options: moved wp-admin from -R to -X
+         [makestaticsite.sh]
+          initialise_variables(): wget_input_files initialised as arrray; 
+          and in lib/mod_wp.sh it is augmented through concatention, to 
+          remove empty line.
+
+0.22.1.1 (released on 2023-02-23)
+         * maintenance *
+         [lib/constants.sh]
+          wget_user_agent set to empty string by default, with guidance on 
+          wrapped in quotes to be correctly parsed by Wget
+         [makestaticsite.sh]
+          initialise_variables(): Bug fix: replaced array assignment with 
+          split values using read -a for wget_extra_options 
+          (--reject options were being ignored)
+          wget_mirror(): added conditional for adding user agent to 
+          wget_core_options; it is set to the value of wget_user_agent 
+          if that is non-empty, otherwise left (use Wget's default).
+
+0.22.1 (released on 2023-02-22)
+       * cosmetic (coloured alerts in terminal output), maintenance *
+       [lib/constants.sh]
+        Added section for display settings, with coloured inks and message
+        constants: msg_error, msg_warning and msg_ok
+        Moved rsync_options definition from makestaticsite.sh
+       [makestaticsite.sh]
+        Implemented coloured alerts using msg_error and msg_warning
+        minor code tidy
+       [setup.sh]
+        Implemented coloured alerts using msg_error and msg_warning
+
+0.22 (released on 2023-02-07)
+     * Added support for CDN deployment on Netlify, maintenance *
+     [lib/constants.sh]
+      allOptions() array: Added fields deploy_netlify, deploy_netlify_name
+      plus associated logic, modified text descriptions for deploy_remote and
+      deploy_remote_rsync; promoted deploy_domain to immediately follow deploy
+     [setup.sh]
+      read_option(): further additions to opt_excludes() array for options
+      deploy and deploy_remote; new exclusions for opt_excludes() from 
+      deploy_rsync and deploy_netlify
+     [makestaticsite.sh]
+      initialise_variables(): extended condition on $deploy_remote to read
+      variables relating to Netlify deployment
+      wget_extra_urls(): some minor changes to runtime message output.
+      New function and code, deploy_on_netlify(), for deploying to named site
+      and moved rysnc connectivity check to new function, prep_rsync()
+
+0.21.5.3 (released on 2023-02-06)
+         * Maintenance *
+          Cosmetic changes - code tidy (made the layout more regular)
+
+0.21.5.2 (released on 2023-01-31)
+         * Maintenance *
+          Added further checks for installed components
+         [lib/constants.sh]
+          Added variables php_version_atleast and php_tutorial_install to support
+          PHP checks
+         [lib/general.sh]
+          Added function which_version() to determine version number of a command
+         [lib/mod_wp.sh]
+          wp_prep(): added check for PHP plus its version number, moved WP-CLI 
+          check here
+         [makestaticsite.sh]
+          initialise_variables(): Added checks for cURL and Wget
+          wget_postprocessing(): Bug fix: find command: moved -depth parameter 
+          before -type
+
+0.21.5.1 (released on 2023-01-21)
+         * Maintenance *
+          Further refactoring following ShellCheck guidelines of makestaticsite.sh, 
+          setup.sh, constants.sh, general.sh and validate.sh
+          Additional changes:
+         [setup.sh]
+          init_mssconfig(): Minor formatting corrections involving printf
+          read_option(): fixed reference to zip download in opt_exclude array; 
+          trim
+         [lib/constants.sh]
+          Reverted wget_version_atleast to 1.21
+          wget_extra_options: changed to reflect more typical WP scenario
+         [lib/validate.sh]
+          Minor tweaks, including version_check(): corrected reference to version 
+          being used, $1; and trimmed input of preceding and trailing whitespace
+
+0.21.5 (released on 2023-01-19)
+       * Refactoring, bug fixes and other maintenance *
+       [lib/constants.sh]
+        Changed default for (ssh) source_port to be the empty string, so only set 
+        explicitly when different from ssh's usual port
+       [lib/mod_wp.sh]
+        wp_prep(): inserted source_port as a parameter for running WP-CLI remotely
+       [makestaticsite.sh]
+        Refactoring following ShellCheck guidelines (SC2001, SC2044, SC2207, SC2128), 
+        affecting mainly wget_extra_urls(), wget_postprocessing() and clean_mirror()
+        initialise_variables(): bug fixes: defined myconfig as string; quoted 
+        wget_plus_ops in array
+        Moved WP-CLI-dependent variables to prepare_static_generation()
+
+0.21.4.1 (released on 2023-01-14)
+         * Maintenance *
+         [makestaticsite.sh]
+          deploy(): modified code to selectively append a_href_tail to internal anchors, 
+          to overcome sed processing limit ('file name too long')
+
+0.21.4 (released on 2023-01-10)
+       * Simplified setup, improved support for canonical URLs, maintenance *
+       [lib/constants.sh]
+        Moved wp_search_dir out of allOptions() to become system constant, 
+        so value no longer requested in setup.sh, nor read in mod_wp.sh
+        Changed location of wp_search_plugin to makestaticsite.sh download/contrib/
+        Replaced constant force_index_html with a_href_tail
+       [makestaticsite.sh]
+        Tightened up use of Bash find to search only type file
+        wget_postprocessing(): removed the condition on force_index_html so that 
+        index.html provisionally appended to internal links in all runs
+        deploy(): inserted code to selectively append a_href_tail to internal anchors
+
+0.21.3 (released on 2022-12-31)
+       * Simplified setup and other maintenance *
+       [lib/constants.sh]
+        Moved wget_cmd, htmltidy_cmd and htmltidy_options out of allOptions() 
+        to become system constants, so values no longer requested in setup;  
+        zip_uploads_folder renamed zip_download_folder and default value changed
+       [lib/validate.sh]
+        Added functions version() and version_check() for version number comparisons
+       [setup.sh]
+        init_mssconfig(): added checks for curl, wget, and rsync; and wget version check
+       [makestaticsite.sh]
+        zip_uploads_folder renamed zip_download_folder
+
+0.21.2 (released on 2022-12-17)
+       * Phases consolidation and other maintenance *
+       [lib/constants.sh]
+        inserted --reject 'index.html?*' as wget_extra_options default
+       [lib/general.sh]
+        added function stopclock() to print elapsed time in hours, minutes and seconds
+       [makestaticsite.sh]
+        ensure zip file generated whenever phase 8 included
+        initialise_variables(): properly deduce input file from -m option; 
+        further tweaks to fully support all valid permutations of p and q.
+        clean_mirror(): filter out query strings from sitemap
+
+0.21.1.1 (released on 2022-12-13)
+         * Maintenance *
+         [makestaticsite.sh]
+          clean_mirror(): added clause to filter out query strings from site maps
+         [lib/general.sh]
+          sitemap_header(): bug fix: removed misplaced \"
+
+0.21.1 (released on 2022-12-10)
+       * Maintenance (refactoring and bug fixes) *
+       [lib/constants.sh]
+        Removed sitemap_header and sitemap_footer, introduced sitemap_schema
+       [lib/general.sh]
+        Added sitemap_header() to print site map header
+       [makestaticsite.sh]
+        process_snippets(): removed now-redundant routine to add snippets to zip
+        create_zip(): bug fix: ensured correct working directory (mirror_dir);
+        clean_mirror(): moved canonical URL generation here
+
+0.21 (released on 2022-12-09)
+     * Improved support for search engines and refinement *
+     Some refactoring around zip creation; reconstructed canonical URLs, added 
+     support for robots and site maps
+     [lib/constants.sh]
+      Added new variables: link_rel_canonical (yes/no), link_href_tail to 
+      handle inclusion and format of canonical URLs in <head>
+      Added yes/no switches: robots_create, sitemap_create
+      Added robots_default, sitemap_file, sitemap_header and sitemap_footer
+     [makestaticsite.sh]
+      main(), read_config(): introduced new phase 6, Optimise the mirror; 
+      moved Create offline zip archive to phase 8.
+      wget_mirror(): added wget calls for detecting and fetching robots.txt and 
+      site map (with support for nested site maps)
+      wget_extra_urls(): trapped remaining empty cases in filtering
+      wget_postprocessing(): reconstructed canonical URL (replaced Wget output);
+      introduced bypass for strings within <code> tags; 
+      added XML files to domain replacements
+      clean_mirror(): added robots.txt and site map file creation
+
+0.20 (released on 2022-11-30)
+     * Maintenance and refinement *
+     [lib/constants.sh]
+      Added switches for WordPress options: wp_remove_query_strings, 
+      wp_remove_shortlink, wp_disable_embeds, wp_disable_xmlrpc, 
+      wp_remove_wlwmanifest_link, wp_remove_rest_api_links
+      Replaced --show-filename with --gnu-emacs for backwards compatibility
+      Fixed options_check_url to include url instead of url_base
+     [lib/mod-wp.sh]
+      Added support for Perform options for each WP switch defined in constants.sh
+      and refactored with new function, wp_option_set()
+     [lib/validate.sh]
+      cmd_check(): call to echo() now passes on second parameter
+     [makestaticsite.sh]
+      wget_postprocessing(): bug fix: replaced grep with find to calculate matches 
+      on $domain
+
+0.19.7.4 (released on 2022-11-28)
+       * Maintenance *
+       [lib/constants.sh]
+        Introduced variable, force_domains, for domain substitution
+       [makestaticsite.sh]
+        wget_postprocessing(): reworked the domain substitution to only 
+        apply when there are substitutions to be made;
+        bugfix: corrected syntax error in find OR statements
+        Moved the upload zip file from process_snippets() to deploy(),
+        added directory creation, as necessary.
+
+0.19.7.3 (released on 2022-11-26)
+       * Maintenance *
+       [lib/general.sh]
+        Added function pluralize to echo 's' if parameter not "1", nothing otherwise
+       [makestaticsite.sh]
+        conclude(): tidied up timer output, using pluralize()
+
+0.19.7.2 (released on 2022-11-24)
+       * Maintenance *
+        Tidy up supp
+       [makestaticsite.sh]
+        initialise_variables(): grouped options relating to WP-CLI
+       [lib/mod-wp.sh]
+        wp_cli_check(): changed check on remote/local to use wp_cli_remote;
+        wp_clean(): bug fix: printf for print
+
+0.19.7.1 (released on 2022-11-22)
+       * Maintenance *
+       [makestaticsite.sh]
+        wget_extra_options inserted as a parameter for every wget call 
+        (to support directory-based basic http authentication)
+        wget_mirror(): provided option to continue if no cookie match 
+        (allows for the case cookie_session_string undefined in constants.sh);
+        added runtime explanatory text.
+       [lib/general.sh]
+        confirm_continue(): moved checks for run_unattended here.
+
+0.19.7 (released on 2022-11-21)
+       * Maintenance and refinement *
+        Made handling of web application sessions more robust
+       [lib/constants.sh]
+        New variables: cookie_session_string for the name of the login/session cookie
+        and logout_path for web logout path
+        Changed variable label: replaced wget_agent with wget_user_agent
+       [makestaticsite.sh]
+        wget_mirror(): changed login check to search for a login/session cookie,
+        removed redundant initial login with bad credentials; added user agent as a 
+        core option
+        bug fix: wget_extra_urls(): substitute wget_plus_ops for
+        wget_extra_options in exclude_dirs assignment
+        clean_mirror(): added cookie expiration and logout path request.
+
+0.19.6.1 (released on 2022-11-17)
+       * Maintenance *
+       [setup.sh]
+        Bug fixes: read_option() and process_options(): introduced checks for
+        whether variables set, mainly around use of ${BASH_REMATCH}, to 
+        prevent being caught by error traps.
+        init_mssconfig(): removed quotes from 'EOF' to allow parameter expansion
+
+0.19.6 (released on 2022-11-16)
+       * Maintenance and refinement *
+        Extended support to URL paths, not just URL base.
+        Capitalised general references to Wget, as opposed to the program, wget.
+        Some refactoring.
+       [lib/constants.sh]
+        Replace constant url_base with url, which supports general URLs.
+       [makestaticsite.sh]
+        Read constant url, retaining/generating url_base (protocol + domain) 
+        for various tests and searches.
+        initialise_variables(): extended handling of -m option, with new
+        variable, mirror_id_flag, to allow for re-runs right from the start
+        wget_mirror(): only overwrite an existing mirror when certain flags are set 
+        and consent given.
+        wget_postprocessing(): cleaner URLs ensured with only single '/' generated 
+        in conversion of remaining absolute paths to relative paths;
+        extended conversion of absolute paths to relative paths to cover http(s).  
+
+0.19.5.1 (released on 2022-11-11)
+       * Maintenance *
+       [makestaticsite.sh]
+        Bug fix: initialise_variables(): handle the case when wget_extra_options
+        does not have -R or --reject option defined
+
+0.19.5 (released on 2022-11-11)
+       * Maintenance and refinement *
+       [lib/constants.sh]
+        Added constant rename_wget_tmps (y/n) for removal of .tmp.html suffixes from 
+        (wget temp) file names.
+       [makestaticsite.sh]
+        wget_mirror(): modified wget_test_option to use --spider rather than 
+        --method=HEAD to support older versions of wget
+        clean_mirror(): added routine (when rename_wget_tmps='y') to rename files  
+        that end .tmp.html, removing such suffices.
+
+0.19.4 (released on 2022-11-10)
+       * Maintenance and refinement *
+       [setup.sh]
+        Bug fix: init_mssconfig(): removed bogus 'message' from Heredoc OR condition
+       [lib/constants.sh]
+        Added constant force_index_html (y/n) to set whether or not index.html
+        should be appended to internal anchors ending with trailing slash
+        as a directory for temporary files.  Default is no.
+       [makestaticsite.sh]
+        wget_postprocessing(): added routine (when force_index_html='y') to ensure 
+        index.html added to internal anchors ending with trailing slash.
+        wget input files, cookies and HTML Tidy error files now written to tmp/
+
+0.19.3 (released on 2022-11-07)
+       * Added support for application-restricted access (login required) *
+       [lib/constants.sh]
+        Added constant tmp_dir as a directory for temporary files
+        allOptions(): Added fields require_login, site_user, site_password + associated 
+        logic
+        Added general constants: Added login_path, login_user_field, login_pwd_field for 
+        specifying the login form's fields
+        Added constant wget_reject_clause to avoid exit by wget hitting logout page
+       [setup.sh]
+        Bug fix: init_mssconfig(): added OR condition on reading from Heredoc
+       [makestaticsite.sh]
+        initialise_variables(): added logic to handle wget --reject clause
+        wget_mirror(): added logic to handle wget logins, based on cookies. Once logged 
+        in, wget will use these cookies to continue a crawl
+        Bug fix: wget_extra_urls(): in the command substitution, webassets_all, 
+        changed the directory for running grep from mirror_dir to working_mirror_dir
+        Added 'return 0' to command substitutions to avoid errors on empty results.
+
+0.19.2 (released on 2022-11-03)
+       * Added support for sites restricted by basic http authentication + bug fix *
+       [lib/validate.sh]
+        validate_http(): inserted a trap for http response 401 (unauthorised), with 
+        message warning of need to supply credentials for wget_extra_options
+       [makestaticsite.sh]
+        Replaced cURL test for connectivity with wget, with wget_extra_options 
+        (assumed to contain credentials)
+        Bug fix: wget_extra_urls(): in the command substitution, webassets_all, 
+        changed the directory for running grep from mirror_dir to working_mirror_dir
+        Added 'return 0' to command substitutions to avoid errors on empty results.
+
+0.19.1 (released on 2022-10-28)
+       * Maintenance, time zones and logging *
+       New project home at https://makestaticsite.sh/ - references updated
+       Added time zone options local / UTC.
+       Added logging at several levels (in parallel with terminal output)
+       A little more refactoring, with overhaul of output through echo command
+       [lib/constants.sh]
+        New variable, timezone, which can take one of three values: local;  
+        utc (UTC, not local); and utllocal, standard local time as UTC.
+        Moved output_level from .cfg file to the runtime variables section
+        Added log_level and log_filename runtime variables to support logging
+       [lib/general.sh]
+        echo(): Standardised echo statements, replacing previous echo0() and echo1();
+        added support for writing to a log file;
+        introduced use of env echo to ensure compatibility
+       [setup.sh]
+        Refactored to group initial setup stages
+        Timestamp of config file set according to timezone setting
+       [makestaticsite.sh]
+        Timestamp of mirror archive directory set according to timezone setting
+        main(): Swapped order of read_config() and initialise_layout() 
+        to support full logging; inserted logging logic
+        Prefixed all occurrences of echo used in internal logic with 'env'
+        Replaced all occurrences of echo0 and echo1 with echo + parameter
+        Bug fix: Replaced occurrences of webassets_exclude_dirs with webassets_omissions
+
+0.19 (released on 2022-10-14)
+     * Refactoring with more command line options *
+     [lib/constants.sh]
+      Added all_phases array to define an initial nine phases
+      set force_ssl=no rather than =yes
+      new variable wp_permalinks_postname=yes ('no' to not enforce)
+     [makestaticsite.sh]
+      Replaced references to 'steps' with more granular phases
+      read_config(): Introduced -p and -q command line options to run between given 
+      phases supported by -m option for the mirror ID (directory); expanded help
+      Moved folder definitions from prepare_static_generation() to new process
+      initialise_layout().
+      initialise_variables(): added validation for phases (start and end)
+      Moved zip file creation to new create_zip() function
+      sed command options changed from strings to arrays
+      Bug fix: for defining rsync options, replaced $src and $dest strings with arrays
+      Some general tidying
+     [README.md]
+      Some elaboration on requirements, command line options and functionality
+
+
+0.18.5 (released on 2022-10-05)
+       * Maintenance *
+       [lib/constants.sh]
+        Added force_ssl (yes/no) variable for https enforcement    
+       [makestaticsite.sh]
+        Bug fix: relaxed draconian enforcement of https for all anchors with
+        optional https for anchors to the deployment domain only
+        Relaxed response to wget error code 3 (no longer aborts), added indication 
+        of possible reason being due to directory - filename clash
+
+0.18.4 (released on 2022-10-03)
+       * Maintenance and refinement *
+       Error reporting refinements, partly to prevent premature program termination
+       Bug fix: for defining wget and rsync options, replaced strings with arrays
+       to remedy a few runtime errors
+       [lib/constants.sh]
+        Added yes/no variable trap_errors for trap and set -euf commands
+        wget options and wget_extra_core_options: changed from strings to arrays
+       [makestaticsite.sh]
+        Bug fix: for wget and rsync options, replaced string with array
+
+0.18.3 (released on 2022-09-28)
+       * Refinement *
+       [lib/constants.sh]
+        Added yes/no switch variable wp_permalinks_postname
+       [mod_wp.sh]
+        Any change to permalinks now dependent on wp_permalinks_postname=yes;
+        relaxed constraint on using %postname% to be a substring.
+
+0.18.2 (released on 2022-09-23)
+       * Maintenance and refinement *
+       [lib/constants.sh]
+        Added variable run_unattended - set 'yes' to allow default responses at prompts
+       [makestaticsite.sh]
+        For run_unattended, assume continuation on wget errors and assume new domain
+        Bug fix: exclude feeds from having URLs made relative
+
+0.18.1 (released on 2022-09-15)
+       * Maintenance and refinement *
+       (License) Added notices of URL where software may be downloaded.
+       [setup.sh]
+        Expanded the welcome text to elaborate on the process and add download URL options
+       [makestaticsite.sh]
+        In the case that deploy=no, but deploydomain and domain (from url_base) 
+        are not equal, added runtime choice of whether to do global search & replace
+
+0.18 (released on 2022-09-14)
+      * Setup refinements and first licensed release - AGPL version 3 *
+      Added Copyright file for license, inserted license headers in source files  
+      and added a mention in README.md
+      Reversed chronology for version_history.txt and started adding release dates
+     [setup.sh]
+      Tweaked input to remove extraneous space (input_text="-i$opt_default"), 
+      plus other cosmetic changes to improve readability of user interface
+     [lib/constants.sh]
+      Added MakeStaticSite version info as variables
+      Added fuller info for a few options settings
+      Added new validation array, options_check_yesno()
+     [lib/validate.sh]
+      validate_input() bug fix: trapped case where suggested input, $1, is empty
+      new function validate_yesno() to ensure correctness of yes/no switches
+     [makestaticsite.sh]
+      read_config() input: added version and help, script termination on invalid input
+      deploy_domain set conditional on value of variable $deploy.
+      bug fix for webassets_exclude_dirs array when wget_extra_options empty
+     [config/sample.cfg]
+      Generated this afresh, with more options selected
+
+0.17.1 Maintenance and refinement
+       [lib/validate.sh]
+        validate_input(): fixed bugs in array checks from streamlined version 0.15
+       [lib/constants.sh]
+        Moved HTML Tidy and additions options into allOptions array
+       [setup.sh]
+        Added options for HTML Tidy and file additional files
+       [makestaticsite.sh]
+        Renamed cmd_htmltidy to htmltidy_cmd to standardise, plus other minor changes
+
+0.17 Extensions to tidy up HTML output and augment the static mirror
+     [makestaticsite.sh]
+      clean_mirror(): Added support for tidying up HTML output, using HTML Tidy
+      Added immediately before deployment a new function, add_extras(), 
+      which allows the addition per domain of further files from a designated 
+      folder
+     [lib/constants.sh]
+      Added new runtime options to support HTML Tidy and additions to static mirror
+
+0.16.5 Maintenance and refinement
+       [makestaticsite.sh]
+        wget_extra_urls(): Additional filtering of wget input URLs 
+        (must start with 'http') for wget second run
+        wget_postprocessing(): Inserted environment language settings, 
+        LC_CTYPE=C && LANG=C, to prevent (Mac) sed: RE error: illegal byte sequence
+
+0.16.4 Maintenance and refinement - mainly README.md update and streamlined wget options
+       [lib/constants.sh]
+        Moved wget_inputs_main and wget_inputs_extra from makestaticsite.sh
+        Added two variables, wget_core_options and wget_extra_core_options, to store 
+        basic options for wget in the respective phases.
+        Removed limit_rate variable, which can be set by user in wget_extra_options
+       [makestaticsite.sh]
+        Updated to support wget options variables
+        Updated wget_input_files initialisation to be empty instead of (), which 
+        was leading to unbound variable error in Bash3
+        Renamed wget_inputs_collated wget_inputs_main to distinguish from phase2
+        wget_inputs_extra
+
+0.16.3 Refinement - additional filtering to remove newsfeeds from second wget run
+       [makestaticsite.sh]
+        In wget_extra_urls(), extended scope of webassets_nohtml to include 
+        RSS and Atom feeds (they don't generate any new assets and have been found  
+        in some situations to prevent the script from completing its run)
+
+0.16.2 Refinement - removed exclude_dirs as a separate variable (leave it for
+       wget_extra_options
+       [lib/general.sh]
+        Added wget_canonical_options() function to return canonical option parameters
+       [makestaticsite.sh]
+        Further tweaks to maintain same behaviour as before for exclusion of directories
+
+0.16.1 Maintenance
+       [makestaticsite.sh]
+        Added another routine to wget_extra_urls() to duly removes any URL that 
+        matches wget exclude_directories directive.
+        Fixed bug: removed the possibility of an empty -X option for wget
+        Some tidying up of runtime stdout.
+
+0.16 Code refactoring with initial support for CMS client modules (currently only WP)
+     [lib/mod_wp.sh]
+      New library module for WordPress-specific functions and settings.
+     [makestaticsite.sh]
+      Replaced WordPress-specific functions with mod_wp.sh library include plus 
+      generic references
+
+0.15.5 Further post-wget processing refinements
+       [makestaticsite.sh]
+        wget_post_processing() tries to ensure that links to domain URLs 
+        under http: and https: are both converted to relative links
+        Extended clean_mirror() to ensure externally linked elements have 
+        https: prefix where url_base has https as protocol
+
+0.15.4 Bug fix and mirror clean
+       [makestaticsite.sh]
+        Bug fix for clean_mirror() - apply changes in relevant directory (not mirror/)
+        Added facility to update references in web pages to support RSS auto-discover
+       [lib/constants.sh]
+        Added a couple of variables to support clean_mirror()
+
+0.15.3 Maintenance and mirror clean
+       [makestaticsite.sh]
+        Augmented clean_mirror() with a routine to replace any stray occurrences to 
+        (local) domain name with the one in deployment.
+        Added a facility to retain support for RSS newsfeeds, aimed at WordPress sites.
+       [README.md]
+        Added subsection on supporting newsfeeds
+
+0.15.2 Bug fix
+       Fixed misspelt variable label and references (from WP-cli to wp_cli)
+
+0.15.1 Maintenance and consolidation
+       Simplified snippets switch - merged two options into one, use_snippets
+       [makestaticsite.sh]
+        Fixed bugs introduced in 0.15 around snippets replacement (-r flag) and 
+        toggle_flag undefined for sites deployed locally
+        Refactored Step 0 into three functions, invoked from main()
+
+0.15 Support for runtime domain entry enabling/disabling in hosts file.
+     Some streamlining of code
+     [makestaticsite.sh]
+      Added check on source and deployment domains, link to host comment routine
+     [general.sh]
+      New function, comment_uncomment(), to (un)comment lines in a given file; 
+      and hosts_toggle() to inspect hosts file for line containing domain, invoking 
+      comment_uncomment(), as needed
+     [validate.sh]
+      Streamlined validation functions
+
+0.14.4 Further maintenance and bug fixes for cross-platform compatibility
+       [makestaticsite.sh]
+        Fixed bugs to ensure snippets applied (filename case and 
+        snippets.data tag handling)
+        Reading config file made more robust for yes/no options
+
+0.14.3 Further maintenance and bug fix
+       [makestaticsite.sh]
+        Fixed 'empty file' issue with sed -i that prevented allow post wget-processing
+        for non-Mac systems
+        Streamlined string comparisons (replacing '==' with '=')
+
+0.14.2 Bug fixes and minor changes in descriptive text
+       [setup.sh]
+        Fixed bugs introduced in 0.13 from process of making variable names lowercase: 
+        completed the conversion to lowercase, whilst preserving capitalisation of 
+        environment variables.
+
+0.14.1 Snippets, name and documentation
+       Consolidated name of software as MakeStaticSite (MSS for short)
+       Expanded README.md with sections on options and snippets
+       [makestaticsite.sh]
+        Generalised snippets to support multiple sites
+        Added 'set' command with -eof options to improve script safety 
+        plus a few tweaks for robustness
+
+0.14 Documentation and maintenance.
+     Added README.md with basic information about and on how to use the tool
+     Global conversion of variable names to lowercase
+     [makestaticsite.sh]
+       Fixed bug introduced in 0.13 that mean wget_extra_urls() was not retrieving URLs
+       added --page-requisites flag for wget
+
+0.13.1 Maintenance: tidy up, assisted by shellcheck
+       [makestaticsite.sh]
+        Added double quotes to prevent word splitting in variables
+        Fixed bug introduced in 0.13 re failed case for 'cd' command in wget_extra_urls()
+
+0.13 [lib/constants.sh]
+       New file to store presets, including allOptions() runtime options array.
+       Introduced OUTPUT_LEVEL constant for stdout with four levels of verbosity
+     [lib/general.sh]
+       New library for general functions.  The first pair are echo statements conditional
+       on OUTPUT_LEVEL constant
+     [lib/config.sh]
+       Modified config_get() to assign runtime defaults where not specified in .cfg file
+     [makestaticsite.sh]
+       Removal of default assignments, as now carried out by config.sh
+       Setting OUTPUT_LEVEL to 'silent' or 'quiet' will suppress all but essential output 
+       for the script and utilities such as wget
+
+0.12.1 [setup.sh]
+       Minor tweaks to defaults (example URLs)
+       [makestaticsite.sh]
+         Added a timer for how long the script takes to complete its work
+         Added clean_mirror() routine to tidy up (little more than a placeholder)
+         Added HTML files filter in wget_extra_urls()
+         Ensured that mirror directory is refreshed before storing files.
+         When reading snippets.data file, ignore lines starting with '<'
+
+0.12 [setup.sh]
+       Added two options: WGET_EXTRA_URLS (retrieve additional URLs y/n?) and 
+       WGET_POST_PROCESSING (convert absolute URLs to relative URLs y/n?)
+       Some tweaks to the descriptions of options
+     [makestaticsite.sh]
+       Added function wget_extra_urls() to generate a list of remaining absolute URLs 
+       involving source donain and then retrieve then (with wget).
+       Added function wget_postprocessing() to convert absolute URLs 
+       involving source donain to relative URLs.
+     [config/sample.cfg]
+       Overhauled to make consistent with current setup.sh
+
+0.11.1 [makestaticsite.sh and setup.sh]
+       Replaced SOURCE_WWW_ROOT and SOURCE_WP_DIR (two variables) by SITE_PATH
+       [makestaticsite.sh]
+         Added --insecure config option for curl, needed for testing local sites with      
+         self-signed certificates.
+         Added $URL_BASE/search/ to extra pages to be indexed as 
+         it might not be linked from anywhere
+       [lib/validate.sh]
+         Added check for directory existence - for SITE_PATH, not yet DEPLOY_PATH
+
+0.11 Debugged to make the system usable for non-WP sites.
+     [makestaticsite.sh]
+       Added checks for wget and rsync commands
+       Added rate limiting as standard option for wget
+     [setup.sh]
+       Added support for more checks
+       Expanded some option descriptions
+       Removed hard-coded URL for search plugin (moved to makestaticsite.sh)
+
+0.10.3 Added library validate.sh for system and user input checks.
+       Moved to UTC for timestamps
+       Start with check for bash version.
+       Tidied up comments - removed ad hoc remarks such as 'to do' (moved to docs)
+       [makestaticsite.sh]
+         Moved config check into config.sh library
+         Added notice about creating search index manually
+       [setup.sh]
+         Changed shebang line to use session:
+         #!/usr/bin/env bash
+         User input tidy for Bash 3 - don't give 'e.g.' hints for Y/N or empty fields
+
+0.10.2 Extended snippets with additional option to include them in a deployed site, 
+       not just for a zip file
+
+0.10.1 Added support for two wget modes: (timestamped archives) or straight download 
+       to same directory, being the site name
+
+0.10 Added setup.sh, an interactive script to generate config files
+     Some tidying of options, added support to specify input URLs file for wget
+
+0.9 Added support for multiple configs, which are invoked depending on 
+    command line option -i (= input).  Hence, defined another variable 
+    for snippets (to determine data file and where snippets are stored); 
+    extended use of input files (renamed from includes)
+
+0.8 Configuration options stored in and loaded from separate files - 
+    config.cfg.defaults stores defaults, config.cfg stores custom settings
+
+0.7.1 Code tidy (various) with ShellCheck, including replacement of backticks 
+      with POSIX $(command) syntax.
+
+0.7 Extended WP-CLI to work remotely over ssh with generalization of the WP commands 
+    supported by a new set of variables for source (server) details.
+    A bit of code tidy - mainly ensuring variables are quoted in conditionals.
+
+0.6 Added WP-CLI functions to prepare WP site for crawling by wget
+    with additional simplification config (via perform plugin).
+    Also installed (optional) search - everything bar the creation of the Lunr index.
+
+0.5.2 Introduced variable $ZIP_FILENAME to replace hard-coded value. 
+      Extended error reporting for wget (explanations for each error code).
+
+0.5.1 Snippet modifications now carried out on mirror/ folder 
+      and this folder is used for rsync instead of local deployment, which is now
+      fully separated.
+
+0.5 Refactored to use functions and added 'yes'/'no' flags for: zip archival creation,
+    local deployment, remote deployment.
+
+0.4 Refactored to run each step in own folder.
+
+0.3.1 Documentation: added section numbering, usage comments for rsync.
+
+0.3 Added support for snippet substitutions using:  
+    snippets.data - index to files to modify followed by list of snippet IDs
+    snippetNNN.html - snippet ID=NNN
+    Modify only these files to provide variants in .zip download (for offline use).
+
+0.2
+
+0.1
+
+0.0.1 Initial version
+
