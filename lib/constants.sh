@@ -50,6 +50,7 @@ tab="  "                        # tab spacing for file outputs
 # input file names for Wget (phase 1 and 2 respectively)
 wget_cmd=wget                   # [Path to] wget binary
 wget_version_atleast="1.21"
+wget_error_level=6              # The lowest Wget error code tolerated else aborts (>8 for no tolerance)
 wget_user_agent= # set browser user agent (empty for default), wrapped in quotes, e.g. "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15)"
 wget_cookies="cookies.txt"      # name of cookies file
 wget_inputs_main="wget_inputs_main.txt"
@@ -156,7 +157,7 @@ msg_ok=${ink_green}OK${ink_normal}
 ################################################
 timezone=local                  # Time zone: local|utc|utclocal
 output_level=quiet              # stdout verbosity - silent|quiet|normal|verbose
-log_level=normal                # Log level: silent|quiet|normal|verbose
+log_level=verbose                # Log level: silent|quiet|normal|verbose
 log_filename=makestaticsite.log # Name of MakeStaticSite log file
 trap_errors=no                  # Trap errors with immediate script termination (yes/no)
 if [ "$trap_errors" = "yes" ]; then

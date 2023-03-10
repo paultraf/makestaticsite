@@ -118,6 +118,15 @@ which_version() {
   "$1" --version | grep "$2" | grep -o -m 1 -- "[0-9]\{1,2\}\.[0-9]\{1,2\}\(\.[0-9]\{1,2\}\)*[ \-]" | head -1 | tr -d '[:space:]-'
 }
 
+wget_error_check() {
+  # expects one parameters: error level (integer)
+  if [ "$wget_error_level" -le "$1" ]; then
+    confirm_continue
+  else
+    echo "Aborting due to wget_error_level setting in constants.sh. To allow continuation, please set its value to less than $1 and rerun."; exit
+  fi
+}
+
 confirm_continue() {
   if [ "$run_unattended" != "yes" ]; then
     read -r -e -p "Do you wish to continue (y/n)? " confirm

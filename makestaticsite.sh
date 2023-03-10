@@ -417,40 +417,36 @@ wget_error_codes() {
         err8_msg+=" and consider setting the output_level constant to 'verbose'"
       fi
       echo "$err8_msg. "
-      confirm_continue
+      wget_error_check 8
       ;;
     "7")
       echo "Wget $msg_error code 7 - wget reports a protocol error, which probably means that it can't connect to the host.  Check that the web server (httpd) is running and also the host spelling."
-      confirm_continue
+      wget_error_check 7
       ;;
     "6")
       echo "Wget $msg_error code 6: Username/password authentication failure.  This can happen when fetching a login page or accessing an API.  Such errores can often be avoided by setting in wget_extra_options the -X option to exclude the relevant directory."
-      confirm_continue
+      wget_error_check 6
       ;;
     "5")
       echo "Wget $msg_error code 5: SSL verification failure.  If you trust the certificate, then you should set the configuration option, ssl_checks=no (for the wget option --no-check-certificate)."
-      echo "Aborting."
-      exit
+      wget_error_check 5
       ;;
     "4")
       echo "Wget $msg_error code 4: Network failure.  It may be a network configuration issue.  Check in particular if there are any firewalls."
-      echo "Aborting."
-      exit
+      wget_error_check 4
       ;;
     "3")
       echo "Wget $msg_error code 3: File I/O error.  Check that you have write access to $working_mirror_dir.  More commonly, this error can occur when wget tries to write to a file where there already exists a directory with the same name."
-      confirm_continue
+      wget_error_check 3
       ;;
     "2")
       echo "Wget $msg_error code 2: Parse error.  Check the command line options:"
       echo "$wget_options"
-      echo "Aborting."
-      exit
+      wget_error_check 2
       ;;
     "1")
       echo "Wget $msg_error code 1: Generic error.  Check the command line options:"
-      echo "$wget_options"
-      echo "Aborting."
+      wget_error_check 1
       exit
       ;;
   esac
