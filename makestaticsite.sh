@@ -341,10 +341,11 @@ initialise_variables() {
     fi
   fi
 
-  #extract the domain and protocol and hence the URL base (no path)
-  domain=$(env echo "$url" | awk -F/ '{print $3}' | awk -F: '{print $1}')
+  # Extract the host (domain or IP) and port, protocol, and hence the URL base (no path)
+  hostport=$(env echo "$url" | awk -F/ '{print $3}')
+  domain=$(env echo "$hostport" | awk -F: '{print $1}')
   protocol=$(env echo "$url" | awk -F/ '{print $1}' | awk -F: '{print $1}')
-  url_base="$protocol://$domain"
+  url_base="$protocol://$hostport"
   login_address="$url_base$login_path"
   require_login=$(yesno "$(config_get require_login "$myconfig")")
   [ "$require_login" = "yes" ] && { site_user="$(config_get site_user "$myconfig")"; site_password="$(config_get site_password "$myconfig")"; }
@@ -357,7 +358,7 @@ initialise_variables() {
   local_sitename="$(config_get local_sitename "$myconfig")"
 
   # Path of the mirror archive, if archive directory is already defined
-  [ "$mirror_archive_dir" != "" ] && working_mirror_dir=$mirror_dir'/'$mirror_archive_dir'/'$domain && zip_archive=$mirror_archive_dir'.zip'
+  [ "$mirror_archive_dir" != "" ] && working_mirror_dir=$mirror_dir'/'$mirror_archive_dir'/'$hostport && zip_archive=$mirror_archive_dir'.zip'
 
   # Zip file of the site snapshot
   zip_filename="$(config_get zip_filename "$myconfig")"
@@ -487,7 +488,7 @@ wget_mirror() {
   if [ "$mirror_archive_dir" = "" ]; then
     mirror_archive_dir="$local_sitename"
     [ "$archive" = "yes" ] && mirror_archive_dir+="$timestamp"
-    working_mirror_dir=$mirror_dir'/'$mirror_archive_dir'/'$domain
+    working_mirror_dir=$mirror_dir'/'$mirror_archive_dir'/'$hostport
     zip_archive=$mirror_archive_dir'.zip'
   fi
 
@@ -514,8 +515,8 @@ wget_mirror() {
   wget_login_options=("$wget_ssl" --directory-prefix "$tmp_mirror_path" --save-cookies "$cookies_path" --keep-session-cookies "$login_address" --delete-after)
 
   url_robots="$url/robots.txt"
-  wget_robot_options=("$wget_ssl" --directory-prefix "$mirror_archive_dir/$domain" "$url_robots")
-  wget_sitemap_options=("$wget_ssl" --directory-prefix "$mirror_archive_dir/$domain")
+  wget_robot_options=("$wget_ssl" --directory-prefix "$mirror_archive_dir/$hostport" "$url_robots")
+  wget_sitemap_options=("$wget_ssl" --directory-prefix "$mirror_archive_dir/$hostport")
 
   if [ "$wvol" = "-q" ] && [ "$log_level" != "silent" ]; then
     wget_options+=(-a "$log_file")
@@ -580,13 +581,13 @@ wget_mirror() {
     if ! $wget_cmd "${wget_extra_options[@]}" "${wget_robot_options[@]}"; then
       echo " "; echo "$msg_warning: Wget reported an error trying to retrieve the robots.txt file (likely not found).  Search engines expect this, so have made a note to create it."
       robots_create=yes
-    elif sitemap_line=$(grep "^[[:space:]]*Sitemap:" "$mirror_archive_dir/$domain/robots.txt"); then
+    elif sitemap_line=$(grep "^[[:space:]]*Sitemap:" "$mirror_archive_dir/$hostport/robots.txt"); then
       # read contents of robots.txt, checking for sitemap
       sitemap=$(env echo "$sitemap_line" | grep -o 'http[s]*:\/\/.*.xml')
       $wget_cmd "${wget_extra_options[@]}" "${wget_sitemap_options[@]}" "$sitemap"
       # Wget any nested sitemaps
       wget_sitemap_options+=("$sitemap" --output-document -)
-      $wget_cmd "${wget_extra_options[@]}" "${wget_sitemap_options[@]}" | grep -o "http[s]*://[^<]*.xml" | $wget_cmd "${wget_extra_options[@]}" --quiet "$wget_ssl" --directory-prefix "$mirror_archive_dir/$domain" -i -
+      $wget_cmd "${wget_extra_options[@]}" "${wget_sitemap_options[@]}" | grep -o "http[s]*://[^<]*.xml" | $wget_cmd "${wget_extra_options[@]}" --quiet "$wget_ssl" --directory-prefix "$mirror_archive_dir/$hostport" -i -
     else
       echo " "; echo "$msg_warning: No sitemap found in robots.txt. Search engines expect this, so have made a note to generate one."
       sitemap_create=yes
@@ -636,7 +637,7 @@ wget_extra_urls() {
   while IFS='' read -r line; do webassets_nohtml+=("$line"); done < <(for opt in "${webassets_http[@]}"; do type=$(curl -skI "$opt" -o/dev/null -w '%{content_type}\n'); if [[ "$type" != *"text/html"* ]] && [[ "$type" != *"application/rss+xml"* ]] && [[ "$type" != *"application/atom+xml"* ]]; then env echo "$opt"; fi; done)
   [ ${#webassets_nohtml[@]} -eq 0 ] && { echo "None found. " "1"; echo "Done."; return 0; }
   if [ "${wget_extra_options[*]}" != "" ]; then
-   url_bas="$protocol://$domain"
+    url_bas="$protocol://$hostport"
     # Filter out URLs whose paths match an excluded directory (via subloop)
     echo "Filter out URLs whose paths match an excluded directory (via subloop)" "1"
     # We assume that grep works as expected, but should really trap exit code 2
@@ -709,8 +710,8 @@ wget_postprocessing() {
     for ((i=1;i<${#depth};i++)); do
       pathpref+="../";
     done
-    sed_subs1=('s~http://'"$domain/"'~'"$pathpref"'~g' "$opt")
-    sed_subs2=('s~https://'"$domain/"'~'"$pathpref"'~g' "$opt")
+    sed_subs1=('s~http://'"$hostport/"'~'"$pathpref"'~g' "$opt")
+    sed_subs2=('s~https://'"$hostport/"'~'"$pathpref"'~g' "$opt")
     sed "${sed_options[@]}" "${sed_subs1[@]}"
     sed "${sed_options[@]}" "${sed_subs2[@]}"
   done
@@ -788,7 +789,7 @@ wget_postprocessing() {
 
 add_extras() {
   # For archival, copy subs files into the respective Wget mirror directory
-  extras_src="$script_dir/$extras_dir/$domain/"
+  extras_src="$script_dir/$extras_dir/$hostport/"
   echo -n "Copying additional files from $extras_src to the static mirror (for distribution) ... "
 
   # Create necessary directories
@@ -884,7 +885,7 @@ clean_mirror() {
 
   # create robots file, where necessary
   if [ "$robots_create" = "yes" ]; then
-    robots_path="$mirror_dir/$mirror_archive_dir/$domain/robots.txt"
+    robots_path="$mirror_dir/$mirror_archive_dir/$hostport/robots.txt"
     touch "$robots_path"
     echo "$robots_default" > "$robots_path"
     echo $'\n'"Sitemap: https://$deploy_domain/$sitemap_file"$'\n'>> "$robots_path"
@@ -892,7 +893,7 @@ clean_mirror() {
 
   # create sitemap, where necessary
   if [ "$sitemap_create" = "yes" ]; then
-    sitemap_path="$mirror_dir/$mirror_archive_dir/$domain/sitemap.xml"
+    sitemap_path="$mirror_dir/$mirror_archive_dir/$hostport/sitemap.xml"
     touch "$sitemap_path"
     sitemap_content="$(sitemap_header)";
     sitemap_loc_files=()
@@ -938,9 +939,9 @@ process_snippets() {
   # Create a substitutions area replicating the mirrored folder
   [ -d "$mirror_archive_dir" ] || mkdir -p "$mirror_archive_dir"
 
-  # Replicate the mirrored folder for the domain
-  domain_dir=$mirror_archive_dir'/'$domain
-  [ -d "$domain_dir" ] || mkdir -p "$domain_dir"
+  # Replicate the mirrored folder for the host [and port]
+  hostport_dir=$mirror_archive_dir'/'$hostport
+  [ -d "$hostport_dir" ] || mkdir -p "$hostport_dir"
 
   # Carry out snippet substitutions:
   echo "current directory: $(pwd)" "1"
@@ -979,7 +980,7 @@ process_snippets() {
         echo -e "input file $sub_input_file" "1"
 
         # Create the necessary subdirectories containing modified files
-        src="$domain_dir/$src_file"
+        src="$hostport_dir/$src_file"
         sub_input_dir="$(dirname "${sub_input_file}")"
         src_dir="$(dirname "${src}")"
         mkdir -p "$src_dir"
@@ -1019,7 +1020,7 @@ process_snippets() {
 
   # Copy any snippets across to mirror
   if [ "$snippets_count" != 0 ]; then
-    snippets_src="$script_dir/$sub_dir/$mirror_archive_dir/$domain/"
+    snippets_src="$script_dir/$sub_dir/$mirror_archive_dir/$hostport/"
     dest="$working_mirror_dir"
     echo "Copying from: $snippets_src" "1"
     echo "To: $dest" "1"
@@ -1064,9 +1065,9 @@ deploy_on_netlify() {
 prep_rsync() {
   echo "Deploying on a remote server using rsync over ssh ... "
 
-  # Test network connection to remote host using netcat
+  # Test network connection to remote server host using netcat
   if ! nc -w2 -z "$deploy_host" "$deploy_port"; then
-    echo "Unable to connect to the remote host, $deploy_host, on port $deploy_port, needed for rsync."
+    echo "Unable to connect to the remote server, $deploy_host, on port $deploy_port, needed for rsync."
     echo "Use of rsync aborted."
     echo "Static archive created, but not deployed remotely using rsync."
     exit
