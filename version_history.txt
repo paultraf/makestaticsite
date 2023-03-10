@@ -19,6 +19,19 @@
 ##########################################################################
 
 
+0.22.3 (released on 2023-03-10)
+       * Wget error handling and maintenance *
+       [lib/constants.sh]
+        Added constant wget_error_level
+       [lib/general.sh]
+        Added function wget_error_check() to compare given Wget error
+        level with wget_error_level and continue or abort accordingly
+       [makestaticsite.sh]
+        wget_error_codes(): inserted calls to wget_error_check()
+        Added support for ports in URL, introduced variable $hostport
+        (host[:port]) to replace instances of $domain, except for
+        comparison with server's domain (host)
+
 0.22.2 (released on 2023-03-06)
        * documentation and minor enhancement *
        [README.md]
