@@ -33,7 +33,8 @@ mss_download="https://makestaticsite.sh/download/makestaticsite_latest.tar.gz"
 # Network settings
 ################################################
 # Regular expressions approximating roughly to IPv4 and IPv6 addresses
-ip4re="^[[:space:]]*#*[[:space:]]*\([0-9]\{0,1\}[0-9]\{0,1\}[0-9]\.\)\{3\}[0-9]\{0,1\}[0-9]\{0,1\}[0-9][[:space:]]*"   ip6re="^[[:space:]]*#*[[:space:]]*\([0-9a-fA-F]\{1,4\}::\{0,1\}\)\{1,7\}[0-9a-fA-F]\{1,4\}[[:space:]]*"
+ip4re="^[[:space:]]*#*[[:space:]]*\([0-9]\{0,1\}[0-9]\{0,1\}[0-9]\.\)\{3\}[0-9]\{0,1\}[0-9]\{0,1\}[0-9][[:space:]]*"
+ip6re="^[[:space:]]*#*[[:space:]]*\([0-9a-fA-F]\{1,4\}::\{0,1\}\)\{1,7\}[0-9a-fA-F]\{1,4\}[[:space:]]*"
 etc_hosts=/etc/hosts            # Location of hosts file
 
 
@@ -355,6 +356,22 @@ add_extras=n
 add_extras__desc="Add additional files to the static output (y/n)?"
 add_extras__info="Option to supplement the static snapshot with further files sourced from elsewhere. They may include non-static files such as scripts to reinstate essential functionality.  Please place them in the $extras_dir/ directory."
 
+)
+
+allOptions_deps=(
+require_login="(site_user site_password)"
+wget_extra_urls="(wget_post_processing)"
+wp_cli="(wp_cli_remote source_host source_protocol source_port source_user site_path wp_helper_plugins add_search wp_search_plugin wp_restore_settings)"
+wp_cli_remote="(source_host source_protocol source_port source_user)"
+wp_helper_plugins="()"
+add_search="(wp_search_plugin)"
+wp_restore_settings="()"
+upload_zip="(zip_filename zip_download_folder)"
+deploy="(deploy_remote deploy_remote_rsync deploy_host deploy_port deploy_user deploy_path deploy_domain deploy_netlify deploy_netlify_name)"
+deploy_remote="(deploy_remote_rsync deploy_host deploy_port deploy_user deploy_netlify deploy_netlify_name)"
+deploy_rsync="(deploy_host deploy_port deploy_user)"
+deploy_netlify="(deploy_netlify_name)"
+htmltidy="(htmltidy_cmd htmltidy_options)"
 )
 
 options_allow_empty=(wget_extra_options input_urls_file)

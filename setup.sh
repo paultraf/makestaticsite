@@ -147,50 +147,16 @@ read_option() {
         env echo ""
         input_line="$opt_desc $input_hint"
         validate_input "$input_text" "$input_line" "$optvar"
-
         opt_value=${input_value::1}
         if [ "$opt_value" = "n" ]; then
-          case $optvar in
-            require_login)
-              opt_excludes+=(site_user site_password)
-              ;;
-            wget_extra_urls)
-              opt_excludes+=(wget_post_processing)
-              ;;
-            wp_cli)
-              opt_excludes+=(wp_cli_remote source_host source_protocol source_port source_user site_path wp_helper_plugins add_search wp_search_plugin wp_restore_settings)
-              ;;
-            wp_cli_remote)
-              opt_excludes+=(source_host source_protocol source_port source_user)
-              ;;
-            wp_helper_plugins)
-              opt_excludes+=()
-              ;;
-            add_search)
-              opt_excludes+=(wp_search_plugin)
-              ;;
-            wp_restore_settings)
-              opt_excludes+=()
-              ;;
-            upload_zip)
-              opt_excludes+=(zip_filename zip_download_folder)
-              ;;
-            deploy)
-              opt_excludes+=(deploy_remote deploy_remote_rsync deploy_host deploy_port deploy_user deploy_path deploy_domain deploy_netlify deploy_netlify_name)
-              ;;
-            deploy_remote)
-              opt_excludes+=(deploy_remote_rsync deploy_host deploy_port deploy_user deploy_netlify deploy_netlify_name)
-              ;;
-            deploy_rsync)
-              opt_excludes+=(deploy_host deploy_port deploy_user)
-              ;;
-            deploy_netlify)
-              opt_excludes+=(deploy_netlify_name)
-              ;;
-            htmltidy)
-              opt_excludes+=(htmltidy_cmd htmltidy_options)
-              ;;
-          esac
+          # loop over allOptions_deps to see what further options to exclude
+          for opt_dep in "${allOptions_deps[@]}"; do
+            var_dep=$(expr "$opt_dep" : '\([^=]*\)'; return 0)       # Array key is everything up to '='
+            val_dep=$(expr "$opt_dep" : '[^=]*.\(.*\)'; return 0)    # Array value is everything after '='
+            if [ "$optvar" = "$var_dep" ]; then
+              opt_excludes+=$val_dep
+            fi
+          done
         fi
       else
         echo
