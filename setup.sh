@@ -25,11 +25,11 @@ source "lib/validate.sh"   # load the validation library functions
 
 main() {
   # Step 0: Initialisation
+  get_configfile "$@"
   print_welcome
   init_mssconfig
 
   # Step 1: Read and process input
-  get_configfile
   process_options
 
   # Step 2: Write config file
@@ -50,19 +50,21 @@ which_version() {
 }
 
 print_welcome() {
-  echo "Welcome to MakeStaticSite for the generation and deployment of static websites.  This is free software released under the $mss_license, the latest version being available from ${mss_download}."
-  echo
+  printf "Welcome to MakeStaticSite for the generation and deployment of static websites.  This is free software released under the %s, the latest version being available from %s.\n\n" "$mss_license" "${mss_download}"
+  printf 'This setup script will ask a few questions to help you set up a configuration file%s for a single site (the script can be run any number of times to generate configs for other sites).  For each option, its label will be displayed together with some guidance. Please enter the values accordingly.\n\n' "$cfg_string"
+  read -r -e -p "Please press Enter to start configuring ... " confirm
+  printf "\n"
 }
 
 init_mssconfig(){
   # Check system requirements - Bash, cURL, Wget and rsync
   msg_checking="Checking your system for Wget and other essential components ... "
   bash_check
-  cmd_check "curl" || { echo -n "$msg_checking"; printf "%s: Unable to find binary: curl ("'$'"PATH contains %s).\nThis command is essential for checking connectivity.  It may be downloaded from https://curl.se/.\nAborting.\n" "$msg_error" "$PATH"; exit; }
-  cmd_check "$wget_cmd" || { echo -n "$msg_checking"; printf "%s: Unable to find binary: wget ("'$'"PATH contains %s)\nThis command is essential for creating the static snapshots.  Please make sure it is installed and review the value of the wget_cmd option in constants.sh.\nAborting.\n" "$msg_error" "$PATH"; exit; }
+  cmd_check "curl" || { printf "%s\n%s: Unable to find binary: curl ("'$'"PATH contains %s).\nThis command is essential for checking connectivity.  It may be downloaded from https://curl.se/.\nAborting.\n" "$msg_checking" "$msg_error" "$PATH"; exit; }
+  cmd_check "$wget_cmd" || { printf "%s\n%s: Unable to find binary: wget ("'$'"PATH contains %s)\nThis command is essential for creating the static snapshots.  Please make sure it is installed and review the value of the wget_cmd option in constants.sh.\nAborting.\n" "$msg_checking" "$msg_error" "$PATH"; exit; }
   wget_cmd_version="$(which_version "$wget_cmd" "GNU Wget")"
-  version_check "$wget_cmd_version" "$wget_version_atleast" || { echo "$msg_checking";  printf "%s: The version of %s is %s, which is old, so some functionality may be lost.  Version %s or later is recommended.\n" "$msg_warning" "$wget_cmd" "$wget_cmd_version" "$wget_version_atleast";}
-  cmd_check "rsync" || { echo; printf "%s: Unable to find binary: rsync ("'$'"PATH contains %s).\nThis command is essential for transferring files remotely.  It may be downloaded from https://rsync.samba.org/.\nAborting.\n" "$msg_error" "$PATH"; exit; }
+  version_check "$wget_cmd_version" "$wget_version_atleast" || { printf "%s\n%s: The version of %s is %s, which is old, so some functionality may be lost.  Version %s or later is recommended.\n" "$msg_checking" "$msg_warning" "$wget_cmd" "$wget_cmd_version" "$wget_version_atleast";}
+  cmd_check "rsync" || { printf "\n%s: Unable to find binary: rsync ("'$'"PATH contains %s).\nThis command is essential for transferring files remotely.  It may be downloaded from https://rsync.samba.org/.\nAborting.\n" "$msg_error" "$PATH"; exit; }
 
   # Define a timestamp function
   # (get atomic time, but caution needed when using parameters of 'date' 
@@ -93,24 +95,23 @@ EOF
 }
 
 get_configfile() {
-  echo 'This setup script will ask a few questions to help you set up a configuration file for a single site (the script can be run any number of times to generate configs for other sites).  For each option, its label will be displayed together with some guidance. Please enter the values accordingly.'
-  echo
-  read -r -e -p "Please press Enter to start configuring ... " confirm
-  echo
-  myconfig=mydefault.cfg
+  cfgfile=
+  cfg_string=
   while getopts ":i:" option; do
-    case ${option} in
+    case "${option}" in
       i)
-        myconfig=$OPTARG.cfg
-        echo "This configuration will be written to the file $myconfig" 1
+        cfgfile="$OPTARG.cfg";
+        cfg_string=", $cfgfile,"
       ;;
       : )
         # Print argument error
-        echo "Invalid option: $OPTARG requires an argument" 1 1>&2
+        printf "Invalid option: %s requires an argument. Please try again.\n" "$OPTARG" 1>&2
+        exit
       ;;
       \? )
         # Print option error
-        echo "Invalid option: $OPTARG" 1 1>&2
+        printf "Invalid option: $OPTARG. Please try again.\n" "$OPTARG" 1>&2
+        exit
       ;;
     esac
   done
@@ -126,7 +127,7 @@ read_option() {
     info)
       opt_info="$val"
       if [ "$opt_info" != "" ]; then
-        env echo "$optvar: $opt_info"
+        printf "%s: %s\n" "$optvar" "$opt_info"
       fi
       if [ "$BASH_VERSION" -ge "4" ]; then
         if [ -n "${opt_default+x}" ] && [ "$opt_default" != "" ]; then
@@ -144,7 +145,7 @@ read_option() {
         fi
       fi
       if [ "${opt_desc: -1}" = "?" ]; then
-        env echo ""
+        printf "\n"
         input_line="$opt_desc $input_hint"
         validate_input "$input_text" "$input_line" "$optvar"
         opt_value=${input_value::1}
@@ -204,32 +205,35 @@ process_options() {
 }
 
 write_config() {
-  echo "Thank you for providing the configuration options."
-  echo "Here is a summary of your input:"
-  echo
-  echo -e "$content"
-  echo
-  read -r -e -p "Do you wish to write this configuration to a file (y/n)? " confirm
-  confirm=${confirm:0:1}
-  if [ "$confirm" = "y" ] || [ "$confirm" = "Y" ]; then
-    status='0'
+  printf "Thank you for providing the configuration options.\nHere is a summary of your input:\n\n%s\n" "$content"
+  status='0'
+  if [ "$cfgfile" = "" ]; then 
+    read -r -e -p "Do you wish to write this configuration to a file (y/n)? " confirm
+    confirm=${confirm:0:1}
+    if [ "$confirm" != "y" ] && [ "$confirm" = "Y" ]; then
+      status='2'
+    fi
   else
-    status='2'
-  fi
+    printf "Will now attempt to write this to the configuration file you specified: %s\n" "$cfgfile"   
+  fi  
   while [ "$status" = '0' ]
   do
-    read -r -e -p "Please enter a filename (a .cfg extension will be added automatically): " filename
-
-    # strip any by alphanumeric characters; should support accented letters
-    cfgfilestem=$(env echo "$filename" | tr -cd '[:alnum:]._-')
-    if [ "$cfgfilestem" != "$filename" ]; then
-      echo "$msg_warning: only alphanumeric characters, hyphen and underscore allowed in filenames.  Have stripped out any others.  The resulting file name is $cfgfilestem.cfg"
+    if [ "$cfgfile" = "" ]; then
+      read -r -e -p "Please enter a filename (a .cfg extension will be added automatically): " cfgfile
     fi
-    if [ "$cfgfilestem" = "" ];then
-        echo "$msg_error: The file name cannot be empty"
-        continue
+    cfgfile=${cfgfile/.cfg/}
+    cfgfile="$cfgfile.cfg"
+    cfgfile_original="$cfgfile"
+    # should allow alphanumeric characters that include accented letters
+    cfgfile=$(printf "%s" "$cfgfile" | tr -cd '[:alnum:]._-')
+    if [ "$cfgfile" != "$cfgfile_original" ]; then
+      printf "%s: only alphanumeric characters, dot, hyphen and underscore allowed in filenames.  Have stripped out any others.  The resulting file name is %s\n" "$msg_warning" "$cfgfile"
     fi
-    cfgfile=$cfgfilestem'.cfg'
+    if [ "$cfgfile" = ".cfg" ];then
+      printf "%s: The file name (less extension) cannot be empty\n" "$msg_error"
+      cfgfile=""
+      continue
+    fi
     write_file="$script_dir/config/$cfgfile"
     if [ -f "$write_file" ]; then
       read -r -e -p "$msg_warning: The file $cfgfile already exists. Overwrite (y/n)? " confirm
@@ -242,14 +246,15 @@ write_config() {
     fi
   done
   if [ "$status" = "1" ]; then
-    echo "Writing file to: $write_file"
-    env echo "$content" > "$write_file"
+    printf "Writing configuration options to: %s ... " "$write_file"
+    printf "%s" "$content" > "$write_file" || { printf "\n%s: Unable to write the configuration file.\nAborting.\n" "$msg_error"; exit; }
+    printf "Done.\n";
 
     # copy to default.cfg if it doesn't already exist
     default_cfg="$script_dir/config/default.cfg"
     if [ ! -f "$default_cfg" ]; then
       cp "$write_file" "$default_cfg"
-      echo "Made a copy to default.cfg.  This means that you can run makestaticsite.sh without a parameter and it will load $cfgfile automatically"
+      printf "Made a copy to default.cfg.  This means that you can run makestaticsite.sh without a parameter and it will load %s automatically.\n" "$cfgfile"
     fi
   fi
 }
@@ -260,13 +265,10 @@ conclude() {
     read -r -e -p "Would you like to make the static site now (y/n)? " confirm
   confirm=${confirm:0:1}
     if [ "$confirm" = "y" ] || [ "$confirm" = "Y" ]; then
-      ./makestaticsite.sh -i "$cfgfilestem"
+      ./makestaticsite.sh -i "$cfgfile"
       echo
     fi
-    echo "To make this static site in future, run the following:"
-    echo "./makestaticsite.sh -i $cfgfilestem"
-    echo
-    echo "Thank you. Setup is complete."
+    printf "To make this static site in future, run the following:\n./makestaticsite.sh -i %s\n\nThank you. Setup is complete.\n" "$cfgfile"
   fi
 }
 ############### end of functions ###############
