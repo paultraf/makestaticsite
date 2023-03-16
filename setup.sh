@@ -97,9 +97,9 @@ EOF
 get_configfile() {
   cfgfile=
   cfg_string=
-  while getopts ":i:" option; do
+  while getopts ":o:" option; do
     case "${option}" in
-      i)
+      o)
         cfgfile="$OPTARG.cfg";
         cfg_string=", $cfgfile,"
       ;;
@@ -110,7 +110,7 @@ get_configfile() {
       ;;
       \? )
         # Print option error
-        printf "Invalid option: $OPTARG. Please try again.\n" "$OPTARG" 1>&2
+        printf "Invalid option: %s. Please try again.\n" "$OPTARG" 1>&2
         exit
       ;;
     esac
@@ -247,7 +247,7 @@ write_config() {
   done
   if [ "$status" = "1" ]; then
     printf "Writing configuration options to: %s ... " "$write_file"
-    printf "%s" "$content" > "$write_file" || { printf "\n%s: Unable to write the configuration file.\nAborting.\n" "$msg_error"; exit; }
+    printf "%s" "$content\n" > "$write_file" || { printf "\n%s: Unable to write the configuration file.\nAborting.\n" "$msg_error"; exit; }
     printf "Done.\n";
 
     # copy to default.cfg if it doesn't already exist
