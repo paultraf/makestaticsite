@@ -789,7 +789,8 @@ wget_postprocessing() {
 
 add_extras() {
   # For archival, copy subs files into the respective Wget mirror directory
-  extras_src="$script_dir/$extras_dir/$hostport/"
+  extras_src="$script_dir/$extras_dir/$hostport"
+  extras_dest="$working_mirror_dir"
   echo -n "Copying additional files from $extras_src to the static mirror (for distribution) ... "
 
   # Create necessary directories
@@ -815,9 +816,9 @@ add_extras() {
   error_set +e
 
   # First, try with rsync, otherwise use cp, to make the copy
-  if ! rsync "${rsync_options[@]}" "$extras_src" "$extras_dest"; then
+  if ! rsync "${rsync_options[@]}" "$extras_src/" "$extras_dest"; then
     echo -n "$msg_error: there was a problem running rsync.  Using 'cp' command ... "
-    cp -r "$extras_src" "$extras_dest" || { printf "%s: copy failed.\n" "$msg_error"; return; }
+    cp -r "$extras_src/." "$extras_dest/." || { printf "%s: copy failed.\n" "$msg_error"; return; }
   fi
   error_set -e
   echo "Done."
@@ -1020,11 +1021,11 @@ process_snippets() {
 
   # Copy any snippets across to mirror
   if [ "$snippets_count" != 0 ]; then
-    snippets_src="$script_dir/$sub_dir/$mirror_archive_dir/$hostport/"
+    snippets_src="$script_dir/$sub_dir/$mirror_archive_dir/$hostport"
     dest="$working_mirror_dir"
     echo "Copying from: $snippets_src" "1"
     echo "To: $dest" "1"
-    cp -r "$snippets_src" "$dest" || { echo "."; echo "$msg_error: Unable to copy the snippets to the mirror."; }
+    cp -r "$snippets_src/." "$dest/." || { echo "."; echo "$msg_error: Unable to copy the snippets to the mirror."; }
   fi
 
   cd "$script_dir" || echo "$msg_warning: cannot change directory to $script_dir."
@@ -1106,7 +1107,7 @@ deploy() {
 
   cmd_check "rsync" "1" || { printf "%s: The rsync command is not available.\nCheck that it is installed and is within PATH.\nAborting.\n" "$msg_error"; exit; }
 
-  src="$working_mirror_dir/"
+  src="$working_mirror_dir"
   comment_status=0   # Host entry commented out? (0 for no, 1 for yes)
   toggle_flag=0      # Has status been toggled?  (0 for no, 1 for yes)
 
@@ -1140,9 +1141,9 @@ deploy() {
     echo "Deploying locally:"
     dest=$deploy_path
   fi
-  echo "From: $src"
+  echo "From: $src/"
   echo "To: $dest"
-  rsync_src=("$src")
+  rsync_src=("$src/")
   rsync_dest=("$dest")
 
   # First, try with rsync
@@ -1153,7 +1154,7 @@ deploy() {
     # Use cp as a fallback for local
     if [ "$deploy_remote" != "yes" ]; then
       echo ", using 'cp' command"
-      cp -r "$src" "$dest"
+      cp -r "$src/." "$dest/."
     else
       echo ". Deployment failed."
     fi
