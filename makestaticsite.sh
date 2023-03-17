@@ -215,7 +215,7 @@ initialise_variables() {
   # Read phase details
   validate_range 1 "$max_phase_num" "$end_phase" || { echo "Sorry, the phase number for exiting the program is out of range (it should be between 1 and $max_phase_num).  Please try again."; exit; }
 
-  ((phase>end_phase)) && { echo "$msg_error: The (start) phase number cannot be greater than the end phase number."; echo "Please rerun the program."; exit; }
+  ((phase>end_phase)) && { printf "%s: The (start) phase number cannot be greater than the end phase number.\nPlease rerun the program." "$msg_error"; exit; }
 
   # If the phase is nonzero, then check for -m option
   if ((phase > minvalue)) && [ "$mirror_id_flag" = "off" ]; then
@@ -235,11 +235,11 @@ initialise_variables() {
      if [ ! -d "$mirror_dir/$mirror_archive_dir" ]; then
        echo "ATTENTION! No mirror archive was found at $mirror_dir/$mirror_archive_dir"
        echo "Here is a list of possible mirror IDs:"
-       cd "$mirror_dir" || { echo "unable to enter directory $mirror_dir."; echo "Aborting."; exit; }
+       cd "$mirror_dir" || { printf "unable to enter directory %s.\nAborting.\n" "$mirror_dir"; exit; }
        pwd
        sh -c "ls -d */ | sed 's/\///'"
        echo "Please choose one from the list and rerun with -m option."
-       cd "$script_dir" || { echo "unable to enter directory $script_dir."; echo "Aborting."; }
+       cd "$script_dir" || { printf "unable to enter directory %s.\nAborting.\n" "$script_dir"; }
        exit
      else
        echo "Found mirror archive at $mirror_dir/$mirror_archive_dir"
@@ -253,10 +253,10 @@ initialise_variables() {
   # Check for mirror ID and, if necessary, derive input cfg file from it 
   # (looking at the tail for the timestamp format) 
   if [ "$myconfig" = "default" ] && [ "$mirror_id_flag" = "on" ]; then
-    myconfig=$(env echo "$mirror_archive_dir" | sed "s/20[[:digit:]]\{6\}_[[:digit:]]\{6\}$//")
+    myconfig=$(printf "%s" "$mirror_archive_dir" | sed "s/20[[:digit:]]\{6\}_[[:digit:]]\{6\}$//")
   fi
 
-  echo -n "Reading custom configuration data from config/$myconfig.cfg ... "
+  printf "Reading custom configuration data from config/%s ... " "$myconfig.cfg"
 
   # Define a timestamp function
   if [ "$timezone" != "utc" ]; then
@@ -286,11 +286,11 @@ initialise_variables() {
 
   # Check system requirements for cURL, Wget and SSL
   msg_checking="Checking your system for Wget and other essential components ... "
-  cmd_check "curl" || { echo -n "$msg_checking"; printf "%s: Unable to find binary: curl ("'$'"PATH contains %s).\nThis command is essential for checking connectivity.  It may be downloaded from https://curl.se/.\nAborting.\n" "$msg_error" "$PATH"; exit; }
+  cmd_check "curl" || { printf "%s%s: Unable to find binary: curl ("'$'"PATH contains %s).\nThis command is essential for checking connectivity.  It may be downloaded from https://curl.se/.\nAborting.\n" "$msg_checking" "$msg_error" "$PATH"; exit; }
   cmd_check "$wget_cmd" "1" || { printf "%s: Unable to carry out a snapshot\nPlease review the value of the wget_cmd option.\nAborting.\n" "$msg_error"; exit; }
   echo "OK" "1"
   wget_cmd_version="$(which_version "$wget_cmd" "GNU Wget")"
-  version_check "$wget_cmd_version" "$wget_version_atleast" || { echo "$msg_checking";  printf "%s. The version of %s is %s, which is old, so some functionality may be lost.  Version %s or later is recommended.\n" "$msg_warning" "$wget_cmd" "$wget_cmd_version" "$wget_version_atleast";}
+  version_check "$wget_cmd_version" "$wget_version_atleast" || { printf "%s%s. The version of %s is %s, which is old, so some functionality may be lost.  Version %s or later is recommended.\n" "$msg_checking" "$msg_warning" "$wget_cmd" "$wget_cmd_version" "$wget_version_atleast";}
   ssl_checks=$(yesno "$(config_get ssl_checks "$myconfig")")
   [ "$ssl_checks" = "no" ] && wget_ssl="--no-check-certificate" || wget_ssl=''
 
@@ -305,15 +305,15 @@ initialise_variables() {
   # Ensure that login pages are rejected, i.e. ensure we have --reject *login*,*logout*
   # Append Wget --reject clause
   grep_clause="\-R[[:space:]][^[:space:]]*\|\-\-reject[[:space:]][^[:space:]]*"
-  rmatch0=$({ env echo "$wget_extra_options_tmp" | grep -o "$grep_clause"; } || echo )
+  rmatch0=$({ printf "%s" "$wget_extra_options_tmp" | grep -o "$grep_clause"; } || echo )
   if [ "$rmatch0" = "" ]; then
     rmatch="$rmatch0"
     vmatch="$wget_extra_options_tmp"
   else
     rmatch=${rmatch0//\*/\\*}
-    vmatch=$(env echo "$wget_extra_options_tmp" | sed 's/'"$rmatch"'//')
+    vmatch=$(printf "%s" "$wget_extra_options_tmp" | sed 's/'"$rmatch"'//')
   fi
-  wget_plus_ops=$(env echo "$vmatch" | xargs)
+  wget_plus_ops=$(printf "%s" "$vmatch" | xargs)
   if [[ ! "$rmatch0" =~ "-R " ]] && [[ ! "$rmatch0" =~ "--reject " ]]; then
     wget_plus_ops+=" -R $wget_reject_clause"
   else
@@ -322,7 +322,7 @@ initialise_variables() {
   IFS=" " read -r -a wget_extra_options <<< "$wget_plus_ops"
 
   # Hide http basic authentication password
-  IFS=" " read -r -a wget_extra_options_print <<< "$(env echo "$wget_plus_ops" | sed "s/password[[:space:]][^[:space:]]*/password *********/")"
+  IFS=" " read -r -a wget_extra_options_print <<< "$(printf "%s" "$wget_plus_ops" | sed "s/password[[:space:]][^[:space:]]*/password *********/")"
 
   # If $wget_plus_ops contains '--spider' then don't deploy, use snippets or postprocess
   [[ "$wget_plus_ops" == *"--spider"* ]] && { use_snippets="no"; wget_extra_urls="no"; wget_post_processing="no"; }
@@ -332,19 +332,19 @@ initialise_variables() {
 
   # Web server details (to be snapped by Wget)
   url="$(config_get url "$myconfig")"
-  url_domain=$(env echo "$url" | awk -F/ '{print $3}' | awk -F: '{print $1}')
+  url_domain=$(printf "%s\n" "$url" | awk -F/ '{print $3}' | awk -F: '{print $1}')
 
   # For backwards-compatibility check whether URL defined instead in url_base
   if [ "$url_domain" = "example.com" ]; then
     url="$(config_get url_base "$myconfig")"
-    if [ "$url" = "" ]; then { echo; echo "$msg_error: the URL supplied in $myconfig (example.com) needs to be changed!"; echo "Aborting."; exit; }
+    if [ "$url" = "" ]; then { printf "\n%s: the URL supplied in %s (example.com) needs to be changed!\nAborting.\n" "$msg_error" "$myconfig"; exit; }
     fi
   fi
 
   # Extract the host (domain or IP) and port, protocol, and hence the URL base (no path)
-  hostport=$(env echo "$url" | awk -F/ '{print $3}')
-  domain=$(env echo "$hostport" | awk -F: '{print $1}')
-  protocol=$(env echo "$url" | awk -F/ '{print $1}' | awk -F: '{print $1}')
+  hostport=$(printf "%s" "$url" | awk -F/ '{print $3}')
+  domain=$(printf "%s" "$hostport" | awk -F: '{print $1}')
+  protocol=$(printf "%s" "$url" | awk -F/ '{print $1}' | awk -F: '{print $1}')
   url_base="$protocol://$hostport"
   login_address="$url_base$login_path"
   require_login=$(yesno "$(config_get require_login "$myconfig")")
@@ -458,7 +458,7 @@ wget_mirror() {
   local wget_test_options=(-q "$wget_ssl" --spider --tries 1 "$url_base")
   if ! $wget_cmd "${wget_extra_options[@]}" "${wget_test_options[@]}"; then
     echo "Unable to connect to $url_base.  Please check the spelling of the domain, that the web server is running and that the website exists. "
-    env echo -e "GET http://google.com HTTP/1.0\n\n" | nc google.com 80 > /dev/null 2>&1 ||  echo "Also, there appears to be no Internet connectivity (tested with http://google.com)."
+    printf "GET http://google.com HTTP/1.0\n\n" | nc google.com 80 > /dev/null 2>&1 ||  echo "Also, there appears to be no Internet connectivity (tested with http://google.com)."
     echo "Aborting."
     exit
   fi
@@ -469,11 +469,11 @@ wget_mirror() {
   # Input file for Wget (generated)
   input_file="$script_dir/$tmp_dir/$wget_inputs_main"
   touch "$input_file"
-  env echo "$url" > "$input_file"
+  printf "%s\n" "$url" > "$input_file"
 
   # Generate the input-file option for Wget from the corresponding array.
   for opt in "${wget_input_files[@]}"; do
-    env echo "$opt" >> "$input_file"
+    printf "%s\n" "$opt" >> "$input_file"
   done
 
   # Append user URLs inputs
@@ -500,7 +500,7 @@ wget_mirror() {
     if [ "$run_unattended" != "yes" ]; then
       read -r -e -p "Do you wish to delete and recreate $working_mirror_dir (y/n)? " confirm
       confirm=${confirm:0:1}
-      echo -n "OK. "
+      printf "OK. "
     fi
     if [ "$confirm" = "y" ] || [ "$confirm" = "Y" ]; then
       rm -rf "$working_mirror_dir"
@@ -539,14 +539,14 @@ wget_mirror() {
 
     # Now log in with supplied credentials
     wget_credentials=(--post-data="${login_user_field}=${site_user}&${login_pwd_field}=${site_password}&testcookie=1")
-    echo -n "Logging in to the site at $login_address using credentials: ${login_user_field}=${site_user}&${login_pwd_field}=******* ${wget_login_options[*]} ... "
+    printf "Logging in to the site at %s using credentials: %s=%s&%s=******* %s ... " "$login_address" "${login_user_field}" "${site_user}" "${login_pwd_field}" "${wget_login_options[*]}"
     $wget_cmd "${wget_credentials[@]}" "${wget_extra_options[@]}" "${wget_login_options[@]}"
 
     # Determine whether login has succeeded by checking cookies file for addition
     cookie_match=$(awk '$6 ~ /'"$cookie_session_string"'/' "$cookies_path")
     if [ "$cookie_match" == "" ]; then
-      env echo
-      env echo -n "$msg_error: Unable to identify a login/session cookie in the generated cookie file, $cookies_path.  Please check the username and password in $myconfig.cfg"
+      printf "\n"
+      printf "%s: Unable to identify a login/session cookie in the generated cookie file, %s.  Please check the username and password in %s" "$msg_error" "$cookies_path" "$myconfig.cfg"
       if [ "$cookie_session_string" = "" ]; then
         echo " and to avoid this prompt, define the cookie_session_string in constants.sh."
       else
@@ -572,24 +572,24 @@ wget_mirror() {
   ####################
   # Main run of Wget #
   ####################
-  echo -n "$msg_mirror_start"
+  printf "%s" "$msg_mirror_start"
   cd "$mirror_dir" || { echo; echo "$msg_error: can't access working directory for the mirror ($mirror_dir)" >&2; exit 1; }
 
   error_set +e  # override because error traps set specially for Wget
   if [ "$robots_create" != "yes" ]; then
     # Check for robots.txt file (will store in mirror directory as they are part of the crawl)
     if ! $wget_cmd "${wget_extra_options[@]}" "${wget_robot_options[@]}"; then
-      echo " "; echo "$msg_warning: Wget reported an error trying to retrieve the robots.txt file (likely not found).  Search engines expect this, so have made a note to create it."
+      printf " \n%s: Wget reported an error trying to retrieve the robots.txt file (likely not found).  Search engines expect this, so have made a note to create it.\n" "$msg_warning"
       robots_create=yes
     elif sitemap_line=$(grep "^[[:space:]]*Sitemap:" "$mirror_archive_dir/$hostport/robots.txt"); then
       # read contents of robots.txt, checking for sitemap
-      sitemap=$(env echo "$sitemap_line" | grep -o 'http[s]*:\/\/.*.xml')
+      sitemap=$(printf "%s\n" "$sitemap_line" | grep -o 'http[s]*:\/\/.*.xml')
       $wget_cmd "${wget_extra_options[@]}" "${wget_sitemap_options[@]}" "$sitemap"
       # Wget any nested sitemaps
       wget_sitemap_options+=("$sitemap" --output-document -)
       $wget_cmd "${wget_extra_options[@]}" "${wget_sitemap_options[@]}" | grep -o "http[s]*://[^<]*.xml" | $wget_cmd "${wget_extra_options[@]}" --quiet "$wget_ssl" --directory-prefix "$mirror_archive_dir/$hostport" -i -
     else
-      echo " "; echo "$msg_warning: No sitemap found in robots.txt. Search engines expect this, so have made a note to generate one."
+      printf " \n%s: No sitemap found in robots.txt. Search engines expect this, so have made a note to generate one.\n" "$msg_warning"
       sitemap_create=yes
     fi
   fi
@@ -612,7 +612,7 @@ post_wget_checks() {
 # target files are not expected to change during this site generation
 wget_extra_urls() {
   cd "$mirror_dir" || { echo "Unable to enter $mirror_dir."; echo "Aborting."; exit; }
-  echo -n "Searching for additional URLs to retrieve with Wget (working in $working_mirror_dir) ... "
+  printf "Searching for additional URLs to retrieve with Wget (working in %s) ... " "$working_mirror_dir"
   webassets_all=()
   while IFS='' read -r line; do webassets_all+=("$line"); done < <(grep -Eroh "$url_base/[^\"'< ]+" "$working_mirror_dir" --include "*\.html")
 
@@ -623,31 +623,31 @@ wget_extra_urls() {
   # Pick out unique items
   echo "Pick out unique items" "1"
   webassets_unique=()
-  while IFS='' read -r line; do webassets_unique+=("$line"); done < <(for item in "${webassets_all[@]}"; do env echo "${item}"; done | sort -u)
+  while IFS='' read -r line; do webassets_unique+=("$line"); done < <(for item in "${webassets_all[@]}"; do printf "%s\n" "${item}"; done | sort -u)
 
   # Filter out all items not starting http
   echo "Filter out all items not starting http" "1"
   webassets_http=()
-  while IFS='' read -r line; do webassets_http+=("$line"); done < <(for item in "${webassets_unique[@]}"; do if [ "${item:0:4}" = "http" ]; then env echo "${item}"; else continue; fi; done)
+  while IFS='' read -r line; do webassets_http+=("$line"); done < <(for item in "${webassets_unique[@]}"; do if [ "${item:0:4}" = "http" ]; then printf "%s\n" "${item}"; else continue; fi; done)
   [ ${#webassets_http[@]} -eq 0 ] && { echo "None found. " "1"; echo "Done."; return 0; }
 
   # Filter out web pages and newsfeeds (limit to non-HTML assets, such as images and JS files)
   echo "Filter out web pages and newsfeeds (limit to non-HTML assets, such as images and JS files)" "1"
   webassets_nohtml=()
-  while IFS='' read -r line; do webassets_nohtml+=("$line"); done < <(for opt in "${webassets_http[@]}"; do type=$(curl -skI "$opt" -o/dev/null -w '%{content_type}\n'); if [[ "$type" != *"text/html"* ]] && [[ "$type" != *"application/rss+xml"* ]] && [[ "$type" != *"application/atom+xml"* ]]; then env echo "$opt"; fi; done)
+  while IFS='' read -r line; do webassets_nohtml+=("$line"); done < <(for opt in "${webassets_http[@]}"; do type=$(curl -skI "$opt" -o/dev/null -w '%{content_type}\n'); if [[ "$type" != *"text/html"* ]] && [[ "$type" != *"application/rss+xml"* ]] && [[ "$type" != *"application/atom+xml"* ]]; then printf "%s\n" "$opt"; fi; done)
   [ ${#webassets_nohtml[@]} -eq 0 ] && { echo "None found. " "1"; echo "Done."; return 0; }
   if [ "${wget_extra_options[*]}" != "" ]; then
     url_bas="$protocol://$hostport"
     # Filter out URLs whose paths match an excluded directory (via subloop)
     echo "Filter out URLs whose paths match an excluded directory (via subloop)" "1"
     # We assume that grep works as expected, but should really trap exit code 2
-    exclude_dirs=$(env echo "$wget_plus_ops"| grep -o "\-X[[:space:]]*[[:alnum:]/,\-]*" | grep -o "/.*"; exit 0)
+    exclude_dirs=$(printf "%s\n" "$wget_plus_ops"| grep -o "\-X[[:space:]]*[[:alnum:]/,\-]*" | grep -o "/.*"; exit 0)
     temp_IFS=$IFS; IFS=","; exclude_arr=("$exclude_dirs"); IFS=$temp_IFS
     if [ ${#exclude_arr[@]} -eq 0 ]; then
       webassets_omissions=("${webassets_nohtml[@]}")
     else
       webassets_omissions=()
-      while IFS='' read -r line; do webassets_omissions+=("$line"); done < <(for opt in "${webassets_nohtml[@]}"; do path="${opt/$url_bas/}"; for exclusion in "${exclude_arr[@]}"; do [ "$path" = "$exclusion" ] || [[ $path =~ ^$exclusion/.* ]] && continue 2; done; env echo "$opt"; done)
+      while IFS='' read -r line; do webassets_omissions+=("$line"); done < <(for opt in "${webassets_nohtml[@]}"; do path="${opt/$url_bas/}"; for exclusion in "${exclude_arr[@]}"; do [ "$path" = "$exclusion" ] || [[ $path =~ ^$exclusion/.* ]] && continue 2; done; printf "%s\n" "$opt"; done)
     fi
   else
     webassets_omissions=("${webassets_nohtml[@]}")
@@ -659,7 +659,7 @@ wget_extra_urls() {
   # Filter out URLs with query strings
   echo "Filter out URLs with query strings" "1"
   webassets=()
-  while IFS='' read -r line; do webassets+=("$line"); done < <(for opt in "${webassets_omissions[@]}"; do if [[ "$opt" != *"?"* ]]; then env echo "$opt"; else continue; fi; done)
+  while IFS='' read -r line; do webassets+=("$line"); done < <(for opt in "${webassets_omissions[@]}"; do if [[ "$opt" != *"?"* ]]; then printf "%s\n" "$opt"; else continue; fi; done)
 
   # Return if empty (all those found were filtered out)
   [ ${#webassets[@]} -eq 0 ] && { echo "None suitable found. " "1"; echo "Done."; return 0; }
@@ -688,8 +688,8 @@ wget_extra_urls() {
 
 # Carry out further processing of output
 wget_postprocessing() {
-  cd "$working_mirror_dir" || { echo "Unable to enter $working_mirror_dir."; echo "Aborting."; exit; }
-  echo -n "Carrying out post-Wget processing in $working_mirror_dir ... "
+  cd "$working_mirror_dir" || { printf "Unable to enter %s.\nAborting.\n" "$working_mirror_dir"; exit; }
+  printf "Carrying out post-Wget processing in %s ... " "$working_mirror_dir"
 
   # Convert remaining absolute paths to relative paths
   webpages=()
@@ -742,7 +742,7 @@ wget_postprocessing() {
       fi
       if [ "$confirm" == "y" ] || [ "$confirm" == "Y" ]; then
         sed_subs=('s~'"$domain"'~'"$deploy_domain"'~g')
-        echo -n "Replacing remaining occurrences of $domain with $deploy_domain ... "
+        printf "Replacing remaining occurrences of %s with %s ... " "$domain" "$deploy_domain"
         if [ "$ostype" = "BSD" ]; then
           find . -type f \( -name '*.html' -o -name '*.xml' -o -name '*.txt' \) -print0 | xargs -0 sed -i '' 's~'"$domain"'~'"$deploy_domain"'~g'
         else
@@ -761,7 +761,7 @@ wget_postprocessing() {
     sed_subs=('s/\(=["'\''][^:\\[:space:]"'\'']*\/\)\([\"'\'']\)/\1index.html\2/g' "$opt")
     sed "${sed_options[@]}" "${sed_subs[@]}"
   done
-  echo -n "Converting feed files and references from index.html to index.xml ... "
+  printf "Converting feed files and references from index.html to index.xml ... "
   find ./ -depth -type f -path "*feed/index.html" -exec sh -c 'mv "$1" "${1%.html}.xml"' _ '{}' \;
 
   webpages=()
@@ -778,20 +778,20 @@ wget_postprocessing() {
   sed_subs1=('s/href="http:\/\/'"${deploy_domain}"'/href="https:\/\/'"${deploy_domain}"'/g')
   sed_subs2=("s/href='http:\/\/${deploy_domain}/href='https:\/\/${deploy_domain}/g")
   if [ "$protocol" = "https" ] && [ "$force_ssl" = "yes" ]; then
-    echo -n "Updating anchors for $deploy_domain from http: to https: ... "
+    printf "Updating anchors for %s from http: to https: ... " "$deploy_domain"
     find . -type f -name '*.html' -print0 | xargs -0 sed "${sed_options[@]}" "${sed_subs1[@]}"
     find . -type f -name '*.html' -print0 | xargs -0 sed "${sed_options[@]}" "${sed_subs2[@]}"
     echo "Done."
   fi
 
-  cd "$mirror_dir" || { echo "Unable to enter $mirror_dir."; echo "Aborting."; exit; }
+  cd "$mirror_dir" || { printf "Unable to enter %s.\nAborting.\n" "$mirror_dir"; exit; }
 }
 
 add_extras() {
   # For archival, copy subs files into the respective Wget mirror directory
   extras_src="$script_dir/$extras_dir/$hostport"
   extras_dest="$working_mirror_dir"
-  echo -n "Copying additional files from $extras_src to the static mirror (for distribution) ... "
+  printf "Copying additional files from %s to %s, the static mirror (for distribution) ... " "$extras_src" "$extras_dest"
 
   # Create necessary directories
   if [ ! -d "$extras_src" ]; then
@@ -811,13 +811,12 @@ add_extras() {
     fi
   fi
 
-  extras_dest="$working_mirror_dir/"
   [ "$rvol" != "" ] && rsync_options+=("$rvol")
   error_set +e
 
   # First, try with rsync, otherwise use cp, to make the copy
   if ! rsync "${rsync_options[@]}" "$extras_src/" "$extras_dest"; then
-    echo -n "$msg_error: there was a problem running rsync.  Using 'cp' command ... "
+    printf "%s: there was a problem running rsync.  Using 'cp' command ... " "$msg_error"
     cp -r "$extras_src/." "$extras_dest/." || { printf "%s: copy failed.\n" "$msg_error"; return; }
   fi
   error_set -e
@@ -825,11 +824,11 @@ add_extras() {
 }
 
 clean_mirror() {
-  cd "$working_mirror_dir" || { echo "Unable to enter $working_mirror_dir."; echo "Aborting."; exit; }
+  cd "$working_mirror_dir" || { printf "Unable to enter %s.\nAborting.\n" "$working_mirror_dir"; exit; }
 
   # reconstruct the canonical URL and replace index.html, the default output from Wget
   url_base_deploy="$protocol://$deploy_domain"
-  echo -n "Updating canonical URLs in document headers ... "
+  printf "Updating canonical URLs in document headers ... "
   while IFS= read -r -d '' opt
   do
     url_canonical="${opt/\./${url_base_deploy}}"
@@ -850,7 +849,7 @@ clean_mirror() {
     if ! cmd_check "$htmltidy_cmd" "1"; then
       printf "Unable to run HTML Tidy (htmltidy_cmd is set to %s) - please check that it is installed according to instructions at https://www.html-tidy.org/. Skipping.\n" "$htmltidy_cmd";
     else
-      echo -n "Running HTML Tidy on html files with options ${htmltidy_options[*]} ... "
+      printf "Running HTML Tidy on html files with options %s ... " "${htmltidy_options[*]}"
       htmltidy_options+=(-f "$html_errors_file")
       while IFS= read -r -d '' fname
       do
@@ -889,7 +888,7 @@ clean_mirror() {
     robots_path="$mirror_dir/$mirror_archive_dir/$hostport/robots.txt"
     touch "$robots_path"
     echo "$robots_default" > "$robots_path"
-    echo $'\n'"Sitemap: https://$deploy_domain/$sitemap_file"$'\n'>> "$robots_path"
+    printf "\nSitemap: https://$deploy_domain/$sitemap_file\n" >> "$robots_path"
   fi
 
   # create sitemap, where necessary
@@ -917,7 +916,7 @@ clean_mirror() {
   echo "Created a sitemap file at $sitemap_path"
 
   # Wrap lines that end in '='
-  echo -n "Wrap lines that end in '=' ... "
+  printf "Wrap lines that end in '=' ... "
   sed_subs=(-e ':a' -e 'N' -e '$!ba' -e 's/=[\r\n][\r\n]*[[:space:]]*/=/g')
   find . -type f -name "*.html" -exec sed "${sed_options[@]}" "${sed_subs[@]}" {} +
   # and ensure that the title is on one line
@@ -925,7 +924,7 @@ clean_mirror() {
   find . -type f -name "*.html" -exec sed "${sed_options[@]}" "${sed_subs[@]}" {} +
   echo "Done."
   
-  cd "$mirror_dir" || { echo "Unable to enter $mirror_dir."; echo "Aborting."; exit; }
+  cd "$mirror_dir" || { printf "Unable to enter %s.\nAborting.\n" "$mirror_dir"; exit; }
 }
 
 process_snippets() {
@@ -965,12 +964,12 @@ process_snippets() {
     do
       # Look for opening tag for $localsite_name
       if [ "${line:0:1}" = "<" ] && [ "${line:1:1}" != "/" ]; then
-        tag=$(env echo "$line" | awk -F '[<>]' '{print $2}')
+        tag=$(printf "%s\n" "$line" | awk -F '[<>]' '{print $2}')
         [ "$tag" = "$local_sitename" ] && read_data=true
         continue
       # Look for closing tag and exit loop
       elif [ "${line:1:1}" = "/" ]; then
-        tag=$(env echo "$line" | awk -F '[/<>]' '{print $3}')
+        tag=$(printf "%s\n" "$line" | awk -F '[/<>]' '{print $3}')
         read_data=false
         [ "$tag" = "$local_sitename" ] && break
       # Read data
@@ -998,7 +997,7 @@ process_snippets() {
           id_num=$(printf "%0*d" 3 "$i")
           snippet_id="SNIPPET"$id_num
           echo "$snippet_id" "1"
-          snippet_file_id=$(env echo "$snippet_id" | tr '[:upper:]' '[:lower:]')
+          snippet_file_id=$(printf "%s" "$snippet_id" | tr '[:upper:]' '[:lower:]')
           snippet_file=$snippets_dir'/'$snippet_file_id'.html'
           start='<!--'$snippet_id'BEGIN'
           end='<!--'$snippet_id'END'
@@ -1025,14 +1024,14 @@ process_snippets() {
     dest="$working_mirror_dir"
     echo "Copying from: $snippets_src" "1"
     echo "To: $dest" "1"
-    cp -r "$snippets_src/." "$dest/." || { echo "."; echo "$msg_error: Unable to copy the snippets to the mirror."; }
+    cp -r "$snippets_src/." "$dest/." || { printf ".\n%s: Unable to copy the snippets to the mirror.\n" "$msg_error"; }
   fi
 
   cd "$script_dir" || echo "$msg_warning: cannot change directory to $script_dir."
 }
 
 create_zip() {
-  cd "$mirror_dir" || { echo "$msg_error: Unable to enter directory $mirror_dir."; echo "Skipping the creation of the zip file."; return; }
+  cd "$mirror_dir" || { printf "%s: Unable to enter directory %s.\nSkipping the creation of the zip file.\n" "$msg_error" "$mirror_dir"; return; }
   echo "Creating a ZIP archive ... "
   if [ -f "$zip_archive" ]; then
     zip_backup="$zip_archive.backup"
@@ -1079,10 +1078,10 @@ prep_rsync() {
 }
 
 deploy() {
-  cd "$working_mirror_dir" || { echo "Unable to enter $working_mirror_dir."; echo "Aborting."; exit; }
+  cd "$working_mirror_dir" || { printf "Unable to enter %s.\nAborting.\n" "$working_mirror_dir"; exit; }
 
   # Final tweaks for canonical URL links ahead of deployment
-  echo -n "Updating internal anchors to conform with canonical URLs ... "
+  printf "Updating internal anchors to conform with canonical URLs ... "
   [ "$a_href_tail" = "" ] && a_href_tail="\/"
   if [ "$a_href_tail" = "html" ] || [ "$a_href_tail" = "index.html" ]; then
     a_href_tail="\/index.html"
@@ -1149,7 +1148,7 @@ deploy() {
   # First, try with rsync
   [ "$rvol" != "" ] && rsync_options+=("$rvol")
   if ! rsync "${rsync_options[@]}" "${rsync_src[@]}" "${rsync_dest[@]}"; then
-    echo -n "$msg_error: there was a problem running rsync"
+    printf "%s: there was a problem running rsync" "$msg_error"
 
     # Use cp as a fallback for local
     if [ "$deploy_remote" != "yes" ]; then
@@ -1175,7 +1174,7 @@ deploy() {
 }
 
 conclude() {
-  echo -n "Completed in "; stopclock SECONDS
+  printf "Completed in "; stopclock SECONDS
   echo "$msg_done"
   echo "Thank you for using MakeStaticSite, free software released under the $mss_license.  The latest version is available from $mss_download."
   echo
