@@ -17,67 +17,13 @@
 # with MakeStaticSite. If not, see <https://www.gnu.org/licenses/>.
 #
 ##########################################################################
-#
-# Override built-in echo and also write to log file
-# This takes an optional priority parameter (number) to constrain output, 
-# stored in echo_num:
-#  0 (liberal)    - echo unless level is silent
-#  1 (normal)     - echo normally 
-#  2 (restricted) - echo only for full logging (this priority is meant for 
-#                   internal processing)
-#
 
-echo() {
-  echo_num=
-  temp_IFS="$IFS"; IFS="|"
-  params=("$@")
-  if [ -z ${1+x} ]; then
-    echo_txt=
-  elif [ "$1" = "-e" ] || [ "$1" = "-n" ]; then
-    echo_opt="$1"
-    echo_txt="$2"
-    if [ -n "${3+x}" ]; then
-      echo_num="$3"
-    fi
-  else
-    echo_opt=
-    echo_txt="$1"
-    if [ -n "${2+x}" ]; then
-      echo_num="$2"
-    fi
-  fi
-  echo_tty="$echo_txt"
-  echo_log="$echo_txt"
-  # Now remove the priority parameter (if supplied)
-  if [ "$#" = "3" ] || { [ "$#" = "2" ] && [ "$echo_opt" = "" ]; }; then
-    unset "params["${#params[@]}-1"]"
-  fi
-
-  if [ "$echo_num" = "0" ]; then
-  # For priority 0, don't echo anything to terminal when level is silent
-    if [ "$output_level" = "silent" ]; then
-      echo_tty=""
-    fi
-  elif [ "$echo_num" = "1" ]; then
-    # For priority 1, don't echo anything unless runtime level is normal or verbose
-    if [ "$output_level" != "normal" ] && [ "$output_level" != "verbose" ]; then
-      echo_tty=""
-    fi;
-  elif [ "$echo_num" = "2" ]; then
-    # For priority 2, log only when verbose
-    if [ "$log_level" != "verbose" ]; then
-      echo_log=""
-    fi
-  fi
-  if [ "$echo_tty" != "" ] || [ "$echo_num" = "2" ]; then
-    env echo "${params[@]}"
-  fi
-  if [ "$echo_log" != "" ] && [ "$log_level" != "silent" ]; then
-    env echo "${params[@]}" >> "$log_file"
-  fi
-
-  IFS="$temp_IFS"
-}
+if [ "$trap_errors" = "yes" ]; then
+# Stop the script if any command [in a pipeline] fails, variable unset; 
+# then report 'system error'.  Also disable globbing
+  trap 'if [ "$?" != "0" ]; then env echo "An unexpected system error occurred in function ${FUNCNAME} called from line $BASH_LINENO.  Aborting."; fi' EXIT
+  set -euf -o pipefail
+fi
 
 error_set() {
   if [ "$trap_errors" = "yes" ]; then
@@ -88,18 +34,94 @@ error_set() {
 # Assume that any option that starts with 'n' or 'N' is a 'no', otherwise 'yes'
 yesno() {
   if [ "${1:0:1}" = "n" ] || [ "${1:0:1}" = "N" ]; then
-    env echo "no"
+    printf "no"
   else
-    env echo "yes"
+    printf "yes"
   fi
 }
 
 pluralize() {
   if [ "$1" != "1" ]; then
-    env echo "s"
+    printf "s"
   else
-    env echo
+    printf
   fi
+}
+
+colorize() {
+  case "$1" in
+    black)
+      printf "%s" $(tput setaf 0)
+      ;;
+    red)
+      printf "%s" $(tput setaf 1)
+      ;;
+    green)
+      printf "%s" $(tput setaf 2)
+      ;;
+    yellow)
+      printf "%s" $(tput setaf 3)
+      ;;
+    blue)
+      printf "%s" $(tput setaf 4)
+      ;;
+    magenta)
+      printf "%s" $(tput setaf 5)
+      ;;
+    cyan)
+      printf "%s" $(tput setaf 6)
+      ;;
+    white)
+      printf "%s" $(tput setaf 7)
+      ;;
+    amber)
+      printf "%s" $(tput setaf 130)
+      ;;
+    paleblue)
+      printf "%s" $(tput setaf 153)
+      ;;
+    lime)
+      printf "%s" $(tput setaf 190)
+      ;;
+    reset)
+      printf "%s" $(tput sgr0)
+      ;;
+  esac
+}
+
+get_inks(){
+  colour_reset=$(colorize "reset")
+  colour_error=$(colorize $ink_error)
+  colour_warning=$(colorize $ink_warning)
+  colour_ok=$(colorize $ink_ok)
+  colour_info=$(colorize $ink_info)
+  # message constants
+  msg_info=${colour_info}INFO${colour_reset}
+  msg_error=${colour_error}ERROR${colour_reset}
+  msg_warning=${colour_warning}WARNING${colour_reset}
+  msg_ok=${colour_ok}OK${colour_reset}
+}
+
+msg_ink() {
+  # expects two parameters: message type and string
+  # (info/error/warning/ok)
+
+  case "$1" in
+    ok)
+      printf "%s%s%s" "$colour_ok" "$2" "$colour_reset"
+      ;;
+    info)
+      printf "%s%s%s" "$colour_info" "$2" "$colour_reset"
+      ;;
+    warning)
+      printf "%s%s%s" "$colour_warning" "$2" "$colour_reset"
+      ;;
+    error)
+      printf "%s%s%s" "$colour_error" "$2" "$colour_reset"
+      ;;
+    *)
+      ;;
+  esac
 }
 
 whichos() {
@@ -142,7 +164,7 @@ get_phase_desc() {
     var=$(expr "$opt" : '\([^=]*\)')              # Everything up to '='
     phase_desc=$(expr "$opt" : '[^=]*.\(.*\)')    # Everything after '='
     if [ "$var" = "$1" ];then
-      env echo "$phase_desc"; return
+      printf "$phase_desc"; return
     fi
   done
 }
@@ -274,7 +296,7 @@ sitemap_header() {
 
 EOT
 
-  echo "$sitemap_contents"
+  printf "$sitemap_contents\n"
 }
 
 # stopclock receives one parameter (number of seconds)
@@ -283,18 +305,18 @@ stopclock() {
   timer_seconds=$1
   (( hrs=timer_seconds/3600, mins=(timer_seconds%3600)/60, secs=(timer_seconds%3600)%60 ))
   hour_s=$(pluralize $hrs); min_s=$(pluralize $mins); sec_s=$(pluralize $secs);
-  (( hrs > 0 )) && echo -n "$hrs hour$hour_s"
+  (( hrs > 0 )) && printf "%s" "$hrs hour$hour_s"
   if (( mins > 0 )); then
     if (( hrs > 0 )); then
-      (( secs > 0 )) && echo -n ", " || echo -n " and "
+      (( secs > 0 )) && printf ", " || printf " and "
     fi
-    echo -n "$mins minute$min_s"
+    printf "%s" "$mins minute$min_s"
   fi
   if (( secs > 0 )); then
     if (( hrs > 0 )) || (( mins > 0 )); then
-      echo -n " and "
+      printf " and "
     fi
-    echo -n "$secs second$sec_s"
+    printf "%s""$secs second$sec_s"
   fi
   (( timer_seconds == 0 )) && echo "no time at all!" || echo "."
 }

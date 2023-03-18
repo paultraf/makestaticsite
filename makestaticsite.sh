@@ -33,6 +33,8 @@ source "lib/config.sh";    # load the config functions library
 
 main() {
   # Phase 0: Initialisation
+  ((max_phase_num=${#all_phases[@]}-1)) # Number of phases minus one
+  get_inks
   whichos
   initialise_layout
   read_config "$@"
@@ -108,7 +110,7 @@ initialise_layout() {
                                           # using this data file where each row is
                                           # path_to_html_file:<list of snippet ids>
 
-  msg_done=$'All done!\n'
+  lib_files="lib/files"                   # library files (defaults/templates) directory
 
   if [ "$log_level" = "silent" ]; then
     exec 2>/dev/null
@@ -122,6 +124,66 @@ initialise_layout() {
   fi
 
   return 0
+}
+
+# Override built-in echo and also write to log file
+# This takes an optional priority parameter (number) to constrain output, 
+# stored in echo_num:
+#  0 (liberal)    - echo unless level is silent
+#  1 (normal)     - echo normally 
+#  2 (restricted) - echo only for full logging (this priority is meant for 
+#                   internal processing)
+#
+echo() {
+  echo_num=
+  temp_IFS="$IFS"; IFS="|"
+  params=("$@")
+  if [ -z ${1+x} ]; then
+    echo_txt=
+  elif [ "$1" = "-e" ] || [ "$1" = "-n" ]; then
+    echo_opt="$1"
+    echo_txt="$2"
+    if [ -n "${3+x}" ]; then
+      echo_num="$3"
+    fi
+  else
+    echo_opt=
+    echo_txt="$1"
+    if [ -n "${2+x}" ]; then
+      echo_num="$2"
+    fi
+  fi
+  echo_tty="$echo_txt"
+  echo_log="$echo_txt"
+  # Now remove the priority parameter (if supplied)
+  if [ "$#" = "3" ] || { [ "$#" = "2" ] && [ "$echo_opt" = "" ]; }; then
+    unset "params["${#params[@]}-1"]"
+  fi
+
+  if [ "$echo_num" = "0" ]; then
+  # For priority 0, don't echo anything to terminal when level is silent
+    if [ "$output_level" = "silent" ]; then
+      echo_tty=""
+    fi
+  elif [ "$echo_num" = "1" ]; then
+    # For priority 1, don't echo anything unless runtime level is normal or verbose
+    if [ "$output_level" != "normal" ] && [ "$output_level" != "verbose" ]; then
+      echo_tty=""
+    fi;
+  elif [ "$echo_num" = "2" ]; then
+    # For priority 2, log only when verbose
+    if [ "$log_level" != "verbose" ]; then
+      echo_log=""
+    fi
+  fi
+  if [ "$echo_tty" != "" ] || [ "$echo_num" = "2" ]; then
+    env echo "${params[@]}"
+  fi
+  if [ "$echo_log" != "" ] && [ "$log_level" != "silent" ]; then
+    env echo "${params[@]}" >> "$log_file"
+  fi
+
+  IFS="$temp_IFS"
 }
 
 read_config() {
@@ -597,8 +659,6 @@ wget_mirror() {
   $wget_cmd "${wget_core_options[@]}" "${wget_extra_options[@]}" "${wget_options[@]}"
   wget_error_codes "$?"
   error_set -e
-  msg_done+="A static mirror of $url has been created in $working_mirror_dir"
-  msg_done+=$'\n'
 }
 
 # (A placeholder for) post-Wget review and analysis
@@ -886,8 +946,8 @@ clean_mirror() {
   # create robots file, where necessary
   if [ "$robots_create" = "yes" ]; then
     robots_path="$mirror_dir/$mirror_archive_dir/$hostport/robots.txt"
-    touch "$robots_path"
-    echo "$robots_default" > "$robots_path"
+    robots_default="$script_dir/$lib_files/$robots_default_file"
+    cp "$robots_default" "$robots_path"
     printf "\nSitemap: https://$deploy_domain/$sitemap_file\n" >> "$robots_path"
   fi
 
@@ -1158,8 +1218,7 @@ deploy() {
       echo ". Deployment failed."
     fi
   else
-    msg_done+="The site has been deployed on $deploy_host, for web access at http[s]://$deploy_domain."
-    msg_done+=$'\n'
+    msg_deploy="The site has been deployed on $deploy_host, for web access at http[s]://$deploy_domain."
   fi
 
   if [ "$toggle_flag" = "1" ]; then
@@ -1175,8 +1234,12 @@ deploy() {
 
 conclude() {
   printf "Completed in "; stopclock SECONDS
-  echo "$msg_done"
-  echo "Thank you for using MakeStaticSite, free software released under the $mss_license.  The latest version is available from $mss_download."
+  msg_done=$(msg_ink "ok" 'All done.') 
+  printf "%s\nA static mirror of %s has been created in %s\n" "$msg_done" "$url" "$working_mirror_dir"
+  if [ ! -z ${msg_deploy+x} ]; then
+    printf "%s\n\n" "$msg_deploy"
+  fi 
+  printf "Thank you for using MakeStaticSite, free software released under the %s. The latest version is available from %s.\n" "$mss_license" "$mss_download"
   echo
 }
 

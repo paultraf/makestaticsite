@@ -22,8 +22,8 @@
 ################################################
 # MakeStaticSite info
 ################################################
-version="0.22.3"
-version_date='10 March 2023'
+version="0.23"
+version_date='18 March 2023'
 version_header="MakeStaticSite version $version, released on $version_date."
 mss_license="GNU Affero General Public License version 3"
 mss_download="https://makestaticsite.sh/download/makestaticsite_latest.tar.gz"
@@ -79,16 +79,8 @@ feed_xml="feed/index.xml"       # tail of valid feed URLs as replacement
 link_rel_canonical=yes          # include <link rel="canonical"...> tag in header (y/n)?
 link_href_tail=                 # The tail of canonical URLs, e.g. index.html or / (leave blank for /)
 a_href_tail=                    # The tail for internal links, e.g. index.html or / (leave blank for /). The value should normally match link_href_tail
-
 robots_create=yes               # Generate and overwrite robots.txt (y/n)?
-# Define main portion of the default robots.txt file contents
-# (the sitemap needs to be appended later to $url)
-read -r -d "" robots_default << EOT
-User-agent: *
-Allow: /
-
-EOT
-
+robots_default_file="robots.txt" # file name for default robots.txt (inside lib/files/), with sitemap to be appended
 sitemap_create=yes              # Generate and overwrite site map file (y/n)?
 sitemap_file="sitemap.xml"      # Name of sitemap (XML) file
 sitemap_schema="http://www.sitemaps.org/schemas/sitemap/0.9" # Site map XML schema URL
@@ -144,30 +136,24 @@ htmltidy_options=(-m -q -indent --indent-spaces 2 --gnu-emacs yes --tidy-mark no
 ################################################
 # Display settings
 ################################################
-ink_normal=$(tput sgr0)
-ink_red=$(tput setaf 1)
-ink_amber=$(tput setaf 130)     # Change this to a number less than 8 if tput colors is 8
-ink_green=$(tput setaf 2)
-msg_error=${ink_red}ERROR${ink_normal}
-msg_warning=${ink_amber}WARNING${ink_normal}
-msg_ok=${ink_green}OK${ink_normal}
-
+# Ink colours supported on all displays, using standard labels:
+# black, red, green, yellow, blue, magenta, cyan, white
+# A few additional colours that need 256-colour support, with custom labels:
+# amber, lime, paleblue
+ink_error=red
+ink_warning=amber
+ink_ok=green
+ink_info=lime
 
 ################################################
 # Other runtime settings
 ################################################
 timezone=local                  # Time zone: local|utc|utclocal
 output_level=quiet              # stdout verbosity - silent|quiet|normal|verbose
-log_level=verbose                # Log level: silent|quiet|normal|verbose
+log_level=verbose               # Log level: silent|quiet|normal|verbose
 log_filename=makestaticsite.log # Name of MakeStaticSite log file
 trap_errors=no                  # Trap errors with immediate script termination (yes/no)
-if [ "$trap_errors" = "yes" ]; then
-# Stop the script if any command [in a pipeline] fails, variable unset; 
-# then report 'system error'.  Also disable globbing
-  trap 'if [ "$?" != "0" ]; then env echo "An unexpected system error occurred in function ${FUNCNAME} called from line $BASH_LINENO.  Aborting."; fi' EXIT
-  set -euf -o pipefail
-fi
-run_unattended=yes               # Is MSS running unattended (yes/no)?
+run_unattended=yes              # Is MSS running unattended (yes/no)?
 extras_dir=extras               # Name of folder containing all the additions
 force_ssl=yes                   # Convert anchors to deployment domain to https (yes/no)
 force_domains=yes               # Auto replace domain with deploy_domain (yes/no)
@@ -193,8 +179,6 @@ all_phases=(
 "8=Create offline zip"
 "9=Deploy"
 )
-
-((max_phase_num=${#all_phases[@]}-1))              # Number of phases minus one
 
 
 ################################################
@@ -237,7 +221,7 @@ input_urls_file__desc='Name of Wget input file for custom crawl URLs'
 input_urls_file__info='If your WordPress site makes use of custom CSS or JavaScript, list their URLs in this file so that Wget can capture them.  Otherwise leave empty.'
 
 wget_extra_urls=y
-wget_extra_urls__desc='Use Wget to retrieve additional assets from domain (y/n)?'
+wget_extra_urls__desc='Use Wget to retrieve additional assets from the domain (y/n)?'
 wget_extra_urls__info="This option will attempt to retrieve further assets by searching each downloaded file for further URLs and then re-running Wget, using the same options except that existing files will not be overwritten (no clobber)."
 
 wget_post_processing=y

@@ -93,7 +93,7 @@ wp_clean() {
     if ! wp option get perform_common "$wp_location" &> /dev/null; then
       echo "Unable to check the status of wp_option setting: perform_common"
     else
-      echo "Checking WordPress settings to remove query strings and shortlinks"
+      echo "Checking WordPress settings to remove query strings and shortlinks ... "
 
       # Check whether the wp_options have been set (need to create nested array)
       perform_common_value=$(wp option get perform_common --format=json "$wp_location")

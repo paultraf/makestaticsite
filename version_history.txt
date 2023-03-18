@@ -19,6 +19,35 @@
 ##########################################################################
 
 
+0.23 (released on 2023-03-18)
+     * Refactoring based on the removal of processing from constants.sh *
+     [lib/constants.sh]
+      Added array allOptions_deps to store the control flow logic for
+      excluding options during setup.
+      Fixed inadvertent newline between definitions of ip4re and ip6re
+      Removed all processing from constants.sh (to general.sh)
+      Added file lib/files/robots.txt as a default template
+      Display settings: just define colours (inks) for message types
+      removed trap_error condition and max_phase_num calculation
+     [lib/general.sh]
+      Added functions colorize() and msg_ink() to define message colours
+      Added functions get_inks() to replace code in constants.sh
+      Moved echo() to makestaticsite.sh, as it's only used there
+     [setup.sh]
+      Inserted lib/general.sh as a source library and a call to get_inks()
+      get_configfile(): Enabled support for command-line option for output file
+      read_option(): replaced case statement for handling option exclusions
+      with loop over allOptions_deps. 
+      Replaced all but trivial echo statements with printf.
+     [makestaticsite.sh]
+      Moved definition of max_phase_num from constants.sh
+      Moved custom echo() function from general.sh
+      robots.txt file now generated using template file
+      Bug fix for cross-platform support of cp command on directories:
+      in add_extras(), process_snippets() and deploy() when using cp command,
+      appended '/.' to source and destination directories to support BSD and GNU.
+      Replaced instances of echo with printf to improve code reliability
+
 0.22.3 (released on 2023-03-10)
        * Wget error handling and maintenance *
        [lib/constants.sh]

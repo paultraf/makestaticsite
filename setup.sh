@@ -21,11 +21,13 @@
 ##########################################################################
 
 source "lib/constants.sh"  # load constants, particularly runtime options
+source "lib/general.sh"    # load general functions library
 source "lib/validate.sh"   # load the validation library functions
 
 main() {
   # Step 0: Initialisation
   get_configfile "$@"
+  get_inks
   print_welcome
   init_mssconfig
 
@@ -44,10 +46,6 @@ main() {
 ################################################
 #              Support functions
 ################################################
-
-which_version() {
-  "$1" --version | grep "$2" | grep -o -m 1 -- "[0-9]\{1,2\}\.[0-9]\{1,2\}\(\.[0-9]\{1,2\}\)*[ \-]" | head -1 | tr -d '[:space:]-'
-}
 
 print_welcome() {
   printf "Welcome to MakeStaticSite for the generation and deployment of static websites.  This is free software released under the %s, the latest version being available from %s.\n\n" "$mss_license" "${mss_download}"
@@ -127,7 +125,7 @@ read_option() {
     info)
       opt_info="$val"
       if [ "$opt_info" != "" ]; then
-        printf "%s: %s\n" "$optvar" "$opt_info"
+        printf "%s: %s\n" $(msg_ink "info" "$optvar") "$opt_info"
       fi
       if [ "$BASH_VERSION" -ge "4" ]; then
         if [ -n "${opt_default+x}" ] && [ "$opt_default" != "" ]; then
