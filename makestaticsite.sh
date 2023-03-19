@@ -955,7 +955,7 @@ clean_mirror() {
   if [ "$sitemap_create" = "yes" ]; then
     sitemap_path="$mirror_dir/$mirror_archive_dir/$hostport/sitemap.xml"
     touch "$sitemap_path"
-    sitemap_content="$(sitemap_header)";
+    sitemap_content="$(sitemap_header)"$'\n';
     sitemap_loc_files=()
     while IFS='' read -r line; do sitemap_loc_files+=("$line"); done < <(find . -type f -name "*.html")
 
@@ -1233,7 +1233,8 @@ deploy() {
 }
 
 conclude() {
-  printf "Completed in "; stopclock SECONDS
+  printf "Completed in "
+  stopclock SECONDS
   msg_done=$(msg_ink "ok" 'All done.') 
   printf "%s\nA static mirror of %s has been created in %s\n" "$msg_done" "$url" "$working_mirror_dir"
   if [ ! -z ${msg_deploy+x} ]; then

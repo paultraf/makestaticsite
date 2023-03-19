@@ -296,7 +296,7 @@ sitemap_header() {
 
 EOT
 
-  printf "$sitemap_contents\n"
+  printf "%s\n" "$sitemap_contents"
 }
 
 # stopclock receives one parameter (number of seconds)

@@ -51,7 +51,7 @@ tab="  "                        # tab spacing for file outputs
 # input file names for Wget (phase 1 and 2 respectively)
 wget_cmd=wget                   # [Path to] wget binary
 wget_version_atleast="1.21"
-wget_error_level=6              # The lowest Wget error code tolerated else aborts (>8 for no tolerance)
+wget_error_level=6              # The lowest Wget error code tolerated or else aborts (>8 for no tolerance)
 wget_user_agent= # set browser user agent (empty for default), wrapped in quotes, e.g. "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15)"
 wget_cookies="cookies.txt"      # name of cookies file
 wget_inputs_main="wget_inputs_main.txt"
@@ -214,7 +214,7 @@ ssl_checks__info="If you trust the SSL certificate of the site for which you are
 
 wget_extra_options="-X/wp-json,/wp-admin --reject xmlrpc*"
 wget_extra_options__desc='Additional command line options for Wget'
-wget_extra_options__info="Wget will be run with the following options as standard: --mirror --convert-links --adjust-extension --no-check-certificate."$'\n'"You may add further options here, e.g., to supply http credentials: --user username --password password; to specify path to a certificate file: --ca-certificate={cert_file_path}; to exclude WordPress JSON directory: -X /wp-json; to exclude index files with query strings, --reject 'index.html?*'; to limit the download rate (N kilobytes/sec): -Nk"$'\n'"Otherwise leave empty."
+wget_extra_options__info="Wget will be run with the following options as standard: --mirror --convert-links --adjust-extension --no-check-certificate."$'\n'"You may add further options here, e.g., to supply http credentials: --user username --password password; to specify path to a certificate file: --ca-certificate={cert_file_path}; to exclude WordPress JSON directory: -X /wp-json; to exclude index files with query strings, --reject 'index.html?*'; to limit the download rate (N kilobytes/sec): --limit-rate=Nk"$'\n'"Otherwise leave empty."
 
 input_urls_file=''
 input_urls_file__desc='Name of Wget input file for custom crawl URLs'
