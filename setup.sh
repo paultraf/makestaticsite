@@ -238,6 +238,8 @@ write_config() {
       confirm=${confirm:0:1}
       if [ "$confirm" = "y" ] || [ "$confirm" = "Y" ]; then
         status='1'
+      else
+        cfgfile= 
       fi
     else
       status='1'
@@ -245,7 +247,7 @@ write_config() {
   done
   if [ "$status" = "1" ]; then
     printf "Writing configuration options to: %s ... " "$write_file"
-    printf "%s" "$content\n" > "$write_file" || { printf "\n%s: Unable to write the configuration file.\nAborting.\n" "$msg_error"; exit; }
+    printf "%s\n" "$content" > "$write_file" || { printf "\n%s: Unable to write the configuration file.\nAborting.\n" "$msg_error"; exit; }
     printf "Done.\n";
 
     # copy to default.cfg if it doesn't already exist
