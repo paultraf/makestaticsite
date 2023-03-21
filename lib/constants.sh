@@ -212,13 +212,13 @@ ssl_checks=n
 ssl_checks__desc='Validate certificate in encrypted (SSL/TLS) connections (y/n)?'
 ssl_checks__info="If you trust the SSL certificate of the site for which you are making a static version, then enter 'n'.  Otherwise, enter 'y' and store the certificate on your file system in PEM format.  Then either enter --ca_certificate={the_cert_file_path} in .wgetrc or --ca-certificate={the_cert_file_path} in wget_extra_options below."
 
-wget_extra_options="-X/wp-json,/wp-admin --reject xmlrpc*"
+wget_extra_options="-X/wp-json,/wp-admin --reject xmlrpc*,'index.html?'*"
 wget_extra_options__desc='Additional command line options for Wget'
-wget_extra_options__info="Wget will be run with the following options as standard: --mirror --convert-links --adjust-extension --no-check-certificate."$'\n'"You may add further options here, e.g., to supply http credentials: --user username --password password; to specify path to a certificate file: --ca-certificate={cert_file_path}; to exclude WordPress JSON directory: -X /wp-json; to exclude index files with query strings, --reject 'index.html?*'; to limit the download rate (N kilobytes/sec): --limit-rate=Nk"$'\n'"Otherwise leave empty."
+wget_extra_options__info="Wget will be run with the following options as standard: --mirror --convert-links --adjust-extension --no-check-certificate.  You may add further options here, e.g., to supply http credentials: --user username --password password; to specify path to a certificate file: --ca-certificate={cert_file_path}; to exclude WordPress JSON directory: -X /wp-json; to exclude index files with query strings, --reject 'index.html?*'; to limit the download rate (N kilobytes/sec): --limit-rate=Nk. Otherwise leave empty."
 
 input_urls_file=''
 input_urls_file__desc='Name of Wget input file for custom crawl URLs'
-input_urls_file__info='If your WordPress site makes use of custom CSS or JavaScript, list their URLs in this file so that Wget can capture them.  Otherwise leave empty.'
+input_urls_file__info='If your site makes use of custom CSS or JavaScript, list their URLs in this file so that Wget can capture them.  Otherwise leave empty.'
 
 wget_extra_urls=y
 wget_extra_urls__desc='Use Wget to retrieve additional assets from the domain (y/n)?'
