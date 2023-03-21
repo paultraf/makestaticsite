@@ -19,6 +19,23 @@
 ##########################################################################
 
 
+0.23.1 (released on 2023-03-21)
+       * Maintenance *
+       [setup.sh]
+        Bug fix: Removed superfluous \n written to .cfg file,
+        introduced in switch from echo to printf
+        Bug fix: allowed to write to another file when not overwriting existing file. 
+       [lib/constants.sh]
+        Replaced $'\n' with spaces.
+        Added 'index.html?'* to list of Wget rejection expressions
+        Changing a few text descriptions
+       [lib/files/robots.txt]
+        Removed erroneous text left inadvertently after test
+       [lib/general.sh]
+        Stylistic correction to use of printf
+       [makestaticsite.sh]
+        Minor tweaks on output (adding newlines)
+  
 0.23 (released on 2023-03-18)
      * Refactoring based on the removal of processing from constants.sh *
      [lib/constants.sh]
