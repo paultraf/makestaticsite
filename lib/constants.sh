@@ -22,11 +22,17 @@
 ################################################
 # MakeStaticSite info
 ################################################
-version="0.23.1"
-version_date='21 March 2023'
+version="0.24"
+version_date='31 March 2023'
 version_header="MakeStaticSite version $version, released on $version_date."
 mss_license="GNU Affero General Public License version 3"
 mss_download="https://makestaticsite.sh/download/makestaticsite_latest.tar.gz"
+
+
+################################################
+# Setup-specific settings
+################################################
+max_setup_level=2               # maximum runtime level for setup (starts at 0)
 
 
 ################################################
@@ -190,6 +196,8 @@ all_phases=(
 # default value, description, info
 # The user can change only the first.
 
+allOptions_yesno=( y n yes no Y N YES NO )
+
 allOptions=(
 
 url='https://example.com/'
@@ -212,7 +220,7 @@ ssl_checks=n
 ssl_checks__desc='Validate certificate in encrypted (SSL/TLS) connections (y/n)?'
 ssl_checks__info="If you trust the SSL certificate of the site for which you are making a static version, then enter 'n'.  Otherwise, enter 'y' and store the certificate on your file system in PEM format.  Then either enter --ca_certificate={the_cert_file_path} in .wgetrc or --ca-certificate={the_cert_file_path} in wget_extra_options below."
 
-wget_extra_options="-X/wp-json,/wp-admin --reject xmlrpc*,'index.html?'*"
+wget_extra_options="-X/wp-json,/wp-admin --reject xmlrpc*,'index.html?'* --limit-rate=500k"
 wget_extra_options__desc='Additional command line options for Wget'
 wget_extra_options__info="Wget will be run with the following options as standard: --mirror --convert-links --adjust-extension --no-check-certificate.  You may add further options here, e.g., to supply http credentials: --user username --password password; to specify path to a certificate file: --ca-certificate={cert_file_path}; to exclude WordPress JSON directory: -X /wp-json; to exclude index files with query strings, --reject 'index.html?*'; to limit the download rate (N kilobytes/sec): --limit-rate=Nk. Otherwise leave empty."
 
@@ -286,13 +294,13 @@ upload_zip__info='If selected, a zip file of the static snapshot will be created
 
 zip_filename='website.zip'
 zip_filename__desc='Zip filename for static snapshot'
-zip_filename__info='Zip filename for static snapshot.  This can be named for specific distribution purposes.'
+zip_filename__info='The zip filename can be named for specific distribution purposes.'
 
 zip_download_folder='download'
 zip_download_folder__desc='Storage location for zip download'
 zip_download_folder__info='For WordPress, this might be wp-content/uploads'
 
-deploy=y
+deploy=n,y,y
 deploy__desc='Deploy the output on a server (y/n)?'
 deploy__info='Deployment can be on a server hosted locally, e.g. on your development machine, or remotely. Further questions will be asked to tailor your options.'
 
@@ -300,17 +308,17 @@ deploy_domain="mydomain.com"
 deploy_domain__desc="Domain name for your web site."
 deploy_domain__info="Domain name for the static web site that you are deploying, which will be used to help ensure that non-static and non-HTML elements are properly delivered.  This is usually distinct from the domain of the host server."
 
-deploy_remote=n
+deploy_remote=y
 deploy_remote__desc='Deploy to a server on a remote host (y/n)?'
 deploy_remote__info="Either indicate 'yes' for deployment on a remote server on the Internet or 'no' for a local server, e.g. on your file system or one shared with your development machine."
 
 deploy_remote_rsync=y
-deploy_remote_rsync__desc='Do you wish to deploy using rsync over ssh (y/n)?'
+deploy_remote_rsync__desc='Deploy using rsync over ssh (y/n)?'
 deploy_remote_rsync__info="Indicate 'yes' for deployment on a remote server that supports rsync over ssh."
 
 deploy_host="examplehosting.net"
-deploy_host__desc="Host (ip or domain) for deploying the static site"
-deploy_host__info="Host (ip address or domain) for deploying the static site remotely.  Leave empty for deployment on local filesystem.  This is not generally the domain name for your site (which you can enter later)."
+deploy_host__desc="Host (IP or domain) for deploying the static site"
+deploy_host__info="Host (IP address or domain) for deploying the static site remotely.  Leave empty for deployment on local filesystem.  This is not generally the domain name for your site (which you can enter later)."
 
 deploy_port=22
 deploy_port__desc='ssh port on deployment server'
@@ -334,7 +342,7 @@ deploy_netlify_name__info="Netlify site name - when first issued, the default fo
 
 htmltidy=n
 htmltidy__desc="Clean up mirror output using HTML Tidy (y/n)?"
-htmltidy__info="Option to clean up HTML output for better conformance to W3C standards along with 'pretty print' cosmetic refinement."
+htmltidy__info="HTML Tidy can clean up HTML output for better conformance to W3C standards along with 'pretty print' cosmetic refinement."
 
 add_extras=n
 add_extras__desc="Add additional files to the static output (y/n)?"
@@ -357,6 +365,9 @@ deploy_rsync="(deploy_host deploy_port deploy_user)"
 deploy_netlify="(deploy_netlify_name)"
 htmltidy="(htmltidy_cmd htmltidy_options)"
 )
+
+options_min=(url)
+options_std=(url local_sitename wp_cli site_path wp_helper_plugins add_search use_snippets upload_zip zip_filename zip_download_folder deploy deploy_domain deploy_remote deploy_remote_rsync deploy_host deploy_user deploy_path htmltidy add_extras)
 
 options_allow_empty=(wget_extra_options input_urls_file)
 options_check_cmd=(wget_cmd htmltidy_cmd)

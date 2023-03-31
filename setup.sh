@@ -27,6 +27,9 @@ source "lib/validate.sh"   # load the validation library functions
 main() {
   # Step 0: Initialisation
   get_configfile "$@"
+  if [ ! -z ${level+x} ]; then
+    validate_range 0 "$max_setup_level" "$level" || { echo "Sorry, the phase number is out of range (it should be an integer between 0 and $max_setup_level).  Please try again."; exit; }
+  fi  
   get_inks
   print_welcome
   init_mssconfig
@@ -50,7 +53,19 @@ main() {
 print_welcome() {
   printf "Welcome to MakeStaticSite for the generation and deployment of static websites.  This is free software released under the %s, the latest version being available from %s.\n\n" "$mss_license" "${mss_download}"
   printf 'This setup script will ask a few questions to help you set up a configuration file%s for a single site (the script can be run any number of times to generate configs for other sites).  For each option, its label will be displayed together with some guidance. Please enter the values accordingly.\n\n' "$cfg_string"
-  read -r -e -p "Please press Enter to start configuring ... " confirm
+  if [ ! -z ${level+x} ]; then
+    printf "The amount of questioning depends on the runtime level - 0 (minimal), 1 (standard) and 2 (advanced).  You have chosen to run this script at level %s.\n\n" "$level"
+  else
+    printf "The amount of questioning depends on the runtime level\n"
+    printf " 0 - minimal setup, suitable for sampling or archival.\n"
+    printf " 1 - standard customisation options, including basic deployment.\n"
+    printf " 2 - full customisation for fine-tuning options, including Wget parameters.\n\n"
+    while true; do
+      read -r -e -p "Please enter a level between 0 and "$max_setup_level" to start configuring: " level
+      validate_range 0 "$max_setup_level" "$level" || { printf "Sorry, the phase number is out of range (it should be an integer between 0 and %s).  Please try again.\n" "$max_setup_level"; continue; }
+      break
+    done
+  fi  
   printf "\n"
 }
 
@@ -95,8 +110,11 @@ EOF
 get_configfile() {
   cfgfile=
   cfg_string=
-  while getopts ":o:" option; do
+  while getopts ":o:l:" option; do
     case "${option}" in
+      l)
+        level="$OPTARG"
+      ;;
       o)
         cfgfile="$OPTARG.cfg";
         cfg_string=", $cfgfile,"
@@ -124,7 +142,12 @@ read_option() {
       ;;
     info)
       opt_info="$val"
-      if [ "$opt_info" != "" ]; then
+      if { [ "$level" = 0 ] && [[ ! "${options_min[*]}" =~ ${optvar} ]]; } || { [ "$level" = 1 ] && [[ ! "${options_std[*]}" =~ ${optvar} ]]; }; then
+        opt_limits=y
+      else
+        opt_limits=n
+      fi
+      if [ "$opt_info" != "" ] && [ "$opt_limits" = "n" ]; then
         printf "%s: %s\n" $(msg_ink "info" "$optvar") "$opt_info"
       fi
       if [ "$BASH_VERSION" -ge "4" ]; then
@@ -143,10 +166,17 @@ read_option() {
         fi
       fi
       if [ "${opt_desc: -1}" = "?" ]; then
-        printf "\n"
+        if [ "$opt_limits" = "n" ]; then
+          printf "\n"
+        fi
         input_line="$opt_desc $input_hint"
-        validate_input "$input_text" "$input_line" "$optvar"
-        opt_value=${input_value::1}
+        if [ "$opt_limits" = "y" ]; then
+          opt_value="$opt_default"
+          input_value="$opt_default"
+        else
+          validate_input "$input_text" "$input_line" "$optvar"
+          opt_value=${input_value::1}
+        fi
         if [ "$opt_value" = "n" ]; then
           # loop over allOptions_deps to see what further options to exclude
           for opt_dep in "${allOptions_deps[@]}"; do
@@ -158,15 +188,23 @@ read_option() {
           done
         fi
       else
-        echo
-        input_line="Please enter the value for $optvar$input_hint: "
-        validate_input "$input_text" "$input_line" "$optvar"
+        if [ "$opt_limits" = "y" ]; then
+          input_value="$opt_default"
+        else
+          echo
+          input_line="Please enter the value for $optvar$input_hint: "
+          validate_input "$input_text" "$input_line" "$optvar"
+        fi
       fi
-      echo
-
+      if [ "$opt_limits" = "n" ]; then
+        echo
+      fi
       # Print tidy output - should be able to put most # in a column
       printf -v CONFIGLINE "%-38s %s %s\n" "$optvar=$input_value" '#' "$opt_desc"
       content+="$CONFIGLINE"
+      if [ "$optvar" = "url" ]; then
+        host=$(printf "%s" "$input_value" | awk -F/ '{print $3}' | awk -F: '{print $1}')
+      fi
       ;;
     *)
       optvar="$var"
@@ -190,6 +228,23 @@ process_options() {
     fi
     if [ "$option_stem" = "" ]; then
       option_stem="$var"
+      string_count=$(grep -o ',' <<< "$val" | wc -l)
+      # enumerate the strings and check if they are all yes/no
+      if (( string_count > 0 )); then
+        is_yesno="y"
+        IFS="," read -r -a val_array <<< "$val"
+        for opt_val in "${val_array[@]}"; do 
+          # if $opt_val is not a yes or no then break
+          if [[ ! "${allOptions_yesno[*]}" =~ ${opt_val} ]]; then
+            is_yesno="n"
+            break
+          fi
+        done
+        if [ "$is_yesno" = "y" ]; then
+          # assign the default value from the array's runtime level as index
+          val=${val_array[$level]}
+        fi
+      fi
     fi
     if [ -n "${BASH_REMATCH[2]+x}" ]; then
       option_type=${BASH_REMATCH[2]}
@@ -278,6 +333,8 @@ conclude() {
       echo
     fi
     printf "To make this static site in future, run the following:\n./makestaticsite.sh -i %s\n\nThank you. Setup is complete.\n" "$cfgfile"
+  elif [ "$status" = "2" ]; then
+    printf "No output written.\n\nThank you for trying the setup script. Goodbye.\n"; exit
   fi
 }
 ############### end of functions ###############
