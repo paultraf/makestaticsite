@@ -146,6 +146,11 @@ read_option() {
         opt_limits=y
       else
         opt_limits=n
+        if [ "$var" = "local_sitename__info" ]; then
+          opt_default="${host//\./_}"
+        elif [ "$var" = "zip_filename__info" ]; then
+          opt_default="${host//\./_}"'.zip'
+        fi
       fi
       if [ "$opt_info" != "" ] && [ "$opt_limits" = "n" ]; then
         printf "%s: %s\n" $(msg_ink "info" "$optvar") "$opt_info"
@@ -190,6 +195,12 @@ read_option() {
       else
         if [ "$opt_limits" = "y" ]; then
           input_value="$opt_default"
+          # generate local_sitename and zip_filename from the URL's host portion
+          if [ "$var" = "local_sitename__info" ]; then
+            input_value="${host//\./_}"
+          elif [ "$var" = "zip_filename__info" ]; then
+            input_value="${host//\./_}"'.zip'
+          fi
         else
           echo
           input_line="Please enter the value for $optvar$input_hint: "
