@@ -19,12 +19,30 @@
 ##########################################################################
 
 
+0.24 (released on 2023-03-31)
+     * Setup now supports three runtime levels (minimal, standard, advanced) *
+     [lib/constants.sh]
+      Added a section for setup-specific settings
+      Modified a few option descriptions, such as adding limit-rate for Wget
+      Modified deploy default value to a triple, for different setup levels.
+      Introduced arrays, options_min and options_std, to limit setup questions.
+     [setup.sh]
+      main(): added a check on level provided as a command-line arguments
+      print_welcome(): Inserted new section introducing three run-time levels,
+      requesting user select one of them.
+      get_configfile(): added support for option ‘l’ (level)
+      read_option(): for levels 0 and 1, constrained questions to those listed
+      in options_min and options_std respectively.
+      local_sitename and zip_filename now generated from URL's host portion.
+      process_options(): added routine to check option for yes/no tuple and
+      extract according to level
+
 0.23.1 (released on 2023-03-21)
        * Maintenance *
        [setup.sh]
         Bug fix: Removed superfluous \n written to .cfg file,
         introduced in switch from echo to printf
-        Bug fix: allowed to write to another file when not overwriting existing file. 
+        Bug fix: writing to another file when not overwriting existing file. 
        [lib/constants.sh]
         Replaced $'\n' with spaces.
         Added 'index.html?'* to list of Wget rejection expressions
@@ -35,7 +53,7 @@
         Stylistic correction to use of printf
        [makestaticsite.sh]
         Minor tweaks on output (adding newlines)
-  
+
 0.23 (released on 2023-03-18)
      * Refactoring based on the removal of processing from constants.sh *
      [lib/constants.sh]
