@@ -208,7 +208,7 @@ write_config() {
   if [ "$cfgfile" = "" ]; then 
     read -r -e -p "Do you wish to write this configuration to a file (y/n)? " confirm
     confirm=${confirm:0:1}
-    if [ "$confirm" != "y" ] && [ "$confirm" = "Y" ]; then
+    if [ "$confirm" != "y" ] && [ "$confirm" != "Y" ]; then
       status='2'
     fi
   else
@@ -248,13 +248,22 @@ write_config() {
   if [ "$status" = "1" ]; then
     printf "Writing configuration options to: %s ... " "$write_file"
     printf "%s\n" "$content" > "$write_file" || { printf "\n%s: Unable to write the configuration file.\nAborting.\n" "$msg_error"; exit; }
-    printf "Done.\n";
+    printf "Done.\n\n";
 
-    # copy to default.cfg if it doesn't already exist
+    # copy to default.cfg if it doesn't already exist else confirm whether or not to overwrite it
     default_cfg="$script_dir/config/default.cfg"
     if [ ! -f "$default_cfg" ]; then
       cp "$write_file" "$default_cfg"
       printf "Made a copy to default.cfg.  This means that you can run makestaticsite.sh without a parameter and it will load %s automatically.\n" "$cfgfile"
+    else
+      read -r -e -p "If you run makestaticsite.sh without a parameter, it will load $default_cfg automatically. Would you like to replace that file with this configuration (y/n)? " confirm
+      confirm=${confirm:0:1}
+      if [ "$confirm" = "y" ] || [ "$confirm" = "Y" ]; then
+        cp "$write_file" "$default_cfg"
+        echo "OK. Made a copy to default.cfg."
+      else
+        echo "OK. Left default.cfg alone."
+      fi
     fi
   fi
 }
