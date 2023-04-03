@@ -119,8 +119,13 @@ initialise_layout() {
   fi
 
   # If output_level is silent, then don't echo anything to the terminal
+  # and set run un_attended=yes
   if [ "$output_level" = "silent" ]; then
     exec 1>/dev/null
+    if [ "$run_unattended" = "no" ]; then
+      echo "NOTICE: run_unattended=yes (to keep terminal output silent)" 0
+    fi  
+    run_unattended=yes
   fi
 
   return 0
@@ -468,7 +473,7 @@ wget_error_codes() {
   echo "Done."
   case "$1" in
     "8")
-      printf "%s: Wget ERROR code 8, i.e. the Web server gave an error on retrieving at least one file, probably HTTP 404 (file not found - possibly specified in the input file).  Less likely is a 500 (internal server error), which in the case of a CMS might be due to a plugin or module. " "$msg_warning";
+      echo -n "$msg_warning: Wget ERROR code 8, i.e. the Web server gave an error on retrieving at least one file, probably HTTP 404 (file not found - possibly specified in the input file).  Less likely is a 500 (internal server error), which in the case of a CMS might be due to a plugin or module. ";
       local err8_msg="It should be safe to proceed, but you may like to rerun and/or review the output"
       if [ "$output_level" = "quiet" ]; then
         if [ "$log_level" != "silent" ] && [ "$log_level" != "quiet" ]; then
@@ -580,6 +585,10 @@ wget_mirror() {
   wget_robot_options=("$wget_ssl" --directory-prefix "$mirror_archive_dir/$hostport" "$url_robots")
   wget_sitemap_options=("$wget_ssl" --directory-prefix "$mirror_archive_dir/$hostport")
 
+  if [ "$wvol" != "-q" ] || [ "$output_level" = "silent" ]; then
+    wget_progress_indicator=()
+  fi
+
   if [ "$wvol" = "-q" ] && [ "$log_level" != "silent" ]; then
     wget_options+=(-a "$log_file")
     wget_login_options+=(-a "$log_file")
@@ -656,7 +665,7 @@ wget_mirror() {
     fi
   fi
 
-  $wget_cmd "${wget_core_options[@]}" "${wget_extra_options[@]}" "${wget_options[@]}"
+  $wget_cmd "${wget_core_options[@]}" "${wget_progress_indicator[@]}" "${wget_extra_options[@]}" "${wget_options[@]}"
   wget_error_codes "$?"
   error_set -e
 }
@@ -732,6 +741,10 @@ wget_extra_urls() {
 
   wget_asset_options=("$wget_ssl" --directory-prefix "$mirror_archive_dir"  --input-file="$input_file_extra")
 
+  if [ "$wvol" != "-q" ] || [ "$output_level" = "silent" ]; then
+    wget_progress_indicator=()
+  fi
+
   if [ "$wvol" = "-q" ] && [ "$log_level" != "silent" ]; then
     wget_asset_options+=(-a "$log_file")
   else
@@ -739,9 +752,8 @@ wget_extra_urls() {
   fi
 
   echo "Running Wget on these additional URLs with options: " "${wget_extra_core_options[@]}" "${wget_extra_options[@]}" "${wget_asset_options[@]}"
-
   error_set +e
-  $wget_cmd "${wget_extra_core_options[@]}" "${wget_extra_options[@]}" "${wget_asset_options[@]}"
+  $wget_cmd "${wget_extra_core_options[@]}" "${wget_progress_indicator[@]}" "${wget_extra_options[@]}" "${wget_asset_options[@]}"
   wget_error_codes "$?"
   error_set -e
 }
