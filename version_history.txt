@@ -19,6 +19,20 @@
 ##########################################################################
 
 
+0.24.1 (released on 2023-04-03)
+       * Refinement of Wget usage *
+       [lib/constants.sh]
+        Added array variable, wget_progress_indicator, a Wget progress bar
+        Changed default runtime settings for log_level and run_unattended
+        Some minor changes to text descriptions
+       [makestaticsite.sh]
+        initialise_layout(): if output_level is silent, then set 
+        run_unattended=yes.
+        wget_mirror() and wget_extra_urls(): inserted the progress bar for
+        Wget when output_level set as 'quiet'
+       [README.md]
+        Added note about three setup run levels
+
 0.24 (released on 2023-03-31)
      * Setup now supports three runtime levels (minimal, standard, advanced) *
      [lib/constants.sh]
