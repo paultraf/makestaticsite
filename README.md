@@ -46,7 +46,8 @@ Please note that the system is not designed for [Wget2](https://gitlab.com/gnuwg
 * A simple command line interface
 * Able to create static versions of a wide range of dynamic websites
 * Support for managing multiple sites, each with custom settings
-* Setup script uses an interactive dialogue to automate the generation of a configuration file
+* Setup script uses an interactive dialogue to automate the generation of a configuration file.
+* During setup, choose from three run levels to determine the amount of customisation - from minimal to advanced.
 * A phased-based workflow separating different aspects in the build process
 * Support for http basic authentication and/or CMS login (experimental, only tested with WordPress)
 * Runtime settings include verbosity (amount of information) for terminal output and logging to file
@@ -60,7 +61,7 @@ Please note that the system is not designed for [Wget2](https://gitlab.com/gnuwg
 
 * MakeStaticSite is prototype software, provided as-is and tested on only a few sites, but in the hope that it will prove useful and become community-supported
 * The system is designed for the original GNU Wget, whereas most development effort is now on GNU Wget2.
-* Supports retrieval from a single domain only.
+* Supports retrieval from a single domain only
 * It is not a good fit for sites that uses query strings extensively, as is the case for collections databases with a large inventory.  Whilst query strings are supported in the initial run of Wget, requests for URLs in the post-processing do not currently include query strings.
 * Whilst phase 3 can discover orphaned links in HTML, links generated dynamically by JavaScript are not included.
 * The script can only provide a snapshot of comments, discussions, surveys, etc. that are provided by the Website itself; the interactivity of such components is generally lost.  In this case, this kind of interactivity will need to be provided by third-parties, typically through the use of embedded JavaScript.
