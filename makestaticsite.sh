@@ -739,7 +739,7 @@ wget_extra_urls() {
   printf "%s\n" "${webassets[@]}" > "$input_file_extra"
   echo "Done."
 
-  wget_asset_options=("$wget_ssl" --directory-prefix "$mirror_archive_dir"  --input-file="$input_file_extra")
+  wget_asset_options=("$wget_ssl" --directory-prefix "$mirror_archive_dir")
 
   if [ "$wvol" != "-q" ] || [ "$output_level" = "silent" ]; then
     wget_progress_indicator=()
@@ -753,7 +753,12 @@ wget_extra_urls() {
 
   echo "Running Wget on these additional URLs with options: " "${wget_extra_core_options[@]}" "${wget_extra_options[@]}" "${wget_asset_options[@]}"
   error_set +e
-  $wget_cmd "${wget_extra_core_options[@]}" "${wget_progress_indicator[@]}" "${wget_extra_options[@]}" "${wget_asset_options[@]}"
+  if (( wget_threads > 1 )); then
+    cat "$input_file_extra" | xargs -n 1 -P $wget_threads $wget_cmd "${wget_extra_core_options[@]}" "${wget_progress_indicator[@]}" "${wget_extra_options[@]}" "${wget_asset_options[@]}"
+  else
+    wget_asset_options+=(--input-file="$input_file_extra")
+    $wget_cmd "${wget_extra_core_options[@]}" "${wget_progress_indicator[@]}" "${wget_extra_options[@]}" "${wget_asset_options[@]}"
+  fi
   wget_error_codes "$?"
   error_set -e
 }
