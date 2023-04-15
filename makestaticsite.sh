@@ -684,7 +684,7 @@ wget_extra_urls() {
   cd "$mirror_dir" || { echo "Unable to enter $mirror_dir."; echo "Aborting."; exit; }
   printf "Searching for additional URLs to retrieve with Wget (working in %s) ... " "$working_mirror_dir"
   webassets_all=()
-  while IFS='' read -r line; do webassets_all+=("$line"); done < <(grep -Eroh "$url_base/[^\"'< ]+" "$working_mirror_dir" --include "*\.html")
+  while IFS='' read -r line; do webassets_all+=("$line"); done < <(grep -Eroh "$url_base/[^\"'<) ]+" "$working_mirror_dir" --include "*\.html")
 
   # Return if empty (nothing further found)
   [ ${#webassets_all[@]} -eq 0 ] && { echo "None found. " "1"; echo "Done."; return 0; }
@@ -712,7 +712,7 @@ wget_extra_urls() {
     echo "Filter out URLs whose paths match an excluded directory (via subloop)" "1"
     # We assume that grep works as expected, but should really trap exit code 2
     exclude_dirs=$(printf "%s\n" "$wget_plus_ops"| grep -o "\-X[[:space:]]*[[:alnum:]/,\-]*" | grep -o "/.*"; exit 0)
-    temp_IFS=$IFS; IFS=","; exclude_arr=("$exclude_dirs"); IFS=$temp_IFS
+    temp_IFS=$IFS; IFS=","; read -r -a exclude_arr <<< "$exclude_dirs"; IFS=$temp_IFS
     if [ ${#exclude_arr[@]} -eq 0 ]; then
       webassets_omissions=("${webassets_nohtml[@]}")
     else
