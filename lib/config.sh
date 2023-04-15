@@ -69,8 +69,17 @@ check_config_file() {
         exit
       fi
     else
-      echo "ERROR: the configuration file was not found at config/$1.cfg"
-      echo "Please check your spelling.  To create config files, it is recommended using the setup script."
+      if [ "$mirror_id_flag" = "on" ]; then
+        echo "$msg_error: The configuration file cannot be determined from the Mirror ID (a string ending YYYYMMDD_NNNNNN is expected)."
+        if [ "$config_flag" = "on" ]; then
+          echo "Also, the configuration file that you supplied with the -i option can't be found.  Please review your command-line options."
+        else
+          echo "You can supply the config file with the -i option and re-run."
+        fi
+      else
+        echo "$msg_error: the configuration file was not found at config/$1.cfg"
+        echo "Please check your spelling.  To create config files, it is recommended using the setup script."
+      fi
       echo "Aborting."
       exit
     fi

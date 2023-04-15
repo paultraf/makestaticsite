@@ -197,6 +197,7 @@ read_config() {
   phase=0
   end_phase=$max_phase_num
   mirror_archive_dir=
+  config_flag=off # flag to denote whether or not -i option set
   mirror_id_flag=off # flag to denote whether or not -m option set
 
   local OPTIND
@@ -204,6 +205,7 @@ read_config() {
     case "${option}" in
       i)
         myconfig="${OPTARG}"
+        config_flag=on
         ;;
       m)
         mirror_archive_dir="${OPTARG}"
@@ -273,9 +275,6 @@ read_config() {
 initialise_variables() {
   myconfig=${myconfig/.cfg/}
 
-  # Check for configuration file
-  check_config_file "$myconfig"
-
   # Read phase details
   validate_range 0 "$max_phase_num" "$phase" || { echo "Sorry, the phase number is out of range (it should be between 0 and $max_phase_num).  Please try again."; exit; }
 
@@ -323,6 +322,8 @@ initialise_variables() {
     myconfig=$(printf "%s" "$mirror_archive_dir" | sed "s/20[[:digit:]]\{6\}_[[:digit:]]\{6\}$//")
   fi
 
+  # Check we now have a valid config file and display it
+  check_config_file "$myconfig"
   printf "Reading custom configuration data from config/%s ... " "$myconfig.cfg"
 
   # Define a timestamp function
