@@ -176,12 +176,15 @@ echo() {
       echo_tty=""
     fi;
   elif [ "$echo_num" = "2" ]; then
-    # For priority 2, log only when verbose
+    # For priority 2, only log and echo when verbose
     if [ "$log_level" != "verbose" ]; then
       echo_log=""
     fi
+    if [ "$output_level" != "verbose" ]; then
+      echo_tty=""
+    fi
   fi
-  if [ "$echo_tty" != "" ] || [ "$echo_num" = "2" ]; then
+  if [ "$echo_tty" != "" ]; then
     env echo "${params[@]}"
   fi
   if [ "$echo_log" != "" ] && [ "$log_level" != "silent" ]; then
@@ -402,6 +405,9 @@ initialise_variables() {
   url="$(config_get url "$myconfig")"
   url_domain=$(printf "%s\n" "$url" | awk -F/ '{print $3}' | awk -F: '{print $1}')
 
+  # additional, supported extensions and domains for stored assets
+  extra_domains="$(config_get extra_domains "$myconfig")"
+
   # For backwards-compatibility check whether URL defined instead in url_base
   if [ "$url_domain" = "example.com" ]; then
     url="$(config_get url_base "$myconfig")"
@@ -417,6 +423,9 @@ initialise_variables() {
   login_address="$url_base$login_path"
   require_login=$(yesno "$(config_get require_login "$myconfig")")
   [ "$require_login" = "yes" ] && { site_user="$(config_get site_user "$myconfig")"; site_password="$(config_get site_password "$myconfig")"; }
+
+  # Generated search prefix combining primary domain and extra domains
+  url_grep="$(assets_search_string "$url_base" "[^\"'<) ]+" "$extra_domains")"
 
   # WP-CLI (or other CMS client) options, including source (server), as appropriate
   wp_cli=$(yesno "$(config_get wp_cli "$myconfig")")
@@ -682,9 +691,19 @@ post_wget_checks() {
 # target files are not expected to change during this site generation
 wget_extra_urls() {
   cd "$mirror_dir" || { echo "Unable to enter $mirror_dir."; echo "Aborting."; exit; }
+  echo "Pruning links to assets that have query strings appended" "1"
+  accept_list=(${query_accept_list/,/ })
+  for opt in "${accept_list[@]}"; do
+ #   sed_subs=('s~\([^>]\.'"$opt"'\)?[^'\''\"]*~\1~g')
+    sed_subs=('s~\([\"'\''][^>]*\.'"$opt"'\)?[^'\''\"]*~\1~g')
+    find "$working_mirror_dir" -type f \( -name '*.html' -o -name '*.xml' -o -name '*.txt' \) -print0 | xargs -0 sed "${sed_options[@]}" "${sed_subs[@]}"
+  done  
+  echo " " "1"
+
   printf "Searching for additional URLs to retrieve with Wget (working in %s) ... " "$working_mirror_dir"
   webassets_all=()
-  while IFS='' read -r line; do webassets_all+=("$line"); done < <(grep -Eroh "$url_base/[^\"'<) ]+" "$working_mirror_dir" --include "*\.html")
+  while IFS='' read -r line; do webassets_all+=("$line"); done < <(grep -Eroh "$url_grep" "$working_mirror_dir" --include "*\.html")
+  echo "webassets_all array has ${#webassets_all[@]} elements" "2"
 
   # Return if empty (nothing further found)
   [ ${#webassets_all[@]} -eq 0 ] && { echo "None found. " "1"; echo "Done."; return 0; }
@@ -694,18 +713,33 @@ wget_extra_urls() {
   echo "Pick out unique items" "1"
   webassets_unique=()
   while IFS='' read -r line; do webassets_unique+=("$line"); done < <(for item in "${webassets_all[@]}"; do printf "%s\n" "${item}"; done | sort -u)
+  echo "webassets_unique array has ${#webassets_unique[@]} elements" "2"
 
   # Filter out all items not starting http
   echo "Filter out all items not starting http" "1"
   webassets_http=()
   while IFS='' read -r line; do webassets_http+=("$line"); done < <(for item in "${webassets_unique[@]}"; do if [ "${item:0:4}" = "http" ]; then printf "%s\n" "${item}"; else continue; fi; done)
   [ ${#webassets_http[@]} -eq 0 ] && { echo "None found. " "1"; echo "Done."; return 0; }
+  echo "webassets_http array has ${#webassets_http[@]} elements" "2"
 
   # Filter out web pages and newsfeeds (limit to non-HTML assets, such as images and JS files)
   echo "Filter out web pages and newsfeeds (limit to non-HTML assets, such as images and JS files)" "1"
   webassets_nohtml=()
-  while IFS='' read -r line; do webassets_nohtml+=("$line"); done < <(for opt in "${webassets_http[@]}"; do type=$(curl -skI "$opt" -o/dev/null -w '%{content_type}\n'); if [[ "$type" != *"text/html"* ]] && [[ "$type" != *"application/rss+xml"* ]] && [[ "$type" != *"application/atom+xml"* ]]; then printf "%s\n" "$opt"; fi; done)
+  assets_or=(${asset_extensions//,/|})
+  while IFS='' read -r line; do webassets_nohtml+=("$line"); done < <(for opt in "${webassets_http[@]}"; do
+    if [ "${asset_extensions}" != "" ]; then
+      # loop over an inclusion list of allowable extensions
+      echo $opt | grep -E "\.$assets_or" > /dev/null && printf "%s\n" "$opt";
+    else
+      type=$(curl -skI "$opt" -o/dev/null -w '%{content_type}\n')  
+      if [[ "$type" != *"text/html"* ]] && [[ "$type" != *"application/rss+xml"* ]] && [[ "$type" != *"application/atom+xml"* ]]; then
+        printf "%s\n" "$opt";
+      fi  
+    fi
+  done)
   [ ${#webassets_nohtml[@]} -eq 0 ] && { echo "None found. " "1"; echo "Done."; return 0; }
+  echo "webassets_nohtml array has ${#webassets_nohtml[@]} elements" "2"
+  
   if [ "${wget_extra_options[*]}" != "" ]; then
     url_bas="$protocol://$hostport"
     # Filter out URLs whose paths match an excluded directory (via subloop)
@@ -722,6 +756,7 @@ wget_extra_urls() {
   else
     webassets_omissions=("${webassets_nohtml[@]}")
   fi
+  echo "webassets_omissions array has ${#webassets_omissions[@]} elements" "2"
 
   # Return if empty (nothing further found)
   [ ${#webassets_omissions[@]} -eq 0 ] && { echo "None found. " "1"; echo "Done."; return 0; }
@@ -731,6 +766,7 @@ wget_extra_urls() {
   webassets=()
   while IFS='' read -r line; do webassets+=("$line"); done < <(for opt in "${webassets_omissions[@]}"; do if [[ "$opt" != *"?"* ]]; then printf "%s\n" "$opt"; else continue; fi; done)
 
+  echo "webassets array has ${#webassets[@]} elements" "2"
   # Return if empty (all those found were filtered out)
   [ ${#webassets[@]} -eq 0 ] && { echo "None suitable found. " "1"; echo "Done."; return 0; }
 
@@ -767,17 +803,25 @@ wget_extra_urls() {
 # Carry out further processing of output
 wget_postprocessing() {
   cd "$working_mirror_dir" || { printf "Unable to enter %s.\nAborting.\n" "$working_mirror_dir"; exit; }
-  printf "Carrying out post-Wget processing in %s ... " "$working_mirror_dir"
+  echo -n "Carrying out post-Wget processing in $working_mirror_dir ... " 
 
   # Convert remaining absolute paths to relative paths
   webpages=()
-  while IFS='' read -r line; do webpages+=("$line"); done < <(grep -Erl "$url_base/[^\"' ]+" . --include "*\.html")
-
+  for opt in "${url_grep[@]}"; do
+    while IFS='' read -r line; do webpages+=("$line"); done < <(grep -Erl "$opt" . --include "*\.html")
+  done
   if [ ${#webpages[@]} -eq 0 ]; then
     echo "No pages to process.  Done." "1"
     return 0
   fi
 
+  url_sed="$(assets_search_string "$url_base" "" "$extra_domains")"
+  url_sed=(${url_sed//|/ })
+  if [ "$assets_directory" != "" ]; then
+    hp_prefix="/"
+  else
+    hp_prefix=
+  fi
   for opt in "${webpages[@]}"; do
     # but don't process XML files in guise of HTML files
     if grep -q "<?xml version" "$opt"; then
@@ -788,11 +832,39 @@ wget_postprocessing() {
     for ((i=1;i<${#depth};i++)); do
       pathpref+="../";
     done
-    sed_subs1=('s~http://'"$hostport/"'~'"$pathpref"'~g' "$opt")
-    sed_subs2=('s~https://'"$hostport/"'~'"$pathpref"'~g' "$opt")
-    sed "${sed_options[@]}" "${sed_subs1[@]}"
-    sed "${sed_options[@]}" "${sed_subs2[@]}"
+    for hp in "${url_sed[@]}"; do
+      if [ "$hp" = "$url_base/" ] || [ "$extra_assets_mode" = "merge" ]; then
+        sed_subs=('s~'"$hp"'~'"$pathpref"'~g' "$opt")
+      else
+        # point to domain_directory (strip the initial http[s]:// using awk)
+        hpdomain=$(printf "%s" "$hp" | awk -F/ '{print $3}')
+        hpdomain="$assets_directory$hp_prefix$hpdomain"
+        sed_subs=('s~'"$hp"'~'"$pathpref$hpdomain/"'~g' "$opt")
+      fi  
+      sed "${sed_options[@]}" "${sed_subs[@]}"
+    done
   done
+
+  if [ "$extra_assets_mode" = "contain" ]; then
+    # Move folders
+    extra_domains_list=(${extra_domains//,/ })
+    if [ "$assets_directory" != "" ]; then
+      mirror_assets_directory="$working_mirror_dir/$assets_directory"
+      mkdir -p "$mirror_assets_directory"
+    else
+      mirror_assets_directory="$working_mirror_dir"
+    fi
+    for extra_dir in "${extra_domains_list[@]}"; do
+      echo "temp extra_dir $extra_dir"
+      echo "temp $mirror_dir/$mirror_archive_dir/$extra_dir"
+      if [ -d "$mirror_dir/$mirror_archive_dir/$extra_dir" ]; then
+        asset_move="$mirror_dir/$mirror_archive_dir/$extra_dir to $mirror_assets_directory/"
+        mv "$mirror_dir/$mirror_archive_dir/$extra_dir" "$mirror_assets_directory/" || { echo "ERROR: Unable to move $asset_move."; exit; }
+        echo "Moved $asset_move."
+      fi
+    done
+  fi
+  
   echo "Done."
 
   # Check for occurrences of $domain as distinct from $deploy_domain.
@@ -820,7 +892,7 @@ wget_postprocessing() {
       fi
       if [ "$confirm" == "y" ] || [ "$confirm" == "Y" ]; then
         sed_subs=('s~'"$domain"'~'"$deploy_domain"'~g')
-        printf "Replacing remaining occurrences of %s with %s ... " "$domain" "$deploy_domain"
+        echo -n "Replacing remaining occurrences of $domain with $deploy_domain ... "
         if [ "$ostype" = "BSD" ]; then
           find . -type f \( -name '*.html' -o -name '*.xml' -o -name '*.txt' \) -print0 | xargs -0 sed -i '' 's~'"$domain"'~'"$deploy_domain"'~g'
         else

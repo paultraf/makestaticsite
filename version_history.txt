@@ -19,6 +19,30 @@
 ##########################################################################
 
 
+0.25 (released on 2023-04-20)
+    * Added support for assets hosted on external domains *
+    [lib/constants.sh]
+     wget_extra_core_options limited to a single file (with directories)
+     Added variables to support assets from extra domains: 
+     asset_extensions,query_accept_list, extra_assets_mode, assets_directory.
+     Added extra_domains as a user option in allOptions array.
+    [lib/general.sh]
+     Added function assets_search_string() to build composite search string
+     for assets.
+    [makestaticsite.sh]
+     initialise_variables(): read and process extra domains; moved Web
+     assets search to new function in general.sh
+     wget_extra_urls(): added routine to prune links with query strings; 
+     search for additional assets extended to domains listed in extra_domains;
+     acceptance set based on asset file types and rejection of HTML files as
+     a falllback.
+     wget_postprocessing(): conversion of absolute paths to relative paths
+     extended to domains in extra_domains; added routine to move extra domain
+     output directories into the primary domain directory.
+    [setup.sh]
+     Minor text changes to clarify writing to default.cfg;
+     running at levels 2 and 3 now asks user to enter value for extra_domains.
+
 0.24.1 (released on 2023-04-03)
        * Refinement of Wget usage *
        [lib/constants.sh]

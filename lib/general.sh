@@ -195,6 +195,37 @@ wget_level_comment() {
   fi
 }
 
+
+# Build composite search string for Web assets
+# Expects three parameters: URL, path, comma-separated list of domains
+assets_search_string() {
+  local url="$1"
+  local path="$2"
+  local url_path="$url/$path"
+
+  # build up a list of URLs from the domains list for the grep
+  if [ "$3" != "" ]; then
+    IFS="," read -r -a other_domains <<< "$3" 
+    for opt in "${other_domains[@]}"; do
+      url_grep+="|http://$opt/$path|https://$opt/$path"
+    done
+  fi
+  echo "$url_path"
+}
+
+
+# Write contents of a string to a given file
+# Expects one parameter: a list with all but the last containing lines and the final one containing a filepath
+print_to_file() {
+  local a=("$@")
+  ((last_idx=${#a[@]} - 1))
+  local output_file=${a[last_idx]}
+  unset a[last_idx]
+  touch "$output_file" || { echo "ERROR: Unable to write to file at $output_file. Please check the directory and file permissions."; exit; }
+#  printf "%s\n" "${a[@]}" | sort -u > "$output_file"
+  printf "%s\n" "${a[@]}" > "$output_file"
+}
+
 # Comment out or uncomment lines that contain the supplied string
 # N.B. By default, in the examples below sed replaces every occurrence
 comment_uncomment() {

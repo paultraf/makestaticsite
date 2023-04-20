@@ -322,7 +322,7 @@ write_config() {
       cp "$write_file" "$default_cfg"
       printf "Made a copy to default.cfg.  This means that you can run makestaticsite.sh without a parameter and it will load %s automatically.\n" "$cfgfile"
     else
-      read -r -e -p "If you run makestaticsite.sh without a parameter, it will load $default_cfg automatically. Would you like to replace that file with this configuration (y/n)? " confirm
+      read -r -e -p "Would you like this configuration to be copied to default.cfg file, which is loaded automatically when you run makestaticsite.sh without a parameter (y/n)? " confirm
       confirm=${confirm:0:1}
       if [ "$confirm" = "y" ] || [ "$confirm" = "Y" ]; then
         cp "$write_file" "$default_cfg"
