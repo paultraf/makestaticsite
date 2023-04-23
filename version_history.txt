@@ -19,6 +19,19 @@
 ##########################################################################
 
 
+0.25.1 (released on 2023-04-23)
+      * Finer control over additional assets, and maintenance *
+      [lib/general.sh]
+       Simplified assets_search_string() to two arguments - list of domains
+       and path (with a bug fix - url_path for url_grep)
+      [makestaticsite.sh]
+       echo(): extended priority 2 output to terminal
+       initialise_variables(): modified url_grep to read and process domains
+       consistently; input_file_extra assignment moved here (else phases break)
+       wget_extra_urls(): code tidy
+       wget_postprocessing(): method for converting absolute to relative paths 
+       for extra domains now constrained to assets already retrieved.
+
 0.25 (released on 2023-04-20)
     * Added support for assets hosted on external domains *
     [lib/constants.sh]

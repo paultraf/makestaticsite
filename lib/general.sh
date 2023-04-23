@@ -197,17 +197,16 @@ wget_level_comment() {
 
 
 # Build composite search string for Web assets
-# Expects three parameters: URL, path, comma-separated list of domains
+# Expects two parameters: comma-separated list of domains, path
 assets_search_string() {
-  local url="$1"
   local path="$2"
-  local url_path="$url/$path"
+  local url_path=
 
-  # build up a list of URLs from the domains list for the grep
-  if [ "$3" != "" ]; then
-    IFS="," read -r -a other_domains <<< "$3" 
+  # build up a list of URLs from the domains list for the search
+  if [ "$1" != "" ]; then
+    IFS="," read -r -a other_domains <<< "$1" 
     for opt in "${other_domains[@]}"; do
-      url_grep+="|http://$opt/$path|https://$opt/$path"
+      url_path+="|https?://$opt/$path" # the '?' is ERE 0 or 1
     done
   fi
   echo "$url_path"
@@ -347,7 +346,7 @@ stopclock() {
     if (( hrs > 0 )) || (( mins > 0 )); then
       printf " and "
     fi
-    printf "%s""$secs second$sec_s"
+    printf "%s" "$secs second$sec_s"
   fi
   (( timer_seconds == 0 )) && echo "no time at all!" || echo "."
 }

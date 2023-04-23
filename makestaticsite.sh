@@ -371,6 +371,7 @@ initialise_variables() {
   wget_post_processing=$(yesno "$(config_get wget_post_processing "$myconfig")")
   archive=$(yesno "$(config_get archive "$myconfig")")
   wget_input_files=()  # Initialise array of additional Wget input URLs
+  input_file_extra="$script_dir/$tmp_dir/$wget_inputs_extra"  # Input file for Wget extra assets (to be generated)
   wget_extra_options_tmp=$(wget_canonical_options "$(config_get wget_extra_options "$myconfig")")
 
   # Ensure that login pages are rejected, i.e. ensure we have --reject *login*,*logout*
@@ -405,7 +406,7 @@ initialise_variables() {
   url="$(config_get url "$myconfig")"
   url_domain=$(printf "%s\n" "$url" | awk -F/ '{print $3}' | awk -F: '{print $1}')
 
-  # additional, supported extensions and domains for stored assets
+  # Additional, supported extensions and domains for stored assets
   extra_domains="$(config_get extra_domains "$myconfig")"
 
   # For backwards-compatibility check whether URL defined instead in url_base
@@ -425,7 +426,12 @@ initialise_variables() {
   [ "$require_login" = "yes" ] && { site_user="$(config_get site_user "$myconfig")"; site_password="$(config_get site_password "$myconfig")"; }
 
   # Generated search prefix combining primary domain and extra domains
-  url_grep="$(assets_search_string "$url_base" "[^\"'<) ]+" "$extra_domains")"
+  if [ "$extra_domains" != "" ]; then
+    all_domains="$domain,$extra_domains"
+  else
+    all_domains="$domain"
+  fi
+  url_grep="$(assets_search_string "$all_domains" "[^\"'<) ]+")"
 
   # WP-CLI (or other CMS client) options, including source (server), as appropriate
   wp_cli=$(yesno "$(config_get wp_cli "$myconfig")")
@@ -615,7 +621,7 @@ wget_mirror() {
     wget_core_options+=(-U "\"$wget_user_agent\"")
   fi
 
-  # if access to site restricted then log in and fetch cookie as required
+  # If access to site restricted then log in and fetch cookie as required
   if [ "$require_login" = "yes" ]; then
 
     # Now log in with supplied credentials
@@ -663,7 +669,7 @@ wget_mirror() {
       printf " \n%s: Wget reported an error trying to retrieve the robots.txt file (likely not found).  Search engines expect this, so have made a note to create it.\n" "$msg_warning"
       robots_create=yes
     elif sitemap_line=$(grep "^[[:space:]]*Sitemap:" "$mirror_archive_dir/$hostport/robots.txt"); then
-      # read contents of robots.txt, checking for sitemap
+      # Read contents of robots.txt, checking for sitemap
       sitemap=$(printf "%s\n" "$sitemap_line" | grep -o 'http[s]*:\/\/.*.xml')
       $wget_cmd "${wget_extra_options[@]}" "${wget_sitemap_options[@]}" "$sitemap"
       # Wget any nested sitemaps
@@ -692,9 +698,8 @@ post_wget_checks() {
 wget_extra_urls() {
   cd "$mirror_dir" || { echo "Unable to enter $mirror_dir."; echo "Aborting."; exit; }
   echo "Pruning links to assets that have query strings appended" "1"
-  accept_list=(${query_accept_list/,/ })
+  IFS="," read -r -a accept_list <<< "$query_accept_list"
   for opt in "${accept_list[@]}"; do
- #   sed_subs=('s~\([^>]\.'"$opt"'\)?[^'\''\"]*~\1~g')
     sed_subs=('s~\([\"'\''][^>]*\.'"$opt"'\)?[^'\''\"]*~\1~g')
     find "$working_mirror_dir" -type f \( -name '*.html' -o -name '*.xml' -o -name '*.txt' \) -print0 | xargs -0 sed "${sed_options[@]}" "${sed_subs[@]}"
   done  
@@ -725,16 +730,16 @@ wget_extra_urls() {
   # Filter out web pages and newsfeeds (limit to non-HTML assets, such as images and JS files)
   echo "Filter out web pages and newsfeeds (limit to non-HTML assets, such as images and JS files)" "1"
   webassets_nohtml=()
-  assets_or=(${asset_extensions//,/|})
+  assets_or='\.('${asset_extensions//,/|}')'
   while IFS='' read -r line; do webassets_nohtml+=("$line"); done < <(for opt in "${webassets_http[@]}"; do
     if [ "${asset_extensions}" != "" ]; then
-      # loop over an inclusion list of allowable extensions
-      echo $opt | grep -E "\.$assets_or" > /dev/null && printf "%s\n" "$opt";
+      # Loop over an inclusion list of allowable extensions
+      echo "$opt" | grep -E "$assets_or" > /dev/null && printf "%s\n" "$opt";
     else
-      type=$(curl -skI "$opt" -o/dev/null -w '%{content_type}\n')  
+      type=$(curl -skI "$opt" -o/dev/null -w '%{content_type}\n')
       if [[ "$type" != *"text/html"* ]] && [[ "$type" != *"application/rss+xml"* ]] && [[ "$type" != *"application/atom+xml"* ]]; then
         printf "%s\n" "$opt";
-      fi  
+      fi
     fi
   done)
   [ ${#webassets_nohtml[@]} -eq 0 ] && { echo "None found. " "1"; echo "Done."; return 0; }
@@ -791,9 +796,9 @@ wget_extra_urls() {
   echo "Running Wget on these additional URLs with options: " "${wget_extra_core_options[@]}" "${wget_extra_options[@]}" "${wget_asset_options[@]}"
   error_set +e
   if (( wget_threads > 1 )); then
-    cat "$input_file_extra" | xargs -n 1 -P $wget_threads $wget_cmd "${wget_extra_core_options[@]}" "${wget_progress_indicator[@]}" "${wget_extra_options[@]}" "${wget_asset_options[@]}"
+    xargs -a "$input_file_extra" -n 1 -P $wget_threads $wget_cmd "${wget_extra_core_options[@]}" "${wget_progress_indicator[@]}" "${wget_extra_options[@]}" "${wget_asset_options[@]}"
   else
-    wget_asset_options+=(--input-file="$input_file_extra")
+    wget_asset_options+=(--input-file="$input_file_extra")    
     $wget_cmd "${wget_extra_core_options[@]}" "${wget_progress_indicator[@]}" "${wget_extra_options[@]}" "${wget_asset_options[@]}"
   fi
   wget_error_codes "$?"
@@ -805,7 +810,9 @@ wget_postprocessing() {
   cd "$working_mirror_dir" || { printf "Unable to enter %s.\nAborting.\n" "$working_mirror_dir"; exit; }
   echo -n "Carrying out post-Wget processing in $working_mirror_dir ... " 
 
-  # Convert remaining absolute paths to relative paths
+  # Convert remaining absolute paths to relative paths ...
+  # First, generate a list of all the web pages that contain relevant URLs to process
+  # (makes subsequent sed replacements more targeted than searching all web pages).
   webpages=()
   for opt in "${url_grep[@]}"; do
     while IFS='' read -r line; do webpages+=("$line"); done < <(grep -Erl "$opt" . --include "*\.html")
@@ -815,13 +822,15 @@ wget_postprocessing() {
     return 0
   fi
 
-  url_sed="$(assets_search_string "$url_base" "" "$extra_domains")"
-  url_sed=(${url_sed//|/ })
   if [ "$assets_directory" != "" ]; then
     hp_prefix="/"
   else
     hp_prefix=
   fi
+
+  # Populate URLs array from Wget's additional input file, 
+  read -d '' -r -a urls_array <"$input_file_extra"
+
   for opt in "${webpages[@]}"; do
     # but don't process XML files in guise of HTML files
     if grep -q "<?xml version" "$opt"; then
@@ -832,22 +841,29 @@ wget_postprocessing() {
     for ((i=1;i<${#depth};i++)); do
       pathpref+="../";
     done
-    for hp in "${url_sed[@]}"; do
-      if [ "$hp" = "$url_base/" ] || [ "$extra_assets_mode" = "merge" ]; then
-        sed_subs=('s~'"$hp"'~'"$pathpref"'~g' "$opt")
-      else
-        # point to domain_directory (strip the initial http[s]:// using awk)
-        hpdomain=$(printf "%s" "$hp" | awk -F/ '{print $3}')
-        hpdomain="$assets_directory$hp_prefix$hpdomain"
-        sed_subs=('s~'"$hp"'~'"$pathpref$hpdomain/"'~g' "$opt")
-      fi  
-      sed "${sed_options[@]}" "${sed_subs[@]}"
-    done
+
+    # Carry out universal search and replace on primary domain
+    sed_subs=('s~https\?://'"$hostport/"'~'"$pathpref"'~g' "$opt")
+    sed "${sed_options[@]}" "${sed_subs[@]}"
+    
+    # Loop over all non-primary-domain assets
+    if [ "$extra_domains" != "" ]; then
+      for hp in "${urls_array[@]}"; do
+        hpdomain=$(echo "$hp" | cut -d/ -f3)
+        if [ "$hpdomain" = "$domain" ]; then
+          continue
+        fi  
+        hppath=$(echo "$hp" | cut -d/ -f3-)
+        hppath="$assets_directory$hp_prefix$hppath"
+        sed_subs=('s~'"$hp"'~'"$pathpref$hppath"'~g' "$opt")
+        sed "${sed_options[@]}" "${sed_subs[@]}"
+      done
+    fi    
   done
 
-  if [ "$extra_assets_mode" = "contain" ]; then
+  if [ "$extra_domains" != "" ] && [ "$extra_assets_mode" = "contain" ]; then
     # Move folders
-    extra_domains_list=(${extra_domains//,/ })
+    IFS="," read -r -a extra_domains_list <<< "$extra_domains"
     if [ "$assets_directory" != "" ]; then
       mirror_assets_directory="$working_mirror_dir/$assets_directory"
       mkdir -p "$mirror_assets_directory"
@@ -855,8 +871,6 @@ wget_postprocessing() {
       mirror_assets_directory="$working_mirror_dir"
     fi
     for extra_dir in "${extra_domains_list[@]}"; do
-      echo "temp extra_dir $extra_dir"
-      echo "temp $mirror_dir/$mirror_archive_dir/$extra_dir"
       if [ -d "$mirror_dir/$mirror_archive_dir/$extra_dir" ]; then
         asset_move="$mirror_dir/$mirror_archive_dir/$extra_dir to $mirror_assets_directory/"
         mv "$mirror_dir/$mirror_archive_dir/$extra_dir" "$mirror_assets_directory/" || { echo "ERROR: Unable to move $asset_move."; exit; }
@@ -976,7 +990,7 @@ add_extras() {
 clean_mirror() {
   cd "$working_mirror_dir" || { printf "Unable to enter %s.\nAborting.\n" "$working_mirror_dir"; exit; }
 
-  # reconstruct the canonical URL and replace index.html, the default output from Wget
+  # Reconstruct the canonical URL and replace index.html, the default output from Wget
   url_base_deploy="$protocol://$deploy_domain"
   printf "Updating canonical URLs in document headers ... "
   while IFS= read -r -d '' opt
@@ -1025,7 +1039,7 @@ clean_mirror() {
     expire_date="Mon, 21 Nov 2022 00:00:01 GMT"
     awk -v expire_date="$expire_date" -F '\t' -v OFS='\t' '{sub(0,expire_date,$5)}1' "$cookies_path" > "$cookies_tmppath" && mv "$cookies_tmppath" "$cookies_path"
 
-    # access logout (or any) page with expired cookie -
+    # Access logout (or any) page with expired cookie -
     # should receive HTTP Error: 403 (Forbidden)
     wget_options_logout=(--spider "$wget_ssl" --directory-prefix "$mirror_archive_dir" "$url_base$logout_path")
     $wget_cmd "${wget_extra_options[@]}" "${wget_options_logout[@]}"
@@ -1033,15 +1047,15 @@ clean_mirror() {
     rm "$cookies_path"
   fi
 
-  # create robots file, where necessary
+  # Create robots file, where necessary
   if [ "$robots_create" = "yes" ]; then
     robots_path="$mirror_dir/$mirror_archive_dir/$hostport/robots.txt"
     robots_default="$script_dir/$lib_files/$robots_default_file"
     cp "$robots_default" "$robots_path"
-    printf "\nSitemap: https://$deploy_domain/$sitemap_file\n" >> "$robots_path"
+    printf "\nSitemap: %s\n" "https://$deploy_domain/$sitemap_file" >> "$robots_path"
   fi
 
-  # create sitemap, where necessary
+  # Create sitemap, where necessary
   if [ "$sitemap_create" = "yes" ]; then
     sitemap_path="$mirror_dir/$mirror_archive_dir/$hostport/sitemap.xml"
     touch "$sitemap_path"
@@ -1139,7 +1153,7 @@ process_snippets() {
         echo "local source: $working_mirror_dir/$src_file copied to $sub_input_dir/" "1"
         mkdir -p "$sub_input_dir" && cp "$working_mirror_dir/$src_file" "$sub_input_dir/"
 
-        # loop through the snippet IDs for this file, read and apply changes for each
+        # Loop through the snippet IDs for this file, read and apply changes for each
         # (uses the /r command to read input from a file)
         id_list=${strarr[1]}
         for i in ${id_list//,/$IFS}
@@ -1263,12 +1277,12 @@ deploy() {
   # if source and deployment domains are the same, then call Hosts function
   if [ "$deploy_host" = "$domain" ]; then
     echo "NOTICE: Your source and deployment domains are the same."
-    # check /etc/hosts - if it exists, search for the domain and then offer choice ...
+    # Check /etc/hosts - if it exists, search for the domain and then offer choice ...
     if [ -f "$etc_hosts" ]; then
       hosts_toggle
     else
       echo "However, you do not appear to have an entry in $etc_hosts."
-      # check whether paths are the same
+      # Check whether paths are the same
       echo "Source site path: $site_path"
       echo "Deployment path: $deploy_path"
       [ "$site_path" != "$deploy_path" ] && echo "The paths appear to be distinct, so deployment should not overwrite" || echo "$msg_warning: The paths appear to be the same - about to overwrite the source folder with the static mirror!"
@@ -1312,7 +1326,7 @@ deploy() {
   fi
 
   if [ "$toggle_flag" = "1" ]; then
-    # invite user to restore Hosts file as it was
+    # Invite user to restore Hosts file as it was
     read -r -e -p "The transfer is complete.  Would you like to restore $etc_hosts as it was (y/n)? " confirm
     confirm=${confirm:0:1}
     if [ "$confirm" = "y" ] || [ "$confirm" = "Y" ]; then
@@ -1323,11 +1337,10 @@ deploy() {
 }
 
 conclude() {
-  printf "Completed in "
-  stopclock SECONDS
+  printf "Completed in "; stopclock SECONDS
   msg_done=$(msg_ink "ok" 'All done.') 
   printf "%s\nA static mirror of %s has been created in %s\n" "$msg_done" "$url" "$working_mirror_dir"
-  if [ ! -z ${msg_deploy+x} ]; then
+  if [[ -n ${msg_deploy+x} ]]; then
     printf "%s\n\n" "$msg_deploy"
   fi 
   printf "Thank you for using MakeStaticSite, free software released under the %s. The latest version is available from %s.\n" "$mss_license" "$mss_download"
@@ -1336,5 +1349,5 @@ conclude() {
 
 ################# END OF FUNCTIONS ################
 
-# run the script
+# Run the script
 main "$@"
