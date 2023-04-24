@@ -26,10 +26,10 @@
 
 SECONDS=0                  # start timer
 
-source "lib/constants.sh"  # load constants, particularly runtime defaults
-source "lib/general.sh"    # load general functions library
-source "lib/validate.sh"   # load the validation functions library
-source "lib/config.sh";    # load the config functions library
+source lib/constants.sh    # load constants, particularly runtime defaults
+source lib/general.sh      # load general functions library
+source lib/validate.sh     # load the validation functions library
+source lib/config.sh       # load the config functions library
 
 main() {
   # Phase 0: Initialisation
@@ -97,11 +97,11 @@ initialise_layout() {
   mirror_dir="$script_dir/mirror"         # path to Wget output root folder
 
   # Substitute files for zip download (used for embeds, etc.)
-  sub_dir='subs'                          # This must be sit under $script_dir
-  sub_files_dir='files'                   # This must be sit under $sub_dir
+  sub_dir=subs                            # This must be sit under $script_dir
+  sub_files_dir=files                     # This must be sit under $sub_dir
   sub_files_path="$script_dir/$sub_dir/$sub_files_dir"
 
-  snippets_dir=$script_dir'/snippets'     # directory storing snippets (.html files)
+  snippets_dir="$script_dir/snippets"     # directory storing snippets (.html files)
   snippets_data_file="$snippets_dir/snippets.data" # list of directories/files relative to
                                           # zip root inside the $sub_files_dir 
                                           # (separated by space)
@@ -110,7 +110,7 @@ initialise_layout() {
                                           # using this data file where each row is
                                           # path_to_html_file:<list of snippet ids>
 
-  lib_files="lib/files"                   # library files (defaults/templates) directory
+  lib_files=lib/files                     # library files (defaults/templates) directory
 
   if [ "$log_level" = "silent" ]; then
     exec 2>/dev/null
@@ -341,11 +341,11 @@ initialise_variables() {
 
   # Translate to output levels for rsync and Wget respectively
   if [ "$output_level" = 'silent' ] || [ "$output_level" = 'quiet' ]; then
-    rvol="-q"; wvol="-q"; wpvol="--quiet"
+    rvol=-q; wvol=-q; wpvol=--quiet
   elif [ "$output_level" = 'verbose' ]; then
-    rvol="-v"; wvol=""; wpvol="--debug"
+    rvol=-v; wvol=; wpvol=--debug
   else
-    rvol=""; wvol="-nv"; wpvol=""
+    rvol=; wvol=-nv; wpvol=
   fi
 
   add_search=$(yesno "$(config_get add_search "$myconfig")")
@@ -823,7 +823,7 @@ wget_postprocessing() {
   fi
 
   if [ "$assets_directory" != "" ]; then
-    hp_prefix="/"
+    hp_prefix=/
   else
     hp_prefix=
   fi
