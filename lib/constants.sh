@@ -22,7 +22,7 @@
 ################################################
 # MakeStaticSite info
 ################################################
-version=0.25.1+1
+version=0.25.1+2
 version_date='24 April 2023'
 version_header="MakeStaticSite version $version, released on $version_date."
 mss_license="GNU Affero General Public License version 3"
@@ -60,8 +60,8 @@ wget_version_atleast=1.21
 wget_error_level=6              # The lowest Wget error code tolerated or else aborts (>8 for no tolerance)
 wget_user_agent= # set browser user agent (empty for default), wrapped in quotes, e.g. "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15)"
 wget_cookies=cookies.txt        # name of cookies file
-wget_inputs_main=wget_inputs_main.txt # name of input file for web content to be retrieved in main run of Wget in phase 2
-wget_inputs_extra=wget_inputs_extra.txt # name of input file for additional assets to be retrieved by Wget in phase 3
+wget_inputs_main=wget_inputs_main # name of input file stem for web content to be retrieved in main run of Wget in phase 2
+wget_inputs_extra=wget_inputs_extra # name of input file stem for additional assets to be retrieved by Wget in phase 3
 rename_wget_tmps=yes            # Remove .tmp.html suffixes from (Wget temp) file names
 
 # Core options for Wget (array)

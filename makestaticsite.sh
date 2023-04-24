@@ -329,6 +329,10 @@ initialise_variables() {
   check_config_file "$myconfig"
   printf "Reading custom configuration data from config/%s ... " "$myconfig.cfg"
 
+  # now augment Wget input files with .cfg label
+  wget_inputs_main="$wget_inputs_main-$myconfig.txt"
+  wget_inputs_extra="$wget_inputs_extra-$myconfig.txt"
+
   # Define a timestamp function
   if [ "$timezone" != "utc" ]; then
     timestamp=$(date "+%Y%m%d_%H%M%S")
@@ -830,6 +834,10 @@ wget_postprocessing() {
 
   # Populate URLs array from Wget's additional input file, 
   read -d '' -r -a urls_array <"$input_file_extra"
+  if [ ${#urls_array[@]} -eq 0 ]; then
+    echo "No URLs to process.  Done." "1"
+    return 0
+  fi
 
   for opt in "${webpages[@]}"; do
     # but don't process XML files in guise of HTML files
@@ -874,7 +882,7 @@ wget_postprocessing() {
       if [ -d "$mirror_dir/$mirror_archive_dir/$extra_dir" ]; then
         asset_move="$mirror_dir/$mirror_archive_dir/$extra_dir to $mirror_assets_directory/"
         mv "$mirror_dir/$mirror_archive_dir/$extra_dir" "$mirror_assets_directory/" || { echo "ERROR: Unable to move $asset_move."; exit; }
-        echo "Moved $asset_move."
+        echo "Moved $asset_move." "1"
       fi
     done
   fi
