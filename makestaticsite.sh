@@ -429,14 +429,6 @@ initialise_variables() {
   require_login=$(yesno "$(config_get require_login "$myconfig")")
   [ "$require_login" = "yes" ] && { site_user="$(config_get site_user "$myconfig")"; site_password="$(config_get site_password "$myconfig")"; }
 
-  # Generated search prefix combining primary domain and extra domains
-  if [ "$extra_domains" != "" ]; then
-    all_domains="$domain,$extra_domains"
-  else
-    all_domains="$domain"
-  fi
-  url_grep="$(assets_search_string "$all_domains" "[^\"'<) ]+")"
-
   # WP-CLI (or other CMS client) options, including source (server), as appropriate
   wp_cli=$(yesno "$(config_get wp_cli "$myconfig")")
   site_path="$(config_get site_path "$myconfig")"
@@ -710,6 +702,31 @@ wget_extra_urls() {
   echo " " "1"
 
   printf "Searching for additional URLs to retrieve with Wget (working in %s) ... " "$working_mirror_dir"
+
+  # Generate search URL prefixes combining primary domain and extra domains
+  if [ "$extra_domains" = "auto" ]; then
+    printf "Searching for extra asset domains (working in %s) ... " "$working_mirror_dir"
+    domain_grep="https?:\\\?/\\\?/[^\"'/< ]+\.[^\"'/< ]+\\\?/[^\"'< ]+[^\"'/< ]+\.[^\"'/< ]+"
+    domain_grep2="https?:\\\?/\\\?/[^\"'/< ]+\.[^\"'/< ]+\\\?/"
+    domain_grep3="[^\"'/< ]+\.[^\"'/< ]+\\\?/"
+    add_domains=()
+    while IFS='' read -r line; do add_domains+=("$line"); done < <(grep -Eroh "$domain_grep" "$working_mirror_dir" --include "*\.html" | grep -Eo "$domain_grep2" | grep -Eo "$domain_grep3" )
+    echo "add_domains array has ${#add_domains[@]} elements" "2"
+    # Store unique elements only
+    add_domains_unique=()
+    while IFS='' read -r line; do add_domains_unique+=("$line"); done < <(for item in "${add_domains[@]}"; do printf "%s\n" "${item}"; done | sort -u)
+    echo "add_domains_unique array has ${#add_domains_unique[@]} elements" "2"
+    # Convert array to domain list (string)
+    extra_domains=$(printf "${add_domains_unique[*]}" | sed "s/ /,/g" | sed "s/"'\\'"\?\/,/,/g" | sed "s/$domain,//g" | sed "s/,$domain//g")
+    [ "${extra_domains: -1}" = "/" ] && extra_domains=${extra_domains:0:-1}
+  fi
+  if [ "$extra_domains" != "" ]; then
+    all_domains="$domain,$extra_domains"
+  else
+    all_domains="$domain"
+  fi
+  url_grep="$(assets_search_string "$all_domains" "[^\"'<) ]+")"
+  
   webassets_all=()
   while IFS='' read -r line; do webassets_all+=("$line"); done < <(grep -Eroh "$url_grep" "$working_mirror_dir" --include "*\.html")
   echo "webassets_all array has ${#webassets_all[@]} elements" "2"
@@ -832,8 +849,11 @@ wget_postprocessing() {
     hp_prefix=
   fi
 
-  # Populate URLs array from Wget's additional input file, 
-  read -d '' -r -a urls_array <"$input_file_extra"
+  urls_array=()
+  # Populate URLs array from Wget's additional input file,
+  if [ -f "$input_file_extra" ]; then
+    read -d '' -r -a urls_array <"$input_file_extra"
+  fi  
   if [ ${#urls_array[@]} -eq 0 ]; then
     echo "No URLs to process.  Done." "1"
     return 0

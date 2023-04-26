@@ -19,6 +19,22 @@
 ##########################################################################
 
 
+0.25.2 (released on 2023-04-26)
+      * Added automated determination of additional assets to retrieve *
+      [lib/constants.sh]
+       wget_inputs_main and wget_inputs_extra now define only the stem;
+       Maintenance: removed redundant quotation from variable assignment
+      [makestaticsite.sh]
+       initialise_variables(): config label to be inserted automatically to 
+       wget_inputs_main and wget_inputs_extra. This removes potential error
+       when running makestaticsite.sh from phase 4.
+       Moved the generation of search URL prefixes combining primary domain
+       and extra domains from initialise_variables() to wget_extra_urls(),
+       adding new routine to generate list of extra domains automatically
+       when the .cfg option extra_domains is set to "auto".
+       Maintenance: removed redundant quotation from variable assignment
+       autogenerate extra_domains.
+
 0.25.1 (released on 2023-04-23)
       * Finer control over additional assets, and maintenance *
       [lib/general.sh]

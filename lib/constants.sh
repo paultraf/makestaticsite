@@ -22,8 +22,8 @@
 ################################################
 # MakeStaticSite info
 ################################################
-version=0.25.1+2
-version_date='24 April 2023'
+version=0.25.2
+version_date='26 April 2023'
 version_header="MakeStaticSite version $version, released on $version_date."
 mss_license="GNU Affero General Public License version 3"
 mss_download="https://makestaticsite.sh/download/makestaticsite_latest.tar.gz"
@@ -236,7 +236,7 @@ ssl_checks__info="If you trust the SSL certificate of the site for which you are
 
 extra_domains=
 extra_domains__desc='Additional domains for asset retrieval and offline access'
-extra_domains__info="Provide a comma-separated list of domains, typically hosted on CDNs, for static assets stored external to the main domain. MakeStaticSite can retrieve these and incorporate in the mirror output. Leave empty if there are no extra domains."
+extra_domains__info="Provide a comma-separated list of domains, typically hosted on CDNs, for static assets stored external to the main domain. MakeStaticSite can retrieve these and incorporate in the mirror output. Enter 'auto' (without quotes) to generate this list automatically.  Leave empty if there are no extra domains."
 
 wget_extra_options="-X/wp-json,/wp-admin --reject xmlrpc*,'index.html?'* --limit-rate=500k"
 wget_extra_options__desc='Additional command line options for Wget'
