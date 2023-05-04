@@ -369,6 +369,29 @@ initialise_variables() {
   ssl_checks=$(yesno "$(config_get ssl_checks "$myconfig")")
   [ "$ssl_checks" = "no" ] && wget_ssl="--no-check-certificate" || wget_ssl=''
 
+  # Web server details (to be snapped by Wget)
+  url="$(config_get url "$myconfig" | sed s'/\/\?$/\//')"  # ensure URL ends in trailing slash
+  url_domain=$(printf "%s\n" "$url" | awk -F/ '{print $3}' | awk -F: '{print $1}')
+
+  # Additional, supported extensions and domains for stored assets
+  extra_domains="$(config_get extra_domains "$myconfig")"
+
+  # For backwards-compatibility check whether URL defined instead in url_base
+  if [ "$url_domain" = "example.com" ]; then
+    url="$(config_get url_base "$myconfig")"
+    if [ "$url" = "" ]; then { printf "\n%s: the URL supplied in %s (example.com) needs to be changed!\nAborting.\n" "$msg_error" "$myconfig"; exit; }
+    fi
+  fi
+
+  # Extract the host (domain or IP) and port, protocol, and hence the URL base (no path)
+  hostport=$(printf "%s" "$url" | awk -F/ '{print $3}')
+  domain=$(printf "%s" "$hostport" | awk -F: '{print $1}')
+  protocol=$(printf "%s" "$url" | awk -F/ '{print $1}' | awk -F: '{print $1}')
+  url_base="$protocol://$hostport"
+  login_address="$url_base$login_path"
+  require_login=$(yesno "$(config_get require_login "$myconfig")")
+  [ "$require_login" = "yes" ] && { site_user="$(config_get site_user "$myconfig")"; site_password="$(config_get site_password "$myconfig")"; }
+
   # Options to support Wget
   input_urls_file="$(config_get input_urls_file "$myconfig")"
   wget_extra_urls=$(yesno "$(config_get wget_extra_urls "$myconfig")")
@@ -405,29 +428,6 @@ initialise_variables() {
 
   htmltidy=$(yesno "$(config_get htmltidy "$myconfig")")
   add_extras=$(yesno "$(config_get add_extras "$myconfig")")
-
-  # Web server details (to be snapped by Wget)
-  url="$(config_get url "$myconfig")"
-  url_domain=$(printf "%s\n" "$url" | awk -F/ '{print $3}' | awk -F: '{print $1}')
-
-  # Additional, supported extensions and domains for stored assets
-  extra_domains="$(config_get extra_domains "$myconfig")"
-
-  # For backwards-compatibility check whether URL defined instead in url_base
-  if [ "$url_domain" = "example.com" ]; then
-    url="$(config_get url_base "$myconfig")"
-    if [ "$url" = "" ]; then { printf "\n%s: the URL supplied in %s (example.com) needs to be changed!\nAborting.\n" "$msg_error" "$myconfig"; exit; }
-    fi
-  fi
-
-  # Extract the host (domain or IP) and port, protocol, and hence the URL base (no path)
-  hostport=$(printf "%s" "$url" | awk -F/ '{print $3}')
-  domain=$(printf "%s" "$hostport" | awk -F: '{print $1}')
-  protocol=$(printf "%s" "$url" | awk -F/ '{print $1}' | awk -F: '{print $1}')
-  url_base="$protocol://$hostport"
-  login_address="$url_base$login_path"
-  require_login=$(yesno "$(config_get require_login "$myconfig")")
-  [ "$require_login" = "yes" ] && { site_user="$(config_get site_user "$myconfig")"; site_password="$(config_get site_password "$myconfig")"; }
 
   # WP-CLI (or other CMS client) options, including source (server), as appropriate
   wp_cli=$(yesno "$(config_get wp_cli "$myconfig")")
@@ -716,9 +716,8 @@ wget_extra_urls() {
     add_domains_unique=()
     while IFS='' read -r line; do add_domains_unique+=("$line"); done < <(for item in "${add_domains[@]}"; do printf "%s\n" "${item}"; done | sort -u)
     echo "add_domains_unique array has ${#add_domains_unique[@]} elements" "2"
-    # Convert array to domain list (string)
-    extra_domains=$(printf "%s" "${add_domains_unique[*]}" | sed "s/ /,/g" | sed "s/"'\\'"\?\/,/,/g" | sed "s/$domain,//g" | sed "s/,$domain//g")
-    [ "${extra_domains: -1}" = "/" ] && extra_domains=${extra_domains:0:-1}
+    # Convert array to domain list (string), removing any trailing slashes
+    extra_domains=$(printf "%s" "${add_domains_unique[*]}" | sed "s/ /,/g" | sed "s/"'\\'"\?\/,/,/g" | sed "s/$domain,//g" | sed "s/,$domain//g" | sed s'/\/$//')
   fi
   if [ "$extra_domains" != "" ]; then
     all_domains="$domain,$extra_domains"
