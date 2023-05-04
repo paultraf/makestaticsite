@@ -717,7 +717,7 @@ wget_extra_urls() {
     while IFS='' read -r line; do add_domains_unique+=("$line"); done < <(for item in "${add_domains[@]}"; do printf "%s\n" "${item}"; done | sort -u)
     echo "add_domains_unique array has ${#add_domains_unique[@]} elements" "2"
     # Convert array to domain list (string)
-    extra_domains=$(printf "${add_domains_unique[*]}" | sed "s/ /,/g" | sed "s/"'\\'"\?\/,/,/g" | sed "s/$domain,//g" | sed "s/,$domain//g")
+    extra_domains=$(printf "%s" "${add_domains_unique[*]}" | sed "s/ /,/g" | sed "s/"'\\'"\?\/,/,/g" | sed "s/$domain,//g" | sed "s/,$domain//g")
     [ "${extra_domains: -1}" = "/" ] && extra_domains=${extra_domains:0:-1}
   fi
   if [ "$extra_domains" != "" ]; then
@@ -753,7 +753,7 @@ wget_extra_urls() {
   webassets_nohtml=()
   assets_or='\.('${asset_extensions//,/|}')'
   while IFS='' read -r line; do webassets_nohtml+=("$line"); done < <(for opt in "${webassets_http[@]}"; do
-    if [ "${asset_extensions}" != "" ]; then
+    if [ "$asset_extensions" != "" ]; then
       # Loop over an inclusion list of allowable extensions
       echo "$opt" | grep -E "$assets_or" > /dev/null && printf "%s\n" "$opt";
     else
@@ -765,8 +765,8 @@ wget_extra_urls() {
   done)
   [ ${#webassets_nohtml[@]} -eq 0 ] && { echo "None found. " "1"; echo "Done."; return 0; }
   echo "webassets_nohtml array has ${#webassets_nohtml[@]} elements" "2"
-  
-  if [ "${wget_extra_options[*]}" != "" ]; then
+
+  if [ ${#wget_extra_options[@]} -ne 0 ]; then
     url_bas="$protocol://$hostport"
     # Filter out URLs whose paths match an excluded directory (via subloop)
     echo "Filter out URLs whose paths match an excluded directory (via subloop)" "1"
@@ -959,7 +959,7 @@ wget_postprocessing() {
   webpages=()
   while IFS='' read -r line; do webpages+=("$line"); done < <(grep -Erl "$feed_html" . --include "*\.html")
 
-  if (( ${#webpages[@]} )); then
+  if [ ${#webpages[@]} -ne 0 ]; then
     for opt in "${webpages[@]}"; do
       sed_subs=('s~'"$feed_html"'~'"$feed_xml"'~g' "$opt")
       sed "${sed_options[@]}" "${sed_subs[@]}"
