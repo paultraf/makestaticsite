@@ -22,8 +22,8 @@
 ################################################
 # MakeStaticSite info
 ################################################
-version=0.25.2
-version_date='26 April 2023'
+version=0.25.3
+version_date='5 May 2023'
 version_header="MakeStaticSite version $version, released on $version_date."
 mss_license="GNU Affero General Public License version 3"
 mss_download="https://makestaticsite.sh/download/makestaticsite_latest.tar.gz"
@@ -68,6 +68,9 @@ rename_wget_tmps=yes            # Remove .tmp.html suffixes from (Wget temp) fil
 #  --mirror is equivalent to ‘-r -N -l inf --no-remove-listing’
 # where -r: recursive; -N: timestamping; -l inf: infinite depth
 wget_core_options=(--mirror --convert-links --adjust-extension --page-requisites)
+wget_no_parent=auto             # Should capturing URLs with directories include the --no-parent option?
+                                # auto or yes - check and add automatically
+                                # otherwise no intervention
 
 # Core options (array) for Wget phase 3 assets
 # -p (page requisites) to download entire asset, possibly page, in directory structure
@@ -92,6 +95,14 @@ extra_assets_mode=contain       # how assets from extra domains should be incorp
                                 # - empty or 'off' to keep in separate directories under mirror ID
                                 # - 'contain' will move the directories inside the assets directory (see below)
 assets_directory=assets         # directory immediately under main domain directory where extra assets are stored per extra domain (set empty to place assets in root)
+
+# URLs with directories
+parent_dirs_mode=contain        # What to do with assets that lie above the mirrored directory
+                                # - empty or 'off' to keep assets where they are after the Wget mirror
+                                # - 'contain' will move the directories inside the assets directory
+external_dir_links=             # What to do with links to resources on same domain, but outside the mirrored tree
+                                # - empty or 'off' to not make relative, only point to the deployment domain 
+                                # - 'local' or anything other than empty or 'off' will make relative, to assets directory
 
 ################################################
 # Robot and site map settings

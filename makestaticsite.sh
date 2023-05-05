@@ -385,7 +385,7 @@ initialise_variables() {
 
   # Extract the host (domain or IP) and port, protocol, and hence the URL base (no path)
   hostport=$(printf "%s" "$url" | awk -F/ '{print $3}')
-  domain=$(printf "%s" "$hostport" | awk -F: '{print $1}')
+  domain=$(printf "%s" "$hostport" | awk -F: '{print $1}') # refer to this as the 'primary domain'
   protocol=$(printf "%s" "$url" | awk -F/ '{print $1}' | awk -F: '{print $1}')
   url_base="$protocol://$hostport"
   login_address="$url_base$login_path"
@@ -401,8 +401,14 @@ initialise_variables() {
   input_file_extra="$script_dir/$tmp_dir/$wget_inputs_extra"  # Input file for Wget extra assets (to be generated)
   wget_extra_options_tmp=$(wget_canonical_options "$(config_get wget_extra_options "$myconfig")")
 
-  # Ensure that login pages are rejected, i.e. ensure we have --reject *login*,*logout*
-  # Append Wget --reject clause
+  # If URL contains one or more directories, then ensure --no-parent option, subject to option settings
+  if [ "$url" != "$url_base/" ] && [[ ! $wget_extra_options_tmp =~ "-np" ]] && [[ ! $wget_extra_options_tmp =~ "--no-parent" ]]; then
+    if [ "$wget_no_parent" = "auto" ] || [ "$wget_no_parent" = "yes" ]; then
+      wget_extra_options_tmp+=" -np"
+    fi
+  fi  
+
+  # Ensure that login pages are rejected by appending Wget --reject clause
   grep_clause="\-R[[:space:]][^[:space:]]*\|\-\-reject[[:space:]][^[:space:]]*"
   rmatch0=$({ printf "%s" "$wget_extra_options_tmp" | grep -o "$grep_clause"; } || echo )
   if [ "$rmatch0" = "" ]; then
@@ -652,9 +658,7 @@ wget_mirror() {
     rm "$zip_archive_old" || echo "$msg_warning: Unable to delete existing zip file at $zip_archive_old"
   fi
 
-  ####################
   # Main run of Wget #
-  ####################
   printf "%s" "$msg_mirror_start"
   cd "$mirror_dir" || { echo; echo "$msg_error: can't access working directory for the mirror ($mirror_dir)" >&2; exit 1; }
 
@@ -825,88 +829,173 @@ wget_extra_urls() {
   error_set -e
 }
 
-# Carry out further processing of output
+# Carry out further processing of output:
+#  - for the primary domain, convert absolute paths to relative paths
+#  - for extra domains, convert absolute paths to relatives paths and
+#    optionally incorporate respective content in a designated assets folder
+#  - replace remaining occurrences of primary domain with the deployment domain
+#    (subject to user confirmation)
 wget_postprocessing() {
   cd "$working_mirror_dir" || { printf "Unable to enter %s.\nAborting.\n" "$working_mirror_dir"; exit; }
   echo -n "Carrying out post-Wget processing in $working_mirror_dir ... " 
 
-  # Convert remaining absolute paths to relative paths ...
   # First, generate a list of all the web pages that contain relevant URLs to process
   # (makes subsequent sed replacements more targeted than searching all web pages).
   webpages=()
+  [ -z ${url_grep+x} ] && url_grep="$(assets_search_string "$all_domains" "[^\"'<) ]+")" # need to define $url_grep when running from phase 4 onwards
   for opt in "${url_grep[@]}"; do
     while IFS='' read -r line; do webpages+=("$line"); done < <(grep -Erl "$opt" . --include "*\.html")
   done
-  if [ ${#webpages[@]} -eq 0 ]; then
-    echo "No pages to process.  Done." "1"
-    return 0
-  fi
 
+  # Prepare adjustment for relative paths with assets directory
   if [ "$assets_directory" != "" ]; then
     hp_prefix=/
   else
     hp_prefix=
   fi
 
-  urls_array=()
-  # Populate URLs array from Wget's additional input file,
-  if [ -f "$input_file_extra" ]; then
-    read -d '' -r -a urls_array <"$input_file_extra"
-  fi  
-  if [ ${#urls_array[@]} -eq 0 ]; then
-    echo "No URLs to process.  Done." "1"
-    return 0
-  fi
-
-  for opt in "${webpages[@]}"; do
-    # but don't process XML files in guise of HTML files
-    if grep -q "<?xml version" "$opt"; then
-      continue
+  # General case: conversion of absolute links to relative links
+  if [ ${#webpages[@]} -eq 0 ]; then
+    echo "No pages to process. " "1"
+  else
+    # Populate URLs array from Wget's additional input file,
+    urls_array=()
+    if [ -f "$input_file_extra" ]; then
+      read -d '' -r -a urls_array <"$input_file_extra"
     fi
-    pathpref=
-    depth=${opt//[!\/]};
-    for ((i=1;i<${#depth};i++)); do
-      pathpref+="../";
-    done
 
-    # Carry out universal search and replace on primary domain
-    sed_subs=('s~https\?://'"$hostport/"'~'"$pathpref"'~g' "$opt")
-    sed "${sed_options[@]}" "${sed_subs[@]}"
-    
-    # Loop over all non-primary-domain assets
-    if [ "$extra_domains" != "" ]; then
-      for hp in "${urls_array[@]}"; do
-        hpdomain=$(echo "$hp" | cut -d/ -f3)
-        if [ "$hpdomain" = "$domain" ]; then
-          continue
-        fi  
-        hppath=$(echo "$hp" | cut -d/ -f3-)
-        hppath="$assets_directory$hp_prefix$hppath"
-        sed_subs=('s~'"$hp"'~'"$pathpref$hppath"'~g' "$opt")
-        sed "${sed_options[@]}" "${sed_subs[@]}"
-      done
-    fi    
-  done
-
-  if [ "$extra_domains" != "" ] && [ "$extra_assets_mode" = "contain" ]; then
-    # Move folders
-    IFS="," read -r -a extra_domains_list <<< "$extra_domains"
-    if [ "$assets_directory" != "" ]; then
-      mirror_assets_directory="$working_mirror_dir/$assets_directory"
-      mkdir -p "$mirror_assets_directory"
+    # Convert absolute links to relative links
+    if [ ${#urls_array[@]} -eq 0 ]; then
+      echo "No URLs to process.  Done." "1"
     else
-      mirror_assets_directory="$working_mirror_dir"
+      for opt in "${webpages[@]}"; do
+        # but don't process XML files in guise of HTML files
+        if grep -q "<?xml version" "$opt"; then
+          continue
+        fi
+        pathpref=
+        depth=${opt//[!\/]};
+        for ((i=1;i<${#depth};i++)); do
+          pathpref+="../";
+        done
+        # Carry out universal search and replace on primary domain
+        # in the case of directory URL with --no-parent, we need to limit matches 
+        # to full URL and tweak the replacements 
+        if [ "$external_dir_links" != "" ] && [ "$external_dir_links" != "off" ]; then
+          sed_subs=('s~https\?://'"$hostport/"'~'"$pathpref"'~g' "$opt")
+          sed "${sed_options[@]}" "${sed_subs[@]}"
+        fi
+
+        # Loop over all non-primary-domain assets
+        # if working with extra domains or a directory URL, 
+        if [ "$extra_domains" != "" ] || [ "$url" != "$url_base/" ]; then
+          for hp in "${urls_array[@]}"; do
+            hpdomain=$(echo "$hp" | cut -d/ -f3)
+            if [ "$hpdomain" = "$domain" ]; then
+              continue
+            fi
+            hppath=$(echo "$hp" | cut -d/ -f3-)
+            hppath="$assets_directory$hp_prefix$hppath"
+            sed_subs=('s~'"$hp"'~'"$pathpref$hppath"'~g' "$opt")
+            sed "${sed_options[@]}" "${sed_subs[@]}"
+          done
+        fi    
+      done
     fi
-    for extra_dir in "${extra_domains_list[@]}"; do
-      if [ -d "$mirror_dir/$mirror_archive_dir/$extra_dir" ]; then
-        asset_move="$mirror_dir/$mirror_archive_dir/$extra_dir to $mirror_assets_directory/"
-        mv "$mirror_dir/$mirror_archive_dir/$extra_dir" "$mirror_assets_directory/" || { echo "ERROR: Unable to move $asset_move."; exit; }
-        echo "Moved $asset_move." "1"
+
+    if [ "$extra_domains" != "" ] && [ "$extra_assets_mode" = "contain" ]; then
+      # Move folders
+      IFS="," read -r -a extra_domains_list <<< "$extra_domains"
+      if [ "$assets_directory" != "" ]; then
+        mirror_assets_directory="$working_mirror_dir/$assets_directory"
+        mkdir -p "$mirror_assets_directory"
+      else
+        mirror_assets_directory="$working_mirror_dir"
       fi
-    done
-  fi
-  
+      for extra_dir in "${extra_domains_list[@]}"; do
+        if [ -d "$mirror_dir/$mirror_archive_dir/$extra_dir" ]; then
+          asset_move="$mirror_dir/$mirror_archive_dir/$extra_dir to $mirror_assets_directory/"
+          mv "$mirror_dir/$mirror_archive_dir/$extra_dir" "$mirror_assets_directory/" || { echo "$msg_error: Unable to move $asset_move."; exit; }
+          echo "Moved $asset_move." "1"
+        fi
+      done
+    fi
   echo "Done."
+  fi
+
+  # Special case: mirroring a directory not a whole domain
+  if [ "$url" != "$url_base/" ]; then
+    url_path=$(printf "%s" "$url" | cut -d/ -f4- | sed s'/\/$//')
+    extra_dirs_list=( "" )
+    while IFS= read -r line; do extra_dirs_list+=("$line"); done <<<"$(find "." -name "*" -type d -print | grep -v "$url_path" | grep -vx "." | sed s'/^..//')"
+
+    # Determine which web pages to search and replace (may as well fetch all)
+    webpages=()
+    while IFS= read -r line; do webpages+=("$line"); done <<<"$(find . -name "*.html" -print)"
+
+    # First determine depth of url_path
+    up_depth=${url_path//[!\/]};
+    url_path_depth=$(( ${#up_depth}+1 ))
+    for opt in "${webpages[@]}"; do
+      # but don't process XML files in guise of HTML files
+      if grep -q "<?xml version" "$opt"; then
+        continue
+      fi
+      pathpref=
+      assetpref=
+      dpth=${opt//[!\/]}; depth=${#dpth}
+      for ((i=1;i<depth;i++)); do
+        pathpref+="\.\./"; # need to escape for sed search else treated as glob
+      done
+      i="$url_path_depth"
+      while (( i+1 < depth )); do
+        assetpref+="../";
+        ((i++))
+      done
+      # Loop over all parent paths and
+      # carry out universal search and replace on them
+      if [ ${#extra_dirs_list[@]} -ne 0 ]; then
+        for pd in "${extra_dirs_list[@]}"; do
+          pdpath="$assets_directory$hp_prefix$pd"
+          if [ "$pd" != "" ]; then
+            sed_subs=('s~'"$pathpref$pd"'~'"$assetpref$pdpath"'~g' "$opt")
+            sed "${sed_options[@]}" "${sed_subs[@]}"
+          fi  
+        done
+      fi    
+    done
+    # Move directories and files
+    if [ ${#extra_dirs_list[@]} -ne 0 ] && [ "$parent_dirs_mode" = "contain" ]; then
+      if [ "$assets_directory" != "" ]; then
+        mirror_assets_directory="$working_mirror_dir/$url_path/$assets_directory"
+        mkdir -p "$mirror_assets_directory"
+      else
+        mirror_assets_directory="$working_mirror_dir/$url_path"
+      fi
+      mkdir -p "$mirror_assets_directory/$url_path" # and avoid moving into itself later
+      for extra_dir in "${extra_dirs_list[@]}"; do
+        if [[ $url_path =~ $extra_dir ]]; then
+          # Move files
+          cd "$extra_dir"
+          for x in *; do
+            mv_file="$working_mirror_dir/$extra_dir/$x"
+            mv_params=("--" "$mv_file" "$mirror_assets_directory/$extra_dir/")
+            # to do: if not in parent_file_omissions then ...
+            if [ ! -d "$x" ]; then
+              mv "${mv_params[@]}"
+              echo "Moved file: $mv_file." "1"
+            fi
+          done
+          cd "$working_mirror_dir"
+        elif [ -d "$working_mirror_dir/$extra_dir" ]; then
+          # Move directories
+          asset_move="$working_mirror_dir/$extra_dir to $mirror_assets_directory/"
+          mv "$working_mirror_dir/$extra_dir" "$mirror_assets_directory/" || { echo "$msg_error: Unable to move $asset_move."; exit; }
+          echo "Moved directory: $asset_move." "1"
+        fi 
+      done
+    fi
+  fi
 
   # Check for occurrences of $domain as distinct from $deploy_domain.
   # Only stick with the domain in url_base if the user requests,
@@ -955,9 +1044,7 @@ wget_postprocessing() {
   printf "Converting feed files and references from index.html to index.xml ... "
   find ./ -depth -type f -path "*feed/index.html" -exec sh -c 'mv "$1" "${1%.html}.xml"' _ '{}' \;
 
-  webpages=()
-  while IFS='' read -r line; do webpages+=("$line"); done < <(grep -Erl "$feed_html" . --include "*\.html")
-
+  IFS=" " read -r -a webpages <<< "$(find_web_pages "." "$feed_html")"
   if [ ${#webpages[@]} -ne 0 ]; then
     for opt in "${webpages[@]}"; do
       sed_subs=('s~'"$feed_html"'~'"$feed_xml"'~g' "$opt")
