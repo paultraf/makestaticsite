@@ -153,7 +153,7 @@ confirm_continue() {
   if [ "$run_unattended" != "yes" ]; then
     read -r -e -p "Do you wish to continue (y/n)? " confirm
     confirm=${confirm:0:1}
-    [ "$confirm" != "y" ] && [ "$confirm" != "Y" ] && { printf "Please review the settings.\nAborting.\n"; exit; } || echo "OK. Continuing."
+    [ "$confirm" != "y" ] && [ "$confirm" != "Y" ] && { printf "Please review the settings.\nAborting.\n"; exit; } || printf "OK. Continuing.\n"
   else
     echo "Continuing (to run unattended)."
   fi
@@ -164,7 +164,7 @@ get_phase_desc() {
     var=$(expr "$opt" : '\([^=]*\)')              # Everything up to '='
     phase_desc=$(expr "$opt" : '[^=]*.\(.*\)')    # Everything after '='
     if [ "$var" = "$1" ];then
-      printf "$phase_desc"; return
+      printf "%s" "$phase_desc"; return
     fi
   done
 }
@@ -212,6 +212,19 @@ assets_search_string() {
   echo "$url_path"
 }
 
+
+# Generate a list of web pages according to given criteria
+# Expects two parameters: directory, search query
+# returns a string with s
+find_web_pages() {
+  local webpages=()
+  local opt
+  local line
+  for opt in "$2"; do
+    while IFS='' read -r line; do webpages+=("$line"); done < <(grep -Erl "$opt" "$1" --include "*\.html")
+  done
+  echo "${webpages[@]}"
+}
 
 # Write contents of a string to a given file
 # Expects one parameter: a list with all but the last containing lines and the final one containing a filepath
