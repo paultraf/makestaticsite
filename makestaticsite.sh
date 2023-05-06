@@ -850,6 +850,11 @@ wget_postprocessing() {
   # Prepare adjustment for relative paths with assets directory
   if [ "$assets_directory" != "" ]; then
     hp_prefix=/
+    # Also, check for duplication of assets directory label
+    if [ "$(find . -name "$assets_directory" -type d -print)" != "" ]; then 
+      echo "$msg_warning: website contains a directory with the same name as your assets directory, $assets_directory.  To avoid confusion (and errors), a timestamp is being appended to your assets directory, but it is recommended that you modify the assets_directory constant and re-run."
+      assets_directory="$assets_directory$timestamp"
+    fi 
   else
     hp_prefix=
   fi
@@ -878,7 +883,7 @@ wget_postprocessing() {
         for ((i=1;i<${#depth};i++)); do
           pathpref+="../";
         done
-        # Carry out universal search and replace on primary domain
+        # Carry out universal search and replace on primary domain;
         # in the case of directory URL with --no-parent, we need to limit matches 
         # to full URL and tweak the replacements 
         if [ "$external_dir_links" != "" ] && [ "$external_dir_links" != "off" ]; then
