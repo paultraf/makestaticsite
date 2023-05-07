@@ -386,6 +386,13 @@ initialise_variables() {
   # Extract the host (domain or IP) and port, protocol, and hence the URL base (no path)
   hostport=$(printf "%s" "$url" | awk -F/ '{print $3}')
   domain=$(printf "%s" "$hostport" | awk -F: '{print $1}') # refer to this as the 'primary domain'
+
+  # initialise list of all domains incorporated in the site
+  if [ "$extra_domains" != "" ] && [ "$extra_domains" != "auto" ] ; then
+    all_domains="$domain,$extra_domains"
+  else
+    all_domains="$domain"
+  fi
   protocol=$(printf "%s" "$url" | awk -F/ '{print $1}' | awk -F: '{print $1}')
   url_base="$protocol://$hostport"
   login_address="$url_base$login_path"
@@ -725,8 +732,6 @@ wget_extra_urls() {
   fi
   if [ "$extra_domains" != "" ]; then
     all_domains="$domain,$extra_domains"
-  else
-    all_domains="$domain"
   fi
   url_grep="$(assets_search_string "$all_domains" "[^\"'<) ]+")"
   
@@ -852,7 +857,7 @@ wget_postprocessing() {
     hp_prefix=/
     # Also, check for duplication of assets directory label
     if [ "$(find . -name "$assets_directory" -type d -print)" != "" ]; then 
-      echo "$msg_warning: website contains a directory with the same name as your assets directory, $assets_directory.  To avoid confusion (and errors), a timestamp is being appended to your assets directory, but it is recommended that you modify the assets_directory constant and re-run."
+      echo -n "$msg_warning: website contains a directory with the same name as your assets directory, $assets_directory.  To avoid confusion (and errors), a timestamp is being appended to your assets directory, but it is recommended that you modify the assets_directory constant and re-run. ... "
       assets_directory="$assets_directory$timestamp"
     fi 
   else
@@ -870,8 +875,8 @@ wget_postprocessing() {
     fi
 
     # Convert absolute links to relative links
-    if [ ${#urls_array[@]} -eq 0 ]; then
-      echo "No URLs to process.  Done." "1"
+    if [ ${#webpages[@]} -eq 0 ]; then
+      echo "No web pages to process.  Done." "1"
     else
       for opt in "${webpages[@]}"; do
         # but don't process XML files in guise of HTML files
@@ -892,8 +897,8 @@ wget_postprocessing() {
         fi
 
         # Loop over all non-primary-domain assets
-        # if working with extra domains or a directory URL, 
-        if [ "$extra_domains" != "" ] || [ "$url" != "$url_base/" ]; then
+        # if working with extra domains or a directory URL,
+        if [ ${#urls_array[@]} -ne 0 ] && { [ "$extra_domains" != "" ] || [ "$url" != "$url_base/" ]; }; then
           for hp in "${urls_array[@]}"; do
             hpdomain=$(echo "$hp" | cut -d/ -f3)
             if [ "$hpdomain" = "$domain" ]; then
@@ -908,7 +913,7 @@ wget_postprocessing() {
       done
     fi
 
-    if [ "$extra_domains" != "" ] && [ "$extra_assets_mode" = "contain" ]; then
+    if [ "$all_domains" != "$domain" ] && [ "$extra_assets_mode" = "contain" ]; then
       # Move folders
       IFS="," read -r -a extra_domains_list <<< "$extra_domains"
       if [ "$assets_directory" != "" ]; then
@@ -931,9 +936,8 @@ wget_postprocessing() {
   # Special case: mirroring a directory not a whole domain
   if [ "$url" != "$url_base/" ]; then
     url_path=$(printf "%s" "$url" | cut -d/ -f4- | sed s'/\/$//')
-    extra_dirs_list=( "" )
+    extra_dirs_list=()
     while IFS= read -r line; do extra_dirs_list+=("$line"); done <<<"$(find "." -name "*" -type d -print | grep -v "$url_path" | grep -vx "." | sed s'/^..//')"
-
     # Determine which web pages to search and replace (may as well fetch all)
     webpages=()
     while IFS= read -r line; do webpages+=("$line"); done <<<"$(find . -name "*.html" -print)"
@@ -957,15 +961,21 @@ wget_postprocessing() {
         assetpref+="../";
         ((i++))
       done
-      # Loop over all parent paths and
-      # carry out universal search and replace on them
+      # Loop over all parent paths and carry out universal search and replace
       if [ ${#extra_dirs_list[@]} -ne 0 ]; then
         for pd in "${extra_dirs_list[@]}"; do
-          pdpath="$assets_directory$hp_prefix$pd"
-          if [ "$pd" != "" ]; then
-            sed_subs=('s~'"$pathpref$pd"'~'"$assetpref$pdpath"'~g' "$opt")
-            sed "${sed_options[@]}" "${sed_subs[@]}"
-          fi  
+          for ((j=0;j<depth-1;j++)); do
+            IFS="/" read -r -a pd_array <<< "$pd"
+            (( pathpref_length=${#pathpref}-(j*5) ))
+            src_path=$(printf "%s" "$pathpref" | cut -b -"$pathpref_length" | tr -d '\n'; printf "%s" "${pd_array[$j]}")
+            (( k=j+1 ))
+            asset_path=$(echo "$pd" | cut -d/ -f 1-$k)
+            rep_path="$assetpref$assets_directory$hp_prefix$asset_path/"
+            if [ "$pd" != "" ] && [[ "$src_path" != */ ]]; then    # ensure the search is relative to a named directory
+              sed_subs=('s~'"$src_path/"'~'"$rep_path"'~g' "$opt")
+              sed "${sed_options[@]}" "${sed_subs[@]}"
+            fi
+          done
         done
       fi    
     done
@@ -979,11 +989,12 @@ wget_postprocessing() {
       fi
       mkdir -p "$mirror_assets_directory/$url_path" # and avoid moving into itself later
       for extra_dir in "${extra_dirs_list[@]}"; do
+        mv_dir="$working_mirror_dir/$extra_dir"
         if [[ $url_path =~ $extra_dir ]]; then
           # Move files
           cd "$extra_dir"
           for x in *; do
-            mv_file="$working_mirror_dir/$extra_dir/$x"
+            mv_file="$mv_dir/$x"
             mv_params=("--" "$mv_file" "$mirror_assets_directory/$extra_dir/")
             # to do: if not in parent_file_omissions then ...
             if [ ! -d "$x" ]; then
@@ -992,10 +1003,16 @@ wget_postprocessing() {
             fi
           done
           cd "$working_mirror_dir"
-        elif [ -d "$working_mirror_dir/$extra_dir" ]; then
+        elif [ -d "$mv_dir" ]; then
           # Move directories
-          asset_move="$working_mirror_dir/$extra_dir to $mirror_assets_directory/"
-          mv "$working_mirror_dir/$extra_dir" "$mirror_assets_directory/" || { echo "$msg_error: Unable to move $asset_move."; exit; }
+          asset_move="$mv_dir to $mirror_assets_directory/"
+          # special case: when the directory is a parent, ensure we make corresponding directory in destination
+          extra_dir_stem=
+          if [[ $extra_dir =~ "/" ]]; then
+            extra_dir_stem=$(dirname "$extra_dir");
+            mkdir -p "$mirror_assets_directory/$extra_dir_stem"
+          fi
+          mv "$mv_dir" "$mirror_assets_directory/$extra_dir_stem" || { echo "$msg_error: Unable to move $asset_move."; exit; }
           echo "Moved directory: $asset_move." "1"
         fi 
       done
