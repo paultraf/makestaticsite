@@ -22,8 +22,8 @@
 ################################################
 # MakeStaticSite info
 ################################################
-version=0.25.4
-version_date='7 May 2023'
+version=0.25.4+1
+version_date='8 May 2023'
 version_header="MakeStaticSite version $version, released on $version_date."
 mss_license="GNU Affero General Public License version 3"
 mss_download="https://makestaticsite.sh/download/makestaticsite_latest.tar.gz"
@@ -58,7 +58,7 @@ tab="  "                        # tab spacing for file outputs
 wget_cmd=wget                   # [Path to] wget binary
 wget_version_atleast=1.21
 wget_error_level=6              # The lowest Wget error code tolerated or else aborts (>8 for no tolerance)
-wget_user_agent= # set browser user agent (empty for default), wrapped in quotes, e.g. "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15)"
+wget_user_agent=                # set browser user agent (empty for default), wrapped in quotes, e.g. "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15)"
 wget_cookies=cookies.txt        # name of cookies file
 wget_inputs_main=wget_inputs_main # name of input file stem for web content to be retrieved in main run of Wget in phase 2
 wget_inputs_extra=wget_inputs_extra # name of input file stem for additional assets to be retrieved by Wget in phase 3
@@ -188,6 +188,7 @@ run_unattended=no               # Is MSS running unattended (yes/no)?
 extras_dir=extras               # Name of folder containing all the additions
 force_ssl=yes                   # Convert anchors to deployment domain to https (yes/no)
 force_domains=yes               # Auto replace domain with deploy_domain (yes/no)
+zip_omit_download=yes           # Omit download folder from website zip (yes/no)
 rsync_options=(-a -z -h)        # Core rsync options (excludes the output level)
 #  -a archive mode preserves permissions, ownership, and modification times, etc
 #  -z compression during transfer

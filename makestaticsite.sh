@@ -1338,8 +1338,12 @@ create_zip() {
     mv "$zip_archive" "$zip_backup" || echo "$msg_warning: unable to create a backup for $zip_archive"
     echo "Backed up $zip_archive to $zip_backup" "1"
   fi
-  zip -q -r "$zip_archive" "$mirror_archive_dir"
-  echo "ZIP archive created."
+  zip_options="-q -r $zip_archive $mirror_archive_dir"
+  zip_omit_download=$(yesno "$zip_omit_download")
+  [ "$zip_omit_download" = "yes" ] && zip_options+=" -x $mirror_archive_dir/$hostport/$zip_download_folder/*" 
+  IFS=" " read -r -a zip_options_all <<< "$zip_options"
+  zip "${zip_options_all[@]}"
+  echo "ZIP archive created at $zip_archive."
   cd "$script_dir"
 }
 
