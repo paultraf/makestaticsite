@@ -890,8 +890,8 @@ wget_postprocessing() {
         done
         # Carry out universal search and replace on primary domain;
         # in the case of directory URL with --no-parent, we need to limit matches 
-        # to full URL and tweak the replacements 
-        if [ "$external_dir_links" != "" ] && [ "$external_dir_links" != "off" ]; then
+        # to full URL and tweak the replacements
+        if [ "$url" = "$url_base/" ] || { [ "$external_dir_links" != "" ] && [ "$external_dir_links" != "off" ]; }; then
           sed_subs=('s~https\?://'"$hostport/"'~'"$pathpref"'~g' "$opt")
           sed "${sed_options[@]}" "${sed_subs[@]}"
         fi
