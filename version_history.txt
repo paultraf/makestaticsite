@@ -19,9 +19,35 @@
 ##########################################################################
 
 
+0.25.4.1 (released on 2023-05-09)
+        * Maintenance *
+        [lib/constants.sh]
+         Added new option: zip_omit_download (default=yes) to specify whether
+         or not to exclude the website download folder from the zip file.
+        [makestaticsite.sh]
+         wget_postprocessing(): bug fix to reinstate functionality:
+         inserted OR clause for URLs with empty paths when carrying out
+         universal search and replace on primary domain.
+         create_zip(): inserted code to exclude zip_download directory from
+         zip file depending on value of zip_omit_download.
+
+0.25.4 (released on 2023-05-07)
+      * Fixes to enable fuller support for mirroring URLs with directories *
+      [makestaticsite.sh]
+       initialise_variables(): Added initialisation of all incorporated domains
+       wget_postprocessing(): Added a check on Wget mirror: if there exists a
+       downloaded directory with same name as $assets_directory then append a
+       timestamp to latter.
+       Adjusted conditionals for converting absolute links to relative links
+       (on webpages, not urls_array); also inserted references to all_domains;
+       Expanded loop over all parent paths for universal search and replace,
+       with a further internal loop for directory traversal of source path.
+       Moving of directories refined to handle case of parent directories,
+       ensuring the corresponding directory is created in the destination.
+
 0.25.3 (released on 2023-05-05)
       * Added support for Wget --no-parent option for URLs with directories,
-        with options to incorporate external files in the assets area
+        with options to incorporate external files in the assets area *
       [lib/constants.sh]
        Added three new options:
        wget_no_parent specifies the behaviour for URLs with directories;

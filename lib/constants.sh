@@ -22,8 +22,8 @@
 ################################################
 # MakeStaticSite info
 ################################################
-version=0.25.4+1
-version_date='8 May 2023'
+version=0.25.4.1
+version_date='9 May 2023'
 version_header="MakeStaticSite version $version, released on $version_date."
 mss_license="GNU Affero General Public License version 3"
 mss_download="https://makestaticsite.sh/download/makestaticsite_latest.tar.gz"
@@ -232,7 +232,7 @@ url__info='Enter a website root URL or a path.  To capture a specific directory 
 
 require_login=n
 require_login__desc='Does the site require a login (y/n)?'
-require_login__info="If your website requires you to log in with a username and password (typically, via a web form), then enter 'y' otherwise 'n'."
+require_login__info="If your website requires you to log in with a username and password (typically, via a web form) to see any content, then enter 'y' otherwise 'n'.  Normally this is only the case for an intranet or firewalled site."
 
 site_user=username
 site_user__desc='Website username'
