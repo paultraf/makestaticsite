@@ -44,7 +44,7 @@ pluralize() {
   if [ "$1" != "1" ]; then
     printf "s"
   else
-    printf
+    printf ""
   fi
 }
 
