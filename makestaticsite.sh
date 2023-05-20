@@ -1039,13 +1039,9 @@ wget_postprocessing() {
         confirm=${confirm:0:1}
       fi
       if [ "$confirm" == "y" ] || [ "$confirm" == "Y" ]; then
-        sed_subs=('s~'"$domain"'~'"$deploy_domain"'~g')
         echo -n "Replacing remaining occurrences of $domain with $deploy_domain ... "
-        if [ "$ostype" = "BSD" ]; then
-          find . -type f \( -name '*.html' -o -name '*.xml' -o -name '*.txt' \) -print0 | xargs -0 sed -i '' 's~'"$domain"'~'"$deploy_domain"'~g'
-        else
-          find . -type f \( -name '*.html' -o -name '*.xml' -o -name '*.txt' \) -print0 | xargs -0 sed -i 's~'"$domain"'~'"$deploy_domain"'~g'
-        fi
+        sed_subs=('s~'"$domain_match_prefix$domain"'~'"$domain_subs_prefix$deploy_domain"'~g')
+        find . -type f \( -name '*.html' -o -name '*.xml' -o -name '*.txt' \) -print0 | xargs -0 sed "${sed_options[@]}" "${sed_subs[@]}"
         echo "Done."
       fi
     fi

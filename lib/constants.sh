@@ -22,8 +22,8 @@
 ################################################
 # MakeStaticSite info
 ################################################
-version=0.25.4.1
-version_date='9 May 2023'
+version=0.25.4.1+3
+version_date='20 May 2023'
 version_header="MakeStaticSite version $version, released on $version_date."
 mss_license="GNU Affero General Public License version 3"
 mss_download="https://makestaticsite.sh/download/makestaticsite_latest.tar.gz"
@@ -49,7 +49,7 @@ etc_hosts=/etc/hosts            # Location of hosts file
 ################################################
 tmp_dir=tmp                     # Directory where temporary files are to be stored
 tab="  "                        # tab spacing for file outputs
-
+host_dir=auto                   # Host directory mode; for Wget, empty or no corresponds to -nh, else host directory included 
 
 ################################################
 # Wget settings - initial and phase 2
@@ -183,11 +183,13 @@ timezone=local                  # Time zone: local|utc|utclocal
 output_level=quiet              # stdout verbosity - silent|quiet|normal|verbose
 log_level=normal                # Log level: silent|quiet|normal|verbose
 log_filename=makestaticsite.log # Name of MakeStaticSite log file
-trap_errors=no                  # Trap errors with immediate script termination (yes/no)
+trap_errors=yes                  # Trap errors with immediate script termination (yes/no)
 run_unattended=no               # Is MSS running unattended (yes/no)?
 extras_dir=extras               # Name of folder containing all the additions
 force_ssl=yes                   # Convert anchors to deployment domain to https (yes/no)
 force_domains=yes               # Auto replace domain with deploy_domain (yes/no)
+domain_match_prefix=//          # Domain prefix for matches (in sed) 
+domain_subs_prefix=//           # Domain prefix for substitutions (in sed)
 zip_omit_download=yes           # Omit download folder from website zip (yes/no)
 rsync_options=(-a -z -h)        # Core rsync options (excludes the output level)
 #  -a archive mode preserves permissions, ownership, and modification times, etc
