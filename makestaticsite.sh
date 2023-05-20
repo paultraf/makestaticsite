@@ -871,47 +871,43 @@ wget_postprocessing() {
     # Populate URLs array from Wget's additional input file,
     urls_array=()
     if [ -f "$input_file_extra" ]; then
-      read -d '' -r -a urls_array <"$input_file_extra"
+      if read -d '' -r -a urls_array; then :; fi <"$input_file_extra"
     fi
 
     # Convert absolute links to relative links
-    if [ ${#webpages[@]} -eq 0 ]; then
-      echo "No web pages to process.  Done." "1"
-    else
-      for opt in "${webpages[@]}"; do
-        # but don't process XML files in guise of HTML files
-        if grep -q "<?xml version" "$opt"; then
-          continue
-        fi
-        pathpref=
-        depth=${opt//[!\/]};
-        for ((i=1;i<${#depth};i++)); do
-          pathpref+="../";
-        done
-        # Carry out universal search and replace on primary domain;
-        # in the case of directory URL with --no-parent, we need to limit matches 
-        # to full URL and tweak the replacements
-        if [ "$url" = "$url_base/" ] || { [ "$external_dir_links" != "" ] && [ "$external_dir_links" != "off" ]; }; then
-          sed_subs=('s~https\?://'"$hostport/"'~'"$pathpref"'~g' "$opt")
-          sed "${sed_options[@]}" "${sed_subs[@]}"
-        fi
-
-        # Loop over all non-primary-domain assets
-        # if working with extra domains or a directory URL,
-        if [ ${#urls_array[@]} -ne 0 ] && { [ "$extra_domains" != "" ] || [ "$url" != "$url_base/" ]; }; then
-          for hp in "${urls_array[@]}"; do
-            hpdomain=$(echo "$hp" | cut -d/ -f3)
-            if [ "$hpdomain" = "$domain" ]; then
-              continue
-            fi
-            hppath=$(echo "$hp" | cut -d/ -f3-)
-            hppath="$assets_directory$hp_prefix$hppath"
-            sed_subs=('s~'"$hp"'~'"$pathpref$hppath"'~g' "$opt")
-            sed "${sed_options[@]}" "${sed_subs[@]}"
-          done
-        fi    
+    for opt in "${webpages[@]}"; do
+      # but don't process XML files in guise of HTML files
+      if grep -q "<?xml version" "$opt"; then
+        continue
+      fi
+      pathpref=
+      depth=${opt//[!\/]};
+      for ((i=1;i<${#depth};i++)); do
+        pathpref+="../";
       done
-    fi
+      # Carry out universal search and replace on primary domain;
+      # in the case of directory URL with --no-parent, we need to limit matches 
+      # to full URL and tweak the replacements
+      if [ "$url" = "$url_base/" ] || { [ "$external_dir_links" != "" ] && [ "$external_dir_links" != "off" ]; }; then
+        sed_subs=('s~https\?://'"$hostport/"'~'"$pathpref"'~g' "$opt")
+        sed "${sed_options[@]}" "${sed_subs[@]}"
+      fi
+
+      # Loop over all non-primary-domain assets
+      # if working with extra domains or a directory URL,
+      if [ ${#urls_array[@]} -ne 0 ] && { [ "$extra_domains" != "" ] || [ "$url" != "$url_base/" ]; }; then
+        for hp in "${urls_array[@]}"; do
+          hpdomain=$(echo "$hp" | cut -d/ -f3)
+          if [ "$hpdomain" = "$domain" ]; then
+            continue
+          fi
+          hppath=$(echo "$hp" | cut -d/ -f3-)
+          hppath="$assets_directory$hp_prefix$hppath"
+          sed_subs=('s~'"$hp"'~'"$pathpref$hppath"'~g' "$opt")
+          sed "${sed_options[@]}" "${sed_subs[@]}"
+        done
+      fi    
+    done
 
     if [ "$all_domains" != "$domain" ] && [ "$extra_assets_mode" = "contain" ]; then
       # Move folders
