@@ -19,6 +19,19 @@
 ##########################################################################
 
 
+0.25.5 (released on 2023-05-21)
+      * Extended support to Wget --no-host-directories plus maintenance *
+      [lib/general.sh]
+       pluralize(): fixed printf empty string
+      [lib/constants.sh]
+       Added constants: domain_match_prefix and domain_subs_prefix to
+       contextualise replacement of source domain with deploy domain.
+      [makestaticsite.sh]
+       wget_postprocessing(): streamlined the code for converting absolute
+       links to relative links; tweaked reading of array to ensure that error
+       traps not inadvertently set.
+       Added support for Wget --no-host-directories (or -nH)
+
 0.25.4.1 (released on 2023-05-09)
         * Maintenance *
         [lib/constants.sh]
