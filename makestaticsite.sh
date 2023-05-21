@@ -450,8 +450,20 @@ initialise_variables() {
   local_sitename="$(config_get local_sitename "$myconfig")"
 
   # Path of the mirror archive, if archive directory is already defined
-  [ "$mirror_archive_dir" != "" ] && working_mirror_dir=$mirror_dir'/'$mirror_archive_dir'/'$hostport && zip_archive=$mirror_archive_dir'.zip'
-
+  # check for -nH option in wget_extra_options
+  hostport_dir=
+  if [[ $wget_extra_options_tmp =~ "-nH" ]] || [[ $wget_extra_options_tmp =~ "--no-host-directories" ]]; then
+    host_dir=
+  fi
+  if [ "$host_dir" != "" ] && [ $(yesno "$host_dir") != "no" ]; then
+    hostport_dir="/$hostport"
+  fi
+    
+  if [ "$mirror_archive_dir" != "" ]; then
+    working_mirror_dir="$mirror_dir/$mirror_archive_dir$hostport_dir"
+    zip_archive=$mirror_archive_dir'.zip'
+  fi
+  
   # Zip file of the site snapshot
   zip_filename="$(config_get zip_filename "$myconfig")"
   zip_download_folder="$(config_get zip_download_folder "$myconfig")"
@@ -580,7 +592,7 @@ wget_mirror() {
   if [ "$mirror_archive_dir" = "" ]; then
     mirror_archive_dir="$local_sitename"
     [ "$archive" = "yes" ] && mirror_archive_dir+="$timestamp"
-    working_mirror_dir=$mirror_dir'/'$mirror_archive_dir'/'$hostport
+    working_mirror_dir="$mirror_dir/$mirror_archive_dir$hostport_dir"
     zip_archive=$mirror_archive_dir'.zip'
   fi
 
@@ -607,8 +619,8 @@ wget_mirror() {
   wget_login_options=("$wget_ssl" --directory-prefix "$tmp_mirror_path" --save-cookies "$cookies_path" --keep-session-cookies "$login_address" --delete-after)
 
   url_robots="$url/robots.txt"
-  wget_robot_options=("$wget_ssl" --directory-prefix "$mirror_archive_dir/$hostport" "$url_robots")
-  wget_sitemap_options=("$wget_ssl" --directory-prefix "$mirror_archive_dir/$hostport")
+  wget_robot_options=("$wget_ssl" --directory-prefix "$mirror_archive_dir$hostport_dir" "$url_robots")
+  wget_sitemap_options=("$wget_ssl" --directory-prefix "$mirror_archive_dir$hostport_dir")
 
   if [ "$wvol" != "-q" ] || [ "$output_level" = "silent" ]; then
     wget_progress_indicator=()
@@ -675,13 +687,13 @@ wget_mirror() {
     if ! $wget_cmd "${wget_extra_options[@]}" "${wget_robot_options[@]}"; then
       printf " \n%s: Wget reported an error trying to retrieve the robots.txt file (likely not found).  Search engines expect this, so have made a note to create it.\n" "$msg_warning"
       robots_create=yes
-    elif sitemap_line=$(grep "^[[:space:]]*Sitemap:" "$mirror_archive_dir/$hostport/robots.txt"); then
+    elif sitemap_line=$(grep "^[[:space:]]*Sitemap:" "$mirror_archive_dir$hostport_dir/robots.txt"); then
       # Read contents of robots.txt, checking for sitemap
       sitemap=$(printf "%s\n" "$sitemap_line" | grep -o 'http[s]*:\/\/.*.xml')
       $wget_cmd "${wget_extra_options[@]}" "${wget_sitemap_options[@]}" "$sitemap"
       # Wget any nested sitemaps
       wget_sitemap_options+=("$sitemap" --output-document -)
-      $wget_cmd "${wget_extra_options[@]}" "${wget_sitemap_options[@]}" | grep -o "http[s]*://[^<]*.xml" | $wget_cmd "${wget_extra_options[@]}" --quiet "$wget_ssl" --directory-prefix "$mirror_archive_dir/$hostport" -i -
+      $wget_cmd "${wget_extra_options[@]}" "${wget_sitemap_options[@]}" | grep -o "http[s]*://[^<]*.xml" | $wget_cmd "${wget_extra_options[@]}" --quiet "$wget_ssl" --directory-prefix "$mirror_archive_dir$hostport_dir" -i -
     else
       printf " \n%s: No sitemap found in robots.txt. Search engines expect this, so have made a note to generate one.\n" "$msg_warning"
       sitemap_create=yes
@@ -866,9 +878,9 @@ wget_postprocessing() {
 
   # General case: conversion of absolute links to relative links
   if [ ${#webpages[@]} -eq 0 ]; then
-    echo "No pages to process. " "1"
+    echo "No web pages to process.  Done." "1"
   else
-    # Populate URLs array from Wget's additional input file,
+    # Populate URLs array from Wget's additional input file
     urls_array=()
     if [ -f "$input_file_extra" ]; then
       if read -d '' -r -a urls_array; then :; fi <"$input_file_extra"
@@ -1177,7 +1189,7 @@ clean_mirror() {
 
   # Create robots file, where necessary
   if [ "$robots_create" = "yes" ]; then
-    robots_path="$mirror_dir/$mirror_archive_dir/$hostport/robots.txt"
+    robots_path="$mirror_dir/$mirror_archive_dir$hostport_dir/robots.txt"
     robots_default="$script_dir/$lib_files/$robots_default_file"
     cp "$robots_default" "$robots_path"
     printf "\nSitemap: %s\n" "https://$deploy_domain/$sitemap_file" >> "$robots_path"
@@ -1185,7 +1197,7 @@ clean_mirror() {
 
   # Create sitemap, where necessary
   if [ "$sitemap_create" = "yes" ]; then
-    sitemap_path="$mirror_dir/$mirror_archive_dir/$hostport/sitemap.xml"
+    sitemap_path="$mirror_dir/$mirror_archive_dir$hostport_dir/sitemap.xml"
     touch "$sitemap_path"
     sitemap_content="$(sitemap_header)"$'\n';
     sitemap_loc_files=()
@@ -1222,9 +1234,8 @@ clean_mirror() {
 process_snippets() {
   # Create necessary directories for substitution files and snippets
   [ -d "$sub_files_path" ] || { mkdir -p "$sub_files_path"; echo "Created folders for substitute files at $sub_files_path."; }
-
   [ -d "$snippets_dir" ] || { mkdir -p "$snippets_dir"; echo "Created folder for snippet files at $snippets_dir."; }
-
+  
   # Change to subs directory
   cd "$script_dir/$sub_dir" || { echo "$msg_error: can't access substitutes directory ($script_dir/$sub_dir)" >&2; echo "No substitutions can be made." >&2;exit 1; }
 
@@ -1232,8 +1243,8 @@ process_snippets() {
   [ -d "$mirror_archive_dir" ] || mkdir -p "$mirror_archive_dir"
 
   # Replicate the mirrored folder for the host [and port]
-  hostport_dir=$mirror_archive_dir'/'$hostport
-  [ -d "$hostport_dir" ] || mkdir -p "$hostport_dir"
+  subs_hostport_dir="$mirror_archive_dir$hostport_dir"
+  [ -d "$subs_hostport_dir" ] || mkdir -p "$subs_hostport_dir"
 
   # Carry out snippet substitutions:
   echo "current directory: $(pwd)" "1"
@@ -1272,7 +1283,7 @@ process_snippets() {
         echo -e "input file $sub_input_file" "1"
 
         # Create the necessary subdirectories containing modified files
-        src="$hostport_dir/$src_file"
+        src="$subs_hostport_dir/$src_file"
         sub_input_dir="$(dirname "${sub_input_file}")"
         src_dir="$(dirname "${src}")"
         mkdir -p "$src_dir"
@@ -1312,7 +1323,7 @@ process_snippets() {
 
   # Copy any snippets across to mirror
   if [ "$snippets_count" != 0 ]; then
-    snippets_src="$script_dir/$sub_dir/$mirror_archive_dir/$hostport"
+    snippets_src="$script_dir/$sub_dir/$subs_hostport_dir"
     dest="$working_mirror_dir"
     echo "Copying from: $snippets_src" "1"
     echo "To: $dest" "1"
@@ -1332,7 +1343,7 @@ create_zip() {
   fi
   zip_options="-q -r $zip_archive $mirror_archive_dir"
   zip_omit_download=$(yesno "$zip_omit_download")
-  [ "$zip_omit_download" = "yes" ] && zip_options+=" -x $mirror_archive_dir/$hostport/$zip_download_folder/*" 
+  [ "$zip_omit_download" = "yes" ] && zip_options+=" -x $mirror_archive_dir$hostport_dir/$zip_download_folder/*" 
   IFS=" " read -r -a zip_options_all <<< "$zip_options"
   zip "${zip_options_all[@]}"
   echo "ZIP archive created at $zip_archive."
