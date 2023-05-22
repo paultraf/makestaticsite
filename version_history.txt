@@ -19,8 +19,14 @@
 ##########################################################################
 
 
+0.25.5.1 (released on 2023-05-22)
+        * Bug fix for setup *
+        [lib/setup.sh]
+         process_options(): added OR clause to string_count to ensure
+         exit code 0
+
 0.25.5 (released on 2023-05-21)
-      * Extended support to Wget --no-host-directories plus maintenance *
+      * Added support for Wget --no-host-directories plus maintenance *
       [lib/general.sh]
        pluralize(): fixed printf empty string
       [lib/constants.sh]

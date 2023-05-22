@@ -239,7 +239,7 @@ process_options() {
     fi
     if [ "$option_stem" = "" ]; then
       option_stem="$var"
-      string_count=$(grep -o ',' <<< "$val" | wc -l)
+      string_count=$(grep -o ',' <<< "$val" | wc -l) || string_count=0
       # enumerate the strings and check if they are all yes/no
       if (( string_count > 0 )); then
         is_yesno="y"
@@ -266,6 +266,7 @@ process_options() {
       read_option "$option_type"
     fi
   done
+  
 }
 
 write_config() {
