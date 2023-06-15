@@ -455,7 +455,7 @@ initialise_variables() {
   if [[ $wget_extra_options_tmp =~ "-nH" ]] || [[ $wget_extra_options_tmp =~ "--no-host-directories" ]]; then
     host_dir=
   fi
-  if [ "$host_dir" != "" ] && [ $(yesno "$host_dir") != "no" ]; then
+  if [ "$host_dir" != "" ] && [ "$(yesno "$host_dir")" != "no" ]; then
     hostport_dir="/$hostport"
   fi
     
@@ -859,7 +859,7 @@ wget_postprocessing() {
   # First, generate a list of all the web pages that contain relevant URLs to process
   # (makes subsequent sed replacements more targeted than searching all web pages).
   webpages=()
-  [ -z ${url_grep+x} ] && url_grep="$(assets_search_string "$all_domains" "[^\"'<) ]+")" # need to define $url_grep when running from phase 4 onwards
+  [ -z ${url_grep+x} ] && url_grep="$(assets_search_string "$all_domains" "[^\"'<) ]+")" # define $url_grep as necessary
   for opt in "${url_grep[@]}"; do
     while IFS='' read -r line; do webpages+=("$line"); done < <(grep -Erl "$opt" . --include "*\.html")
   done
@@ -998,7 +998,7 @@ wget_postprocessing() {
       mkdir -p "$mirror_assets_directory/$url_path" # and avoid moving into itself later
       for extra_dir in "${extra_dirs_list[@]}"; do
         mv_dir="$working_mirror_dir/$extra_dir"
-        if [[ $url_path =~ $extra_dir ]]; then
+        if [ "$url_path" != "" ] && [[ $url_path =~ $extra_dir ]]; then
           # Move files
           cd "$extra_dir"
           for x in *; do
