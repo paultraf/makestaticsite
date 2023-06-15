@@ -61,6 +61,9 @@ main() {
   # Phase 7: Use snippets
   (( phase < 8 )) && (( end_phase >= 7 )) && [ "$use_snippets" = "yes" ] && process_snippets
 
+  # Phase 7-8 Interval: MSS cut directories
+  [ "$mss_cut_dirs" = "yes" ] && cut_mss_dirs
+
   # Phase 8: Create an offline zip archive
   (( phase < 9 )) && (( end_phase >= 8 )) && [ "$upload_zip" = "yes" ] && create_zip || echo "Creation of ZIP archive skipped, as per preferences." "1"
 
@@ -372,6 +375,13 @@ initialise_variables() {
   # Web server details (to be snapped by Wget)
   url="$(config_get url "$myconfig" | sed s'/\/\?$/\//')"  # ensure URL ends in trailing slash
   url_domain=$(printf "%s\n" "$url" | awk -F/ '{print $3}' | awk -F: '{print $1}')
+  url_path=$(printf "%s" "$url" | cut -d/ -f4- | sed s'/\/$//')
+  if [ "$url_path" = "" ]; then
+    url_path_depth=0
+  else  
+    url_slashes=${url_path//[!\/]};
+    url_path_depth=$(( ${#url_slashes}+1 ))
+  fi
 
   # Additional, supported extensions and domains for stored assets
   extra_domains="$(config_get extra_domains "$myconfig")"
@@ -464,6 +474,12 @@ initialise_variables() {
     zip_archive=$mirror_archive_dir'.zip'
   fi
 
+  mss_cut_dirs=$(yesno "$mss_cut_dirs" "1")
+  cut_dirs=0
+  if [[ $wget_extra_options_tmp =~ "--cut-dirs" ]]; then
+    cut_dirs=$(echo "$wget_extra_options_tmp" | grep -o "cut-dirs=[0-9]*" | cut -d '=' -f2)
+  fi
+ 
   # Zip file of the site snapshot
   zip_filename="$(config_get zip_filename "$myconfig")"
   zip_download_folder="$(config_get zip_download_folder "$myconfig")"
@@ -486,6 +502,9 @@ initialise_variables() {
   deploy_path="$(config_get deploy_path "$myconfig")"
   deploy_domain="$(config_get deploy_domain "$myconfig")"
   echo "Done."
+  if [ "$cut_dirs" != "0" ]; then
+    echo "$msg_warning: You have specified Wget --cut-dirs option. Ignoring mss_cut_dirs."
+  fi
 }
 
 prepare_static_generation() {
@@ -847,11 +866,12 @@ wget_extra_urls() {
 }
 
 # Carry out further processing of output:
-#  - for the primary domain, convert absolute paths to relative paths
-#  - for extra domains, convert absolute paths to relatives paths and
-#    optionally incorporate respective content in a designated assets folder
-#  - replace remaining occurrences of primary domain with the deployment domain
-#    (subject to user confirmation)
+#  1. For the primary domain, convert absolute paths to relative paths.
+#  2. For extra domains, convert absolute paths to relatives paths and
+#     optionally incorporate respective content in a designated assets folder.
+#  3. Replace remaining occurrences of primary domain with the deployment domain
+#     (subject to user confirmation).
+#  4. If Wget --cut-dirs options set, then only carry out option 3.
 wget_postprocessing() {
   cd "$working_mirror_dir" || { printf "Unable to enter %s.\nAborting.\n" "$working_mirror_dir"; exit; }
   echo -n "Carrying out post-Wget processing in $working_mirror_dir ... " 
@@ -865,7 +885,7 @@ wget_postprocessing() {
   done
 
   # Prepare adjustment for relative paths with assets directory
-  if [ "$assets_directory" != "" ]; then
+  if [ "$assets_directory" != "" ] && [ "$cut_dirs" = "0" ]; then
     hp_prefix=/
     # Also, check for duplication of assets directory label
     if [ "$(find . -name "$assets_directory" -type d -print)" != "" ]; then 
@@ -879,7 +899,7 @@ wget_postprocessing() {
   # General case: conversion of absolute links to relative links
   if [ ${#webpages[@]} -eq 0 ]; then
     echo "No web pages to process.  Done." "1"
-  else
+  elif [ "$cut_dirs" = "0" ]; then
     # Populate URLs array from Wget's additional input file
     urls_array=()
     if [ -f "$input_file_extra" ]; then
@@ -942,17 +962,13 @@ wget_postprocessing() {
   fi
 
   # Special case: mirroring a directory not a whole domain
-  if [ "$url" != "$url_base/" ]; then
-    url_path=$(printf "%s" "$url" | cut -d/ -f4- | sed s'/\/$//')
+  if [ "$url" != "$url_base/" ] && [ "$cut_dirs" = "0" ]; then
     extra_dirs_list=()
     while IFS= read -r line; do extra_dirs_list+=("$line"); done <<<"$(find "." -name "*" -type d -print | grep -v "$url_path" | grep -vx "." | sed s'/^..//')"
     # Determine which web pages to search and replace (may as well fetch all)
     webpages=()
     while IFS= read -r line; do webpages+=("$line"); done <<<"$(find . -name "*.html" -print)"
 
-    # First determine depth of url_path
-    up_depth=${url_path//[!\/]};
-    url_path_depth=$(( ${#up_depth}+1 ))
     for opt in "${webpages[@]}"; do
       # but don't process XML files in guise of HTML files
       if grep -q "<?xml version" "$opt"; then
@@ -1331,6 +1347,26 @@ process_snippets() {
   fi
 
   cd "$script_dir" || echo "$msg_warning: cannot change directory to $script_dir."
+}
+
+#  If Wget --cut-dirs not specified, then move top-level index.html to root directory.
+cut_mss_dirs() {
+  if [ "$url" = "$url_base/" ]; then
+    echo "$msg_info: You have specified mss_cut_dirs to cut directories, but this is only effective for a URL with a directory path. No action taken."
+    return 0
+  fi
+  if [ "$cut_dirs" != "0" ]; then
+    return 0
+  fi
+  cd "$working_mirror_dir" || { printf "Unable to enter %s.\nAborting.\n" "$working_mirror_dir"; exit; }
+  dir_path="$working_mirror_dir/$url_path"
+  mv "$dir_path/"* "$working_mirror_dir/"
+  echo "Moved files and folders from $dir_path to $working_mirror_dir/." "1"
+  # remove top-level folder of $url_path
+  url_root_dir=$(echo "$url_path" | cut -d/ -f1)
+  if [ -d "$url_root_dir" ]; then
+    rm -rf "$url_root_dir"
+  fi  
 }
 
 create_zip() {

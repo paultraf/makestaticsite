@@ -31,12 +31,20 @@ error_set() {
   fi
 }
 
-# Assume that any option that starts with 'n' or 'N' is a 'no', otherwise 'yes'
+# Return canonical form for on/off, yes/no.
+# Assume that any option (first parameter) that 
+# starts with 'n' or 'off' (as lower case) is a 'no';
+# or 'yes' if it starts with 'y' or 'on' (as lower case) 
+# or if second (optional) parameter is not set.
+# Otherwise, return original value.
 yesno() {
-  if [ "${1:0:1}" = "n" ] || [ "${1:0:1}" = "N" ]; then
+  a=$(echo "$1" | tr '[A-Z]' '[a-z]')
+  if [ "${a:0:1}" = "n" ] || [ "${a:0:3}" = "off" ]; then
     printf "no"
-  else
+  elif [ -z ${2+x} ] || [ "${a:0:1}" = "y" ] || [ "${a:0:2}" = "on" ]; then
     printf "yes"
+  else
+    printf "$1"
   fi
 }
 

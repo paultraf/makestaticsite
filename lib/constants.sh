@@ -22,8 +22,8 @@
 ################################################
 # MakeStaticSite info
 ################################################
-version=0.25.5
-version_date='21 May 2023'
+version=0.25.6
+version_date='15 June 2023'
 version_header="MakeStaticSite version $version, released on $version_date."
 mss_license="GNU Affero General Public License version 3"
 mss_download="https://makestaticsite.sh/download/makestaticsite_latest.tar.gz"
@@ -103,6 +103,10 @@ parent_dirs_mode=contain        # What to do with assets that lie above the mirr
 external_dir_links=             # What to do with links to resources on same domain, but outside the mirrored tree
                                 # - empty or 'off' to not make relative, only point to the deployment domain 
                                 # - 'local' or anything other than empty or 'off' will make relative, to assets directory
+mss_cut_dirs=yes                # Option to cut directories.  When this is enabled, there is no need to specify Wget option --cut-dirs 
+                                # - 'yes' or 'on' for a MakeStaticSite-specific cut that moves content of URL path to root
+                                # - empty, 'no' or 'off' to support Wget --cut-dirs and not carry out further MakeStaticSite-specific processing
+                                # - 'auto' to support Wget --cut-dirs and carry out further processing (not yet implemented)
 
 ################################################
 # Robot and site map settings
@@ -183,7 +187,7 @@ timezone=local                  # Time zone: local|utc|utclocal
 output_level=quiet              # stdout verbosity - silent|quiet|normal|verbose
 log_level=normal                # Log level: silent|quiet|normal|verbose
 log_filename=makestaticsite.log # Name of MakeStaticSite log file
-trap_errors=yes                  # Trap errors with immediate script termination (yes/no)
+trap_errors=no                  # Trap errors with immediate script termination (yes/no)
 run_unattended=no               # Is MSS running unattended (yes/no)?
 extras_dir=extras               # Name of folder containing all the additions
 force_ssl=yes                   # Convert anchors to deployment domain to https (yes/no)

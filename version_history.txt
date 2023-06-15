@@ -19,6 +19,27 @@
 ##########################################################################
 
 
+0.25.6 (released on 2023-06-15)
+      * Added support for custom cut directories (url shortening) *
+      [lib/constants.sh]
+       Added constants mss_cut_dirs: for URLs with paths, this cut outs parent
+       directories, promoting the web content.
+      [lib/general.sh]
+       yesno(): extended function to interpret 'on'/'off' as 'yes'/'no' and to
+       allow for returning original value other than 'yes' or 'no'.
+      [makestaticsite.sh]
+       Added two kinds of support for cut directories:
+       native (via mss_cut_dirs) preserves original directory paths, and 
+       supports consolidation of files in assets/ directory; 
+       Wget --cut-dirs, but no support for assets/ directory consolidation.
+       main(): inserted inter-phase process to support cut directories'
+       initialise_variables(): moved computation of cut directories and
+       url_path here as they are used in multiple phases'
+       wget_postprocessing(): added constraints to prevent assets/ directory
+       routine when Wget --cut-dirs options set.
+       Added function cut_mss_dirs(): if Wget --cut-dirs not specified, then
+       move top-level index.html to root directory.
+
 0.25.5.1 (released on 2023-05-22)
         * Bug fix for setup *
         [lib/setup.sh]
