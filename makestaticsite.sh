@@ -463,7 +463,7 @@ initialise_variables() {
     working_mirror_dir="$mirror_dir/$mirror_archive_dir$hostport_dir"
     zip_archive=$mirror_archive_dir'.zip'
   fi
-  
+
   # Zip file of the site snapshot
   zip_filename="$(config_get zip_filename "$myconfig")"
   zip_download_folder="$(config_get zip_download_folder "$myconfig")"
@@ -726,6 +726,9 @@ wget_extra_urls() {
 
   printf "Searching for additional URLs to retrieve with Wget (working in %s) ... " "$working_mirror_dir"
 
+  # Refresh file for Wget (generated)
+  touch "$input_file_extra"; echo > "$input_file_extra"
+
   # Generate search URL prefixes combining primary domain and extra domains
   if [ "$extra_domains" = "auto" ]; then
     printf "Searching for extra asset domains (working in %s) ... " "$working_mirror_dir"
@@ -816,9 +819,6 @@ wget_extra_urls() {
   # Return if empty (all those found were filtered out)
   [ ${#webassets[@]} -eq 0 ] && { echo "None suitable found. " "1"; echo "Done."; return 0; }
 
-  # Input file for Wget (generated)
-  input_file_extra="$script_dir/$tmp_dir/$wget_inputs_extra"
-  touch "$input_file_extra"
   printf "%s\n" "${webassets[@]}" > "$input_file_extra"
   echo "Done."
 
