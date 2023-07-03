@@ -22,7 +22,7 @@
 ################################################
 # MakeStaticSite info
 ################################################
-version=0.25.6+1
+version=0.26
 version_date='3 July 2023'
 version_header="MakeStaticSite version $version, released on $version_date."
 mss_license="GNU Affero General Public License version 3"
@@ -67,7 +67,7 @@ rename_wget_tmps=yes            # Remove .tmp.html suffixes from (Wget temp) fil
 # Core options for Wget (array)
 #  --mirror is equivalent to ‘-r -N -l inf --no-remove-listing’
 # where -r: recursive; -N: timestamping; -l inf: infinite depth
-wget_core_options=(--mirror --convert-links --adjust-extension --page-requisites)
+wget_core_options=(--mirror --convert-links --adjust-extension --page-requisites --tries=3)
 wget_no_parent=auto             # Should capturing URLs with directories include the --no-parent option?
                                 # auto or yes - check and add automatically
                                 # otherwise no intervention

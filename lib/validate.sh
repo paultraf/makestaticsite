@@ -73,6 +73,13 @@ validate_dir() {
   [ -d "$1" ] || { echo "There doesn't appear to be a valid directory at $1"; return 1; }
 }
 
+validate_url() {
+  url_regex='(https?|ftp|file)://[-[:alnum:]\+&@#/%?=~_|!:,.;]+'
+  if [[ ! $1 =~ $url_regex ]]; then
+    return 1
+  fi
+}
+
 validate_http() {
   echo "Checking connection to $1 ..."
   status="$(curl -s -k --head -w "%{http_code}" "$1" -o /dev/null)"
@@ -129,7 +136,8 @@ validate_input() {
 
 validate_range() {
   minvalue="$1"; maxvalue="$2"; num="$3"
-  if ((num >= minvalue && num <= maxvalue)); then
+  # test that it is an integer and that it is in range
+  if [[ $num =~ ^-?[0-9]+$ ]] && ((num >= minvalue && num <= maxvalue)); then
     return 0
   else
     return 1

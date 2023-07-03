@@ -19,6 +19,33 @@
 ##########################################################################
 
 
+0.26 (released on 2023-07-03)
+    * Enabled setup to run in unattended mode on provision of a URL *
+    [lib/constants.sh]
+     Added constant mod_wp for WordPress module filename.
+     Added --tries=3 (replacing default of 20) to $wget_core_options.
+    [makestaticsite.sh]
+     main(): minor cosmetic tidying
+     read_config(): added support for 'u' (run unattended) option that does
+     not take an argument.
+     prepare_static_generation(): uses $mod_wp for WordPress module name.
+    [lib/setup.sh]
+     write_config(): removed option to write file to default for level 0.
+     main(): moved command line input validation to get_configfile().
+     get_configfile(): added support for 'u' (run unattended) option that
+     does not take an argument;
+     added support for a single parameter (not option) for URL;
+     added validation checks for URL (and dependency for running unattended).
+     read_option(): when URL supplied via command line, do not request input.
+     write_config(): added auto-generation of configuration filename when
+     running unattended; counter used to ensure file doesn't already exist.
+     Removed option to write to default.cfg for level 0.
+     conclude(): if running unattended, then makestaticsite will be run in
+     unattended mode too.
+    [lib/validate.sh]
+     Added validate_url() to validate the syntax of a URL.
+     validate_range(): added clause to check if string is an integer.
+     
 0.25.6 (released on 2023-06-15)
       * Added support for custom cut directories (url shortening) *
       [lib/constants.sh]

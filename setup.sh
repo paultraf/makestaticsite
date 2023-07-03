@@ -27,9 +27,6 @@ source "lib/validate.sh"   # load the validation library functions
 main() {
   # Step 0: Initialisation
   get_configfile "$@"
-  if [ ! -z ${level+x} ]; then
-    validate_range 0 "$max_setup_level" "$level" || { echo "Sorry, the phase number is out of range (it should be an integer between 0 and $max_setup_level).  Please try again."; exit; }
-  fi  
   get_inks
   print_welcome
   init_mssconfig
@@ -62,7 +59,7 @@ print_welcome() {
     printf " 2 - full customisation for fine-tuning options, including Wget parameters.\n\n"
     while true; do
       read -r -e -p "Please enter a level between 0 and "$max_setup_level" to start configuring: " level
-      validate_range 0 "$max_setup_level" "$level" || { printf "Sorry, the phase number is out of range (it should be an integer between 0 and %s).  Please try again.\n" "$max_setup_level"; continue; }
+      validate_range 0 "$max_setup_level" "$level" || { printf "Sorry, the setup level number is out of range (it should be an integer between 0 and %s).  Please try again.\n" "$max_setup_level"; continue; }
       break
     done
   fi  
@@ -110,10 +107,16 @@ EOF
 get_configfile() {
   cfgfile=
   cfg_string=
-  while getopts ":o:l:" option; do
+  local OPTIND
+  while getopts ":o:l:u" option; do
     case "${option}" in
       l)
         level="$OPTARG"
+        validate_range 0 "$max_setup_level" "$level" ||{ printf "Sorry, the setup level of $level is out of range (it should be an integer between 0 and %s).  Please try again.\n" "$max_setup_level"; exit; }
+      ;;
+      u)
+        level=0
+        run_unattended=yes
       ;;
       o)
         cfgfile="$OPTARG.cfg";
@@ -131,6 +134,24 @@ get_configfile() {
       ;;
     esac
   done
+
+  echo 
+  shift "$(($OPTIND -1))"
+
+  if [ -n "$@+x" ] && [ "$*" != "" ] ; then
+    url="$*";
+    validate_url "$url" || { printf "Sorry, the syntax of the URL appears to be invalid.  Please try again.\n"; exit; }
+    echo
+  fi
+
+  if [ -n "${level+x}" ]; then
+    validate_range 0 "$max_setup_level" "$level" || { printf "Sorry, the setup level is out of range (it should be an integer between 0 and %s).  Please try again.\n" "$max_setup_level"; continue; }
+  fi
+
+  if [ "$run_unattended" = "yes" ] && [ -z ${url+x} ]; then
+    printf "You have run setup in unattended mode (-u flag), but not supplied a URL. Please try again.\n"; exit;
+  fi
+
 }
 
 # Read options through stdin
@@ -152,7 +173,7 @@ read_option() {
           opt_default="${host//\./_}"'.zip'
         fi
       fi
-      if [ "$opt_info" != "" ] && [ "$opt_limits" = "n" ]; then
+      if [ "$opt_info" != "" ] && [ "$opt_limits" = "n" ] && { [ -z "${url+x}" ] || [ "$optvar" != "url" ]; }; then
         printf "%s: %s\n" $(msg_ink "info" "$optvar") "$opt_info"
       fi
       if [ "$BASH_VERSION" -ge "4" ]; then
@@ -200,6 +221,13 @@ read_option() {
             input_value="${host//\./_}"
           elif [ "$var" = "zip_filename__info" ]; then
             input_value="${host//\./_}"'.zip'
+          fi
+        elif [ -n "${url+x}" ] && [ "$optvar" = "url" ]; then
+          echo "You have entered as URL: $url"
+          input_value="$url"
+          if ! validate_http "$input_value"; then
+            input_line="Please enter the value for $optvar$input_hint: "
+            validate_input "$input_text" "$input_line" "$optvar"
           fi
         else
           echo
@@ -272,12 +300,26 @@ process_options() {
 write_config() {
   printf "Thank you for providing the configuration options.\nHere is a summary of your input:\n\n%s\n" "$content"
   status='0'
-  if [ "$cfgfile" = "" ]; then 
-    read -r -e -p "Do you wish to write this configuration to a file (y/n)? " confirm
-    confirm=${confirm:0:1}
-    if [ "$confirm" != "y" ] && [ "$confirm" != "Y" ]; then
-      status='2'
-    fi
+  if [ "$cfgfile" = "" ]; then
+    if [ "$run_unattended" = "yes" ]; then
+      # autogenerate cfg filename based on url host
+      cfgfile="${host//\./_}.cfg"
+      write_file="$script_dir/config/$cfgfile"
+      i=1
+      while [ -f "$write_file" ]
+      do
+        cfgfile="${host//\./_}_$i.cfg"
+        write_file="$script_dir/config/$cfgfile"
+        (( i++ ))
+      done
+      status='1'
+    else
+      read -r -e -p "Do you wish to write this configuration to a file (y/n)? " confirm
+      confirm=${confirm:0:1}
+      if [ "$confirm" != "y" ] && [ "$confirm" != "Y" ]; then
+        status='2'
+      fi
+    fi  
   else
     printf "Will now attempt to write this to the configuration file you specified: %s\n" "$cfgfile"   
   fi  
@@ -322,7 +364,7 @@ write_config() {
     if [ ! -f "$default_cfg" ]; then
       cp "$write_file" "$default_cfg"
       printf "Made a copy to default.cfg.  This means that you can run makestaticsite.sh without a parameter and it will load %s automatically.\n" "$cfgfile"
-    else
+    elif [ "$level" != 0 ];then
       read -r -e -p "Would you like this configuration to be copied to default.cfg file, which is loaded automatically when you run makestaticsite.sh without a parameter (y/n)? " confirm
       confirm=${confirm:0:1}
       if [ "$confirm" = "y" ] || [ "$confirm" = "Y" ]; then
@@ -336,12 +378,19 @@ write_config() {
 }
 
 conclude() {
-  echo
   if [ "$status" = "1" ]; then
-    read -r -e -p "Would you like to make the static site now (y/n)? " confirm
-  confirm=${confirm:0:1}
+    if [ "$run_unattended" != "yes" ]; then
+      read -r -e -p "Would you like to make the static site now (y/n)? " confirm
+      confirm=${confirm:0:1}
+      echo
+    else
+      confirm="y"
+    fi  
     if [ "$confirm" = "y" ] || [ "$confirm" = "Y" ]; then
-      ./makestaticsite.sh -i "$cfgfile"
+      echo "Proceeding to make the static site ... "
+      args=(-i "$cfgfile")
+      [ "$run_unattended" = "yes" ] && args+=(-u)
+      ./makestaticsite.sh "${args[@]}"
       echo
     fi
     printf "To make this static site in future, run the following:\n./makestaticsite.sh -i %s\n\nThank you. Setup is complete.\n" "$cfgfile"
