@@ -22,8 +22,8 @@
 ################################################
 # MakeStaticSite info
 ################################################
-version=0.25.6
-version_date='15 June 2023'
+version=0.25.6+1
+version_date='3 July 2023'
 version_header="MakeStaticSite version $version, released on $version_date."
 mss_license="GNU Affero General Public License version 3"
 mss_download="https://makestaticsite.sh/download/makestaticsite_latest.tar.gz"
@@ -134,7 +134,8 @@ wget_reject_clause="*login*,*logout*" # wget --reject parameter (uses wildcard *
 ################################################
 # WordPress-specific settings
 ################################################
-php_version_atleast=5.6
+mod_wp="mod_wp.sh"              # WordPress module filename
+php_version_atleast=5.6         # Minimum PHP version for running WP-CLI
 php_tutorial_install=https://kinsta.com/blog/install-php/
 wp_cli_install=https://wp-cli.org/#installing
 wp_content=wp-content           # WordPress content folder name
@@ -404,7 +405,6 @@ htmltidy="(htmltidy_cmd htmltidy_options)"
 
 options_min=(url)
 options_std=(url extra_domains local_sitename wp_cli site_path wp_helper_plugins add_search use_snippets upload_zip zip_filename zip_download_folder deploy deploy_domain deploy_remote deploy_remote_rsync deploy_host deploy_user deploy_path htmltidy add_extras)
-
 options_allow_empty=(extra_domains wget_extra_options input_urls_file)
 options_check_cmd=(wget_cmd htmltidy_cmd)
 options_check_dir=(site_path)

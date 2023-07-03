@@ -50,13 +50,13 @@ main() {
   (( phase < 4 )) && (( end_phase >= 3 )) && [ "$wget_extra_urls" = "yes" ] && wget_extra_urls
 
   # Phase 4: Refine the static site
-  (( phase < 5 )) && (( end_phase >= 4 )) && [ "$wget_post_processing" = "yes" ] && { wget_postprocessing; }
+  (( phase < 5 )) && (( end_phase >= 4 )) && [ "$wget_post_processing" = "yes" ] && wget_postprocessing
 
   # Phase 5: Further additions from an extras folder
   (( phase < 6 )) && (( end_phase >= 5 )) && [ "$add_extras" = "yes" ] && add_extras
 
   # Phase 6: Optimise the mirror
-  (( phase < 7 )) && (( end_phase >= 6 )) && clean_mirror;
+  (( phase < 7 )) && (( end_phase >= 6 )) && clean_mirror
 
   # Phase 7: Use snippets
   (( phase < 8 )) && (( end_phase >= 7 )) && [ "$use_snippets" = "yes" ] && process_snippets
@@ -207,8 +207,11 @@ read_config() {
   mirror_id_flag=off # flag to denote whether or not -m option set
 
   local OPTIND
-  while getopts ":i:p:q:m:vh" option; do
+  while getopts "ui:p:q:m:vh" option; do
     case "${option}" in
+      u)
+        run_unattended=yes
+        ;;
       i)
         myconfig="${OPTARG}"
         config_flag=on
@@ -232,6 +235,7 @@ read_config() {
         echo "Usage: ./makestatic.sh [OPTIONS]"
         echo
         echo "Allowable options are:"
+        echo " -u                 Run unattended."
         echo " -i FILENAME        Input configuration file."
         echo " -p NUMBER          Run from phase NUMBER, where"
         echo "    0 (default)     Initialisation"
@@ -261,6 +265,7 @@ read_config() {
       \? )
         echo "Invalid option: $OPTARG" 1>&2
         echo "Allowable options are:"
+        echo " -u                 Run unattended."
         echo " -i FILENAME        Input configuration file."
         echo " -p NUMBER          Run from phase NUMBER (default is 0, start)."
         echo " -q NUMBER          End at phase NUMBER (default is 9, end)."
@@ -518,7 +523,7 @@ prepare_static_generation() {
     source_protocol="$(config_get source_protocol "$myconfig")"
     source_port="$(config_get source_port "$myconfig")"
     source_user="$(config_get source_user "$myconfig")"
-    source "lib/mod_wp.sh";
+    source "lib/$mod_wp";
     wp_prep
   fi
 
