@@ -50,7 +50,7 @@ main() {
 print_welcome() {
   printf "Welcome to MakeStaticSite for the generation and deployment of static websites.  This is free software released under the %s, the latest version being available from %s.\n\n" "$mss_license" "${mss_download}"
   printf 'This setup script will ask a few questions to help you set up a configuration file%s for a single site (the script can be run any number of times to generate configs for other sites).  For each option, its label will be displayed together with some guidance. Please enter the values accordingly.\n\n' "$cfg_string"
-  if [ ! -z ${level+x} ]; then
+  if [ -n "${level+x}" ]; then
     printf "The amount of questioning depends on the runtime level - 0 (minimal), 1 (standard) and 2 (advanced).  You have chosen to run this script at level %s.\n\n" "$level"
   else
     printf "The amount of questioning depends on the runtime level\n"
@@ -58,7 +58,7 @@ print_welcome() {
     printf " 1 - standard customisation options, including basic deployment.\n"
     printf " 2 - full customisation for fine-tuning options, including Wget parameters.\n\n"
     while true; do
-      read -r -e -p "Please enter a level between 0 and "$max_setup_level" to start configuring: " level
+      read -r -e -p "Please enter a level between 0 and $max_setup_level to start configuring: " level
       validate_range 0 "$max_setup_level" "$level" || { printf "Sorry, the setup level number is out of range (it should be an integer between 0 and %s).  Please try again.\n" "$max_setup_level"; continue; }
       break
     done
@@ -136,16 +136,16 @@ get_configfile() {
   done
 
   echo 
-  shift "$(($OPTIND -1))"
+  shift "$((OPTIND-1))"
 
-  if [ -n "$@+x" ] && [ "$*" != "" ] ; then
+  if [ "$*" != "" ]; then
     url="$*";
     validate_url "$url" || { printf "Sorry, the syntax of the URL appears to be invalid.  Please try again.\n"; exit; }
     echo
   fi
 
   if [ -n "${level+x}" ]; then
-    validate_range 0 "$max_setup_level" "$level" || { printf "Sorry, the setup level is out of range (it should be an integer between 0 and %s).  Please try again.\n" "$max_setup_level"; continue; }
+    validate_range 0 "$max_setup_level" "$level" || { printf "Sorry, the setup level is out of range (it should be an integer between 0 and %s).  Please try again.\n" "$max_setup_level"; return; }
   fi
 
   if [ "$run_unattended" = "yes" ] && [ -z ${url+x} ]; then
@@ -174,7 +174,7 @@ read_option() {
         fi
       fi
       if [ "$opt_info" != "" ] && [ "$opt_limits" = "n" ] && { [ -z "${url+x}" ] || [ "$optvar" != "url" ]; }; then
-        printf "%s: %s\n" $(msg_ink "info" "$optvar") "$opt_info"
+        printf "%s: %s\n" "$(msg_ink "info" "$optvar")" "$opt_info"
       fi
       if [ "$BASH_VERSION" -ge "4" ]; then
         if [ -n "${opt_default+x}" ] && [ "$opt_default" != "" ]; then

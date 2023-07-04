@@ -25,7 +25,7 @@ MakeStaticSite (project site [https://makestaticsite.sh/](https://makestaticsite
 
 ## About
 
-MakeStaticSite provides a convenient means to set up and manage the automated creation and deployment of static versions of websites.  Such sites include content management systems (such as [WordPress](https://wordpress.org/) and [Drupal](https://drupal.org/)) that can, for example, be administered locally and then deployed remotely to a hosting provider or Content Distribution Network (CDN).  Strictly speaking, this is not an archival tool as the output is not an exact mirror, but a version of the site that preserves content while aiming to remain current. For example, RSS feeds are saved and then renamed with `.xml` extensions, and further files may be added.
+MakeStaticSite provides a convenient means to set up and manage the automated creation and deployment of static versions of websites.  These include content management systems (such as [WordPress](https://wordpress.org/) and [Drupal](https://drupal.org/)) that can, for example, be administered locally and then deployed remotely to a hosting provider or Content Distribution Network (CDN).  Strictly speaking, this is not an archival tool as the output is not an exact mirror, but a version of the site that preserves content while aiming to remain current. For example, RSS feeds are saved and then renamed with `.xml` extensions, and further files may be added.
 
 The goal is for anyone who has a little familiarity with the command line to be able to use the tool to assist in maintaining their sites.  Similarly, a scripting-based approach has been chosen to make the code widely accessible for developers to further fine-tune;
 a number of refinements are already included that augment the standard use of [Wget](https://www.gnu.org/software/wget/), such as support for arbitrary attributes and, in the case of WordPress, the use of [WP-CLI](https://wp-cli.org/) to prepare sites beforehand.
@@ -43,12 +43,15 @@ Please note that the system is not designed for [Wget2](https://gitlab.com/gnuwg
 
 ### Features
 
-* A simple command line interface
+* A straightforward command line interface
 * Able to create static versions of a wide range of dynamic websites
 * Support for managing multiple sites, each with custom settings
-* Setup script uses an interactive dialogue to automate the generation of a configuration file.
+* Setup script guides users with an interactive dialogue and automatically generates a configuration file.
 * During setup, choose from three run levels to determine the amount of customisation - from minimal to advanced.
+* In addition to the main host domain, additional assets such as JavaScript, CSS and images can be retrieved from other domains and subdomains.
 * A phased-based workflow separating different aspects in the build process
+* Manage multiple sites, each with custom settings defined in their own configuration file (and multiple config files can also be used for any given site).
+* Suitable for batch processes, allowing operations to be scaled up so that any or all of the sites are updated in one process.
 * Support for http basic authentication and/or CMS login (experimental, only tested with WordPress)
 * Runtime settings include verbosity (amount of information) for terminal output and logging to file
 * Option of a downloadable copy of the entire site (zip file) for offline use 
@@ -63,8 +66,9 @@ Please note that the system is not designed for [Wget2](https://gitlab.com/gnuwg
 * The system is designed for the original GNU Wget, whereas most development effort is now on GNU Wget2.
 * Not a general crawler, but designed to retrieve from a single site, with supporting assets (CSS, multimedia, etc.) incorporated from other domains and subdomains
 * It is not a good fit for sites that uses query strings extensively, as is the case for collections databases with a large inventory.  Whilst query strings are supported in the initial run of Wget, requests for URLs in the post-processing do not currently include query strings.
-* Whilst phase 3 can discover orphaned links in HTML, links generated dynamically by JavaScript are not included.
+* Links generated dynamically by JavaScript are not included.
 * The script can only provide a snapshot of comments, discussions, surveys, etc. that are provided by the Website itself; the interactivity of such components is generally lost.  In this case, this kind of interactivity will need to be provided by third-parties, typically through the use of embedded JavaScript.
+* Performance: MakeStaticSite output is not instant.  It typically takes up to a few minutes to build a site, which, depending on usage scenario, may or may not be a significant duration.  Some acceleration is possible by running Wget threads in parallel (see the `wget_threads` option).
 * For WordPress sites, using WP-CLI remotely over ssh may not be fully supported by hosting providers running jailed shells for shared hosting. In that case, WordPress updates need to be done manually.
 
 ### Acknowledgements

@@ -19,6 +19,13 @@
 ##########################################################################
 
 
+0.26.1 (released on 2023-07-04)
+      * Maintenance release *
+      [setup.sh]
+       Code tidy to fix Shellcheck errors
+      [README.md]
+       Updated features and limitations
+
 0.26 (released on 2023-07-03)
     * Enabled setup to run in unattended mode on provision of a URL *
     [lib/constants.sh]
