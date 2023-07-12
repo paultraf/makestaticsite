@@ -22,8 +22,8 @@
 ################################################
 # MakeStaticSite info
 ################################################
-version=0.26.1
-version_date='4 July 2023'
+version=0.26.1+1
+version_date='12 July 2023'
 version_header="MakeStaticSite version $version, released on $version_date."
 mss_license="GNU Affero General Public License version 3"
 mss_download="https://makestaticsite.sh/download/makestaticsite_latest.tar.gz"
@@ -119,6 +119,7 @@ robots_default_file=robots.txt  # file name for default robots.txt (inside lib/f
 sitemap_create=yes              # Generate and overwrite site map file (y/n)?
 sitemap_file=sitemap.xml        # Name of sitemap (XML) file
 sitemap_schema=http://www.sitemaps.org/schemas/sitemap/0.9 # Site map XML schema URL
+sitemap_file_extensions=htm,html # List of file extensions allowed for inclusion in sitemap file
 
 
 ################################################
@@ -160,6 +161,7 @@ wp_remove_rsd_link=yes          # Remove Really Simple Discovery (RSD) <link> ta
 # HTML Tidy settings
 ################################################
 htmltidy_cmd=tidy               # [Path to] HTML Tidy binary
+htmltidy_url=https://www.html-tidy.org/ # URL of HTML Tidy project
 htmltidy_errors_file=errors_htmltidy.txt # HTML Tidy errors file
 htmltidy_options=(-m -q -indent --indent-spaces 2 --gnu-emacs yes --tidy-mark no) # Command line options for HTML Tidy (array).
 # -modify, -m:              modify the original input files

@@ -523,6 +523,7 @@ prepare_static_generation() {
     source_protocol="$(config_get source_protocol "$myconfig")"
     source_port="$(config_get source_port "$myconfig")"
     source_user="$(config_get source_user "$myconfig")"
+# shellcheck source=lib/mod_wp.sh
     source "lib/$mod_wp";
     wp_prep
   fi
@@ -767,7 +768,7 @@ wget_extra_urls() {
     while IFS='' read -r line; do add_domains_unique+=("$line"); done < <(for item in "${add_domains[@]}"; do printf "%s\n" "${item}"; done | sort -u)
     echo "add_domains_unique array has ${#add_domains_unique[@]} elements" "2"
     # Convert array to domain list (string), removing any trailing slashes
-    extra_domains=$(printf "%s" "${add_domains_unique[*]}" | sed "s/ /,/g" | sed "s/"'\\'"\?\/,/,/g" | sed "s/$domain,//g" | sed "s/,$domain//g" | sed s'/\/$//')
+    extra_domains=$(printf "%s" "${add_domains_unique[*]}" | sed 's/ /,/g' | sed 's/\\\?\/,/,/g' | sed "s/$domain,//g" | sed "s/,$domain//g" | sed 's/\/$//')
   fi
   if [ "$extra_domains" != "" ]; then
     all_domains="$domain,$extra_domains"
@@ -1104,8 +1105,8 @@ wget_postprocessing() {
   sed_subs2=("s/href='http:\/\/${deploy_domain}/href='https:\/\/${deploy_domain}/g")
   if [ "$protocol" = "https" ] && [ "$force_ssl" = "yes" ]; then
     printf "Updating anchors for %s from http: to https: ... " "$deploy_domain"
-    find . -type f -name '*.html' -print0 | xargs -0 sed "${sed_options[@]}" "${sed_subs1[@]}"
-    find . -type f -name '*.html' -print0 | xargs -0 sed "${sed_options[@]}" "${sed_subs2[@]}"
+    find . -type f \( -name '*.html' -o -name '*.htm' \) -print0 | xargs -0 sed "${sed_options[@]}" "${sed_subs1[@]}"
+    find . -type f \( -name '*.html' -o -name '*.htm' \) -print0 | xargs -0 sed "${sed_options[@]}" "${sed_subs2[@]}"
     echo "Done."
   fi
 
@@ -1172,14 +1173,14 @@ clean_mirror() {
   html_errors_file="$script_dir/$tmp_dir/${htmltidy_errors_file}"
   if [ "$htmltidy" = "yes" ]; then
     if ! cmd_check "$htmltidy_cmd" "1"; then
-      printf "Unable to run HTML Tidy (htmltidy_cmd is set to %s) - please check that it is installed according to instructions at https://www.html-tidy.org/. Skipping.\n" "$htmltidy_cmd";
+      printf "Unable to run HTML Tidy (htmltidy_cmd is set to %s) - please check that it is installed according to instructions at %s. Skipping.\n" "$htmltidy_cmd" "$htmltidy_url";
     else
       printf "Running HTML Tidy on html files with options %s ... " "${htmltidy_options[*]}"
       htmltidy_options+=(-f "$html_errors_file")
       while IFS= read -r -d '' fname
       do
         $htmltidy_cmd "${htmltidy_options[@]}" "$fname"
-      done <   <(find . -type f -name "*.html" -print0)
+      done <   <(find . -type f \( -name "*.html" -o -name "*.htm" \) -print0)
       echo "Done."
     fi
   fi
@@ -1224,6 +1225,11 @@ clean_mirror() {
     sitemap_loc_files=()
     while IFS='' read -r line; do sitemap_loc_files+=("$line"); done < <(find . -type f -name "*.html")
 
+    # Generate find params string based on $sitemap_file_extensions
+    IFS="," read -r -a sitemap_file_exts <<< "$sitemap_file_extensions"
+    for ext in "${sitemap_file_exts[@]}"; do
+      while IFS='' read -r line; do sitemap_loc_files+=("$line"); done < <(find . -type f  -name "*.$ext")
+    done
     for loc in "${sitemap_loc_files[@]}"; do
       # and exclude case where loc contains '?', i.e. query strings
       if [[ "$loc" == *"?"* ]]; then
