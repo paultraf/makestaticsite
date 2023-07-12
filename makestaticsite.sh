@@ -43,14 +43,14 @@ main() {
   # Phase 1: Prepare the CMS
   (( phase < 2 )) && (( end_phase >= 1 )) && prepare_static_generation
 
-  # Phase 2: Generate a static mirror using Wget
-  (( phase < 3 )) && (( end_phase >= 2 )) && wget_mirror
+  # Phase 2: Generate a static mirror
+  (( phase < 3 )) && (( end_phase >= 2 )) && mirror_site
 
   # Phase 3: Augment the static site
   (( phase < 4 )) && (( end_phase >= 3 )) && [ "$wget_extra_urls" = "yes" ] && wget_extra_urls
 
   # Phase 4: Refine the static site
-  (( phase < 5 )) && (( end_phase >= 4 )) && [ "$wget_post_processing" = "yes" ] && wget_postprocessing
+  (( phase < 5 )) && (( end_phase >= 4 )) && [ "$site_post_processing" = "yes" ] && site_postprocessing
 
   # Phase 5: Further additions from an extras folder
   (( phase < 6 )) && (( end_phase >= 5 )) && [ "$add_extras" = "yes" ] && add_extras
@@ -98,6 +98,7 @@ initialise_layout() {
 
   # Local target directory and web server deployment
   mirror_dir="$script_dir/mirror"         # path to Wget output root folder
+  [ -d "$mirror_dir" ] || { mkdir -p "$mirror_dir"; echo "Created folder for mirror files at $mirror_dir."; }
 
   # Substitute files for zip download (used for embeds, etc.)
   sub_dir=subs                            # This must be sit under $script_dir
@@ -341,16 +342,6 @@ initialise_variables() {
   wget_inputs_main="$wget_inputs_main-$myconfig.txt"
   wget_inputs_extra="$wget_inputs_extra-$myconfig.txt"
 
-  # Define a timestamp function
-  if [ "$timezone" != "utc" ]; then
-    timestamp=$(date "+%Y%m%d_%H%M%S")
-    if [ "$timezone" = "utclocal" ]; then
-      timestamp+=$(date +"%z")
-    fi
-  else
-    timestamp=$(TZ=UTC date "+%Y%m%d_%H%M%S")"Z"
-  fi
-
   # Translate to output levels for rsync and Wget respectively
   if [ "$output_level" = 'silent' ] || [ "$output_level" = 'quiet' ]; then
     rvol=-q; wvol=-q; wpvol=--quiet
@@ -377,8 +368,39 @@ initialise_variables() {
   ssl_checks=$(yesno "$(config_get ssl_checks "$myconfig")")
   [ "$ssl_checks" = "no" ] && wget_ssl="--no-check-certificate" || wget_ssl=''
 
-  # Web server details (to be snapped by Wget)
+  # Web server details (to be snapped by Wget, etc.)
   url="$(config_get url "$myconfig" | sed s'/\/\?$/\//')"  # ensure URL ends in trailing slash
+
+  # Wayback Machine support
+  use_wayback= 
+  wayback_enable=$(yesno "$wayback_enable")
+  if [ "$wayback_enable" = "yes" ]; then
+    if (( phase < 4 )) && ! validate_internet; then
+      echo " "; echo "$msg_error: Unable to establish Internet access. Please check your network connectivity."
+      echo "Aborting."
+      exit
+    fi 
+    if wayback_check_url "$url" "$wayback_hosts"; then
+      use_wayback=yes
+      wget_extra_urls=no
+      url_original="$url"
+      hostport_original=$(printf "%s" "$url_original" | awk -F/ '{print $3}')
+      domain_original=$(printf "%s" "$hostport_original" | awk -F: '{print $1}')
+      url1=${url%http*}
+      url_slashes=${url1//[!\/]};
+      url_depth=$(( ${#url_slashes}+1 ))
+      url=$(echo "$url" | cut -d/ -f${url_depth}-)
+      wayback_date_to=$(echo "$url" | cut -d/ -f${url_depth})
+      printf "\nWayback Machine detected at %s, hosted on %s.\n" "$url_original" "$domain_original"
+      if [ "$url1" = "" ] || ! validate_url "$url"; then
+        printf "%s: The extracted URL, %s, is considered invalid.\n" "$msg_error" "$url"
+        printf "It is recommended that you modify the value of 'url' in %s and re-run\n." "$myconfig.cfg"
+        echo "Aborting."
+        exit
+      fi
+    fi
+  fi
+
   url_domain=$(printf "%s\n" "$url" | awk -F/ '{print $3}' | awk -F: '{print $1}')
   url_path=$(printf "%s" "$url" | cut -d/ -f4- | sed s'/\/$//')
   if [ "$url_path" = "" ]; then
@@ -414,10 +436,14 @@ initialise_variables() {
   require_login=$(yesno "$(config_get require_login "$myconfig")")
   [ "$require_login" = "yes" ] && { site_user="$(config_get site_user "$myconfig")"; site_password="$(config_get site_password "$myconfig")"; }
 
+  # Local snapshot label
+  local_sitename="$(config_get local_sitename "$myconfig")"
+
   # Options to support Wget
   input_urls_file="$(config_get input_urls_file "$myconfig")"
-  wget_extra_urls=$(yesno "$(config_get wget_extra_urls "$myconfig")")
-  wget_post_processing=$(yesno "$(config_get wget_post_processing "$myconfig")")
+  
+  [ "$use_wayback" != "yes" ] && wget_extra_urls=$(yesno "$(config_get wget_extra_urls "$myconfig")")
+  site_post_processing=$(yesno "$(config_get site_post_processing "$myconfig")")
   archive=$(yesno "$(config_get archive "$myconfig")")
   wget_input_files=()  # Initialise array of additional Wget input URLs
   input_file_extra="$script_dir/$tmp_dir/$wget_inputs_extra"  # Input file for Wget extra assets (to be generated)
@@ -452,7 +478,7 @@ initialise_variables() {
   IFS=" " read -r -a wget_extra_options_print <<< "$(printf "%s" "$wget_plus_ops" | sed "s/password[[:space:]][^[:space:]]*/password *********/")"
 
   # If $wget_plus_ops contains '--spider' then don't deploy, use snippets or postprocess
-  [[ "$wget_plus_ops" == *"--spider"* ]] && { use_snippets="no"; wget_extra_urls="no"; wget_post_processing="no"; }
+  [[ "$wget_plus_ops" == *"--spider"* ]] && { use_snippets="no"; wget_extra_urls="no"; site_post_processing="no"; }
 
   htmltidy=$(yesno "$(config_get htmltidy "$myconfig")")
   add_extras=$(yesno "$(config_get add_extras "$myconfig")")
@@ -461,22 +487,20 @@ initialise_variables() {
   wp_cli=$(yesno "$(config_get wp_cli "$myconfig")")
   site_path="$(config_get site_path "$myconfig")"
 
-  # Local snapshot label
-  local_sitename="$(config_get local_sitename "$myconfig")"
-
   # Path of the mirror archive, if archive directory is already defined
   # check for -nH option in wget_extra_options
   hostport_dir=
   if [[ $wget_extra_options_tmp =~ "-nH" ]] || [[ $wget_extra_options_tmp =~ "--no-host-directories" ]]; then
     host_dir=
   fi
-  if [ "$host_dir" != "" ] && [ "$(yesno "$host_dir")" != "no" ]; then
+
+  if [ "$host_dir" != "" ] && [ "$(yesno "$host_dir")" != "no" ] && [ "$use_wayback" != "yes" ]; then
     hostport_dir="/$hostport"
   fi
-    
+
   if [ "$mirror_archive_dir" != "" ]; then
     working_mirror_dir="$mirror_dir/$mirror_archive_dir$hostport_dir"
-    zip_archive=$mirror_archive_dir'.zip'
+    zip_archive="$mirror_archive_dir.zip"
   fi
 
   mss_cut_dirs=$(yesno "$mss_cut_dirs" "1")
@@ -514,10 +538,9 @@ initialise_variables() {
 
 prepare_static_generation() {
   echo "Starting the static site generation ..."
-  echo "Will capture snapshot from $url using $wget_cmd."
 
   # Prepare WordPress site for static archive, if applicable
-  if [ "$wp_cli" = "yes" ]; then
+  if [ "$wp_cli" = "yes" ] && [ "$use_wayback" != "yes" ]; then
     wp_cli_remote=$(yesno "$(config_get wp_cli_remote "$myconfig")")
     source_host="$(config_get source_host "$myconfig")"
     source_protocol="$(config_get source_protocol "$myconfig")"
@@ -582,18 +605,19 @@ wget_error_codes() {
   esac
 }
 
+
+# Mirror a site using Wget (main site capture)
 wget_mirror() {
+  echo "Will capture snapshot from $url using $wget_cmd."
+
   # First, test source host is available
-  local wget_test_options=(-q "$wget_ssl" --spider --tries 1 "$url_base")
+  local wget_test_options=(-q "$wget_ssl" --spider --tries 3 "$url_base")
   if ! $wget_cmd "${wget_extra_options[@]}" "${wget_test_options[@]}"; then
     echo "Unable to connect to $url_base.  Please check the spelling of the domain, that the web server is running and that the website exists. "
     printf "GET http://google.com HTTP/1.0\n\n" | nc google.com 80 > /dev/null 2>&1 ||  echo "Also, there appears to be no Internet connectivity (tested with http://google.com)."
     echo "Aborting."
     exit
   fi
-
-  # Create necessary directories
-  [ -d "$mirror_dir" ] || { mkdir -p "$mirror_dir"; echo "Created folder for mirror files at $mirror_dir."; }
 
   # Input file for Wget (generated)
   input_file="$script_dir/$tmp_dir/$wget_inputs_main"
@@ -618,7 +642,7 @@ wget_mirror() {
     mirror_archive_dir="$local_sitename"
     [ "$archive" = "yes" ] && mirror_archive_dir+="$timestamp"
     working_mirror_dir="$mirror_dir/$mirror_archive_dir$hostport_dir"
-    zip_archive=$mirror_archive_dir'.zip'
+    zip_archive="$mirror_archive_dir.zip"
   fi
 
   # Overwrite an existing mirror only if the -m and wget_refresh_mirror flags are unset 
@@ -704,7 +728,6 @@ wget_mirror() {
 
   # Main run of Wget #
   printf "%s" "$msg_mirror_start"
-  cd "$mirror_dir" || { echo; echo "$msg_error: can't access working directory for the mirror ($mirror_dir)" >&2; exit 1; }
 
   error_set +e  # override because error traps set specially for Wget
   if [ "$robots_create" != "yes" ]; then
@@ -730,13 +753,74 @@ wget_mirror() {
   error_set -e
 }
 
-# (A placeholder for) post-Wget review and analysis
-post_wget_checks() {
+
+# Call Wayback Machine Downloader, a tool in Ruby
+# https://github.com/hartator/wayback-machine-downloader
+# Expects one parameter: URL
+# optional parameters:
+# - date from
+# - date to
+wmd_get_wayback_site() {
+  local url="$1"
+  [ -n "${2+x}" ] && wayback_date_from="$2" 
+  [ -n "${3+x}" ] && wayback_date_to="$3" 
+
+  wmd_get_options=()
+  [ "$wayback_matchtype" = "exact" ] && wmd_get_options+=(-e)
+  [ -n "${wayback_machine_only+x}" ] && [ "$wayback_machine_only" != "" ] && wmd_get_options+=(-o "$wayback_machine_only") 
+  [ -n "${wayback_machine_excludes+x}" ] && [ "$wayback_machine_excludes" != "" ] && wmd_get_options+=(-x "$wayback_machine_excludes") 
+  [ -n "${wayback_date_from+x}" ] && [ "$wayback_date_from" != "" ] && wmd_get_options+=(-f "$wayback_date_from") 
+  [ -n "${wayback_date_to+x}" ] && [ "$wayback_date_to" != "" ] && wmd_get_options+=(-t "$wayback_date_to") 
+
+  wmd_get_options+=(-d "$mirror_archive_dir" "$url")
+  echo "Executing: $wayback_machine_downloader_cmd ${wmd_get_options[*]}"
+  $wayback_machine_downloader_cmd "${wmd_get_options[@]}"
+}
+
+
+# Capture a site
+# The method used depends on the service;
+# currently two kinds are supported:
+# - Wayback Machine (Wayback Machine Downloader)
+# - the rest (Wget)
+mirror_site() {
+  cd "$mirror_dir" || { echo; echo "$msg_error: can't access working directory for the mirror ($mirror_dir)" >&2; exit 1; }
+
+  # Define a timestamp 
+  timestamp=$(timestamp "$timezone")
+
+  if [ "$use_wayback" = "yes" ]; then
+    echo "Retrieving archive for $domain... "
+    mirror_archive_dir="$local_sitename"
+    [ "$archive" = "yes" ] && mirror_archive_dir+="$timestamp"
+    working_mirror_dir="$mirror_dir/$mirror_archive_dir"
+    zip_archive="$mirror_archive_dir.zip"
+
+    # Check for Wayback Machine Downloader binary, else report error (in the absence of an alternative)
+    if cmd_check "$wayback_machine_downloader_cmd" "1"; then
+      printf "Running Wayback Machine Downloader on %s ... " "$url."
+      if [ "$domain_original" != "web.archive.org" ]; then
+        echo "$msg_error: The Wayback Machine Downloader only supports web.archive.org and we don't have any custom alternative.  You might be able to retrieve some files by setting wayback_enable=no in constants.sh (to treat like any other site) and then re-running, though this is not recommended."
+        exit
+      else
+        wmd_get_wayback_site "$url"
+      fi
+    else
+      printf "%s: Wayback Machine Downloader not found (wayback_machine_downloader_cmd is set to %s) - please check that it is installed according to instructions at %s. Aborting.\n" "$msg_error" "$wayback_machine_downloader_cmd" "$wayback_machine_downloader_url"
+      exit
+    fi
+  else
+    wget_mirror
+  fi
+}
+
+# (A placeholder for) post mirror site review and analysis
+post_get_site_checks() {
   echo
 }
 
 # Augment Wget's snapshot by retrieving missed URLs
-# (this needs to be done before wget_postprocessing)
+# (this needs to be done before site_postprocessing)
 # We use Wget instead of cURL to avoid repeated overwrites -
 # target files are not expected to change during this site generation
 wget_extra_urls() {
@@ -878,9 +962,9 @@ wget_extra_urls() {
 #  3. Replace remaining occurrences of primary domain with the deployment domain
 #     (subject to user confirmation).
 #  4. If Wget --cut-dirs options set, then only carry out option 3.
-wget_postprocessing() {
+site_postprocessing() {
   cd "$working_mirror_dir" || { printf "Unable to enter %s.\nAborting.\n" "$working_mirror_dir"; exit; }
-  echo -n "Carrying out post-Wget processing in $working_mirror_dir ... " 
+  echo -n "Carrying out site postprocessing in $working_mirror_dir ... " 
 
   # First, generate a list of all the web pages that contain relevant URLs to process
   # (makes subsequent sed replacements more targeted than searching all web pages).
@@ -1114,7 +1198,7 @@ wget_postprocessing() {
 }
 
 add_extras() {
-  # For archival, copy subs files into the respective Wget mirror directory
+  # For archival, copy subs files into the respective mirror directory
   extras_src="$script_dir/$extras_dir/$hostport"
   extras_dest="$working_mirror_dir"
   printf "Copying additional files from %s to %s, the static mirror (for distribution) ... " "$extras_src" "$extras_dest"
@@ -1213,7 +1297,11 @@ clean_mirror() {
   if [ "$robots_create" = "yes" ]; then
     robots_path="$mirror_dir/$mirror_archive_dir$hostport_dir/robots.txt"
     robots_default="$script_dir/$lib_files/$robots_default_file"
-    cp "$robots_default" "$robots_path"
+    if [ -f "$robots_default" ]; then
+      cp "$robots_default" "$robots_path"
+    else
+      touch "$robots_path"
+    fi  
     printf "\nSitemap: %s\n" "https://$deploy_domain/$sitemap_file" >> "$robots_path"
   fi
 
@@ -1223,7 +1311,6 @@ clean_mirror() {
     touch "$sitemap_path"
     sitemap_content="$(sitemap_header)"$'\n';
     sitemap_loc_files=()
-    while IFS='' read -r line; do sitemap_loc_files+=("$line"); done < <(find . -type f -name "*.html")
 
     # Generate find params string based on $sitemap_file_extensions
     IFS="," read -r -a sitemap_file_exts <<< "$sitemap_file_extensions"

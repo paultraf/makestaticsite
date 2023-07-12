@@ -243,6 +243,16 @@ read_option() {
       content+="$CONFIGLINE"
       if [ "$optvar" = "url" ]; then
         host=$(printf "%s" "$input_value" | awk -F/ '{print $3}' | awk -F: '{print $1}')
+        # Check for Wayback Machine
+        if [ "$wayback_enable" = "yes" ] && wayback_check_url "$input_value" "$wayback_hosts"; then
+          echo "Wayback Machine URL detected."
+          archived_domain_path=$(echo "${input_value//:\/\//|}" | cut -d\| -f3)
+          if [ "$archived_domain_path" = "" ]; then
+            echo "$msg_error: Sorry, no archive URL found at the Wayback Machine!  For guidance on acceptable URLs, please consult https://help.archive.org/help/using-the-wayback-machine/ and then try again."; exit
+          else
+            host=$(echo "$archived_domain_path" | cut -d/ -f1)
+          fi
+        fi
       fi
       ;;
     *)

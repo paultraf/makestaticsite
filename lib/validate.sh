@@ -80,6 +80,16 @@ validate_url() {
   fi
 }
 
+# Test internet connection:
+# ping default gateway with aid of ip command or, if not available, use netcat
+validate_internet() {
+  if command -v "ip" 1> /dev/null; then
+    ping -q -w 1 -c 1 `ip r | grep default | cut -d ' ' -f 3` > /dev/null 2>&1 && return 0 || return 1
+  else
+    printf "GET http://google.com HTTP/1.0\n\n" | nc google.com 80 > /dev/null 2>&1 && return 0 || return 1
+  fi  
+}
+
 validate_http() {
   echo "Checking connection to $1 ..."
   status="$(curl -s -k --head -w "%{http_code}" "$1" -o /dev/null)"
@@ -144,5 +154,33 @@ validate_range() {
   fi
 }
 
+# check URL for Wayback Machine service
+# using two methods:
+# 1. check list membership
+# 2. check header response with cURL
+#
+# Expects two parameters:
+# - URL being tested
+# - Wayback list
+wayback_check_url(){
+  # Read parameters and assign to variables
+  local url="$1"
+  local wayback_list="$2"
+  local host=$(printf "%s" "$url" | awk -F/ '{print $3}' | awk -F: '{print $1}')
+
+  # Check list of known Wayback Machine hosts
+  if echo ",$wayback_list," | grep -q ",$host,"; then
+    return 0
+  fi
+
+  # cURL check (-I : header, -s: silent, -k: don't check SSL certs)
+  wayback_header="Memento-Datetime:"
+  if curl -skI "$url" | grep -Fiq "$wayback_header"; then
+    return 0
+  fi
+
+  # Failed both checks, so return error status
+  return 1
+}
 
 

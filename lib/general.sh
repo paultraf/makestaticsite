@@ -372,3 +372,22 @@ stopclock() {
   (( timer_seconds == 0 )) && echo "no time at all!" || echo "."
 }
 
+# Generate timestamp
+# One optional parameter:
+#  - timezone
+timestamp() {
+  if [ -n "{1+x}" ]; then
+    timezone="$1"
+  else
+    timezone="utc"
+  fi
+  if [ "$timezone" != "utc" ]; then
+    timestamp=$(date "+%Y%m%d_%H%M%S")
+    if [ "$timezone" = "utclocal" ]; then
+      timestamp+=$(date +"%z")
+    fi
+  else
+    timestamp=$(TZ=UTC date "+%Y%m%d_%H%M%S")"Z"
+  fi
+  echo $timestamp
+}

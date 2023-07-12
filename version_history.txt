@@ -19,6 +19,36 @@
 ##########################################################################
 
 
+0.27 (released on 2023-07-12)
+    * Added support for Wayback Machine Downloader*
+     Renamed constant, wget_post_processing to site_post_processing, updated
+     all references.
+    [lib/constants.sh]
+     Added constants to support querying of Wayback Machine:
+     mod_wayback for Wayback Machine module filename; wayback_enable; 
+     wayback_hosts, wayback_date_from, wayback_date_to, wayback_matchtype,
+     wayback_wget_options.
+     Added two options specific to Hartator's Wayback Machine downloader:
+     wayback_machine_downloader_url and wayback_machine_downloader_cmd
+    [lib/general.sh]
+     Added timestamp() function
+    [lib/validate.sh]
+     Added function: validate_internet() to test Internet connection 
+     Added function: wayback_check_url() to check whether a given URL is for
+     a valid Wayback Machine service.
+    [makestaticsite.sh]
+     initialise_variables(): added checks for Wayback Machine URL, extracting
+     URL and domain of the archived host, parameters for the downloader.
+     Added a few conditionals to ensure subsequent processing.
+     Added function mirror_site() to coordinate site captures (may or may not
+     call wget_mirror). Moved setting of timestamps here.
+     Renamed function wget_postprocessing to site_postprocessing.
+     Added function wmd_get_wayback_site() to run Wayback Machine Downloader
+     with various parameters.
+     Some minor changes, mainly cosmetic.
+    [setup.sh]
+     read_option(): inserted check for Wayback Machine URL
+
 0.26.1 (released on 2023-07-04)
       * Maintenance release *
       [setup.sh]

@@ -22,7 +22,7 @@
 ################################################
 # MakeStaticSite info
 ################################################
-version=0.26.1+1
+version=0.27
 version_date='12 July 2023'
 version_header="MakeStaticSite version $version, released on $version_date."
 mss_license="GNU Affero General Public License version 3"
@@ -118,8 +118,29 @@ robots_create=yes               # Generate and overwrite robots.txt (y/n)?
 robots_default_file=robots.txt  # file name for default robots.txt (inside lib/files/), with sitemap to be appended
 sitemap_create=yes              # Generate and overwrite site map file (y/n)?
 sitemap_file=sitemap.xml        # Name of sitemap (XML) file
-sitemap_schema=http://www.sitemaps.org/schemas/sitemap/0.9 # Site map XML schema URL
+sitemap_schema=http://www.sitemaps.org/schemas/sitemap/0.9 # Sitemap XML schema URL
 sitemap_file_extensions=htm,html # List of file extensions allowed for inclusion in sitemap file
+
+
+################################################
+# Wayback Machine settings
+################################################
+wayback_enable=yes              # Enable Wayback Machine module (y/n)?  If not enabled, then any Wayback sites will be retrieved using default (Wget).
+wayback_hosts=web.archive.org,www.webarchive.org.uk  # Domains where Wayback Machine is hosted
+wayback_date_from=              # Earliest date timestamp for Wayback Machine snapshot files
+wayback_date_to=                # Latest date timestamp for Wayback Machine snapshot files
+wayback_matchtype=prefix        # Wayback Machine CDX server match type:
+                                #  - 'domain' will return all results from host domain and all its subdomains 
+                                #  - 'host' will return results from host domain, but no other domains 
+                                #  - 'exact' will return results matching URL exactly
+                                #  - 'prefix' will return results for all results under a URL path
+
+# Settings specifically for Wayback Machine downloader coded in Ruby
+# https://github.com/hartator/wayback-machine-downloader
+wayback_machine_downloader_url=https://github.com/hartator/wayback-machine-downloader # URL of Wayback Machine Downloader repository
+wayback_machine_downloader_cmd=wayback_machine_downloader # [Path to] binary for the Wayback Machine Downloader
+wayback_machine_only=           # Restrict downloading to URLs that match this filter (enclose in slashes // to treat as a regex and place in quotes)
+wayback_machine_excludes=       # Skip downloading of URLs that match this filter (enclose in slashes // to treat as a regex and place in quotes)
 
 
 ################################################
@@ -272,9 +293,9 @@ wget_extra_urls=y
 wget_extra_urls__desc='Use Wget to retrieve additional assets from the domain (y/n)?'
 wget_extra_urls__info="This option will attempt to retrieve further assets by searching each downloaded file for further URLs and then re-running Wget, using the same options except that existing files will not be overwritten (no clobber)."
 
-wget_post_processing=y
-wget_post_processing__desc='Further refine the output from the first run of Wget (y/n)?'
-wget_post_processing__info="This option will attempt to convert further absolute paths for url_base to relative paths; replace remaining occurrences of the source domain with deploy domain; and convert feed files and references from index.html to index.xml. Note that the method of search and replace is blunt - all occurrences will be replaced!"
+site_post_processing=y
+site_post_processing__desc='Further refine the output after the first site capture (y/n)?'
+site_post_processing__info="This option will attempt to convert further absolute paths for url_base to relative paths; replace remaining occurrences of the source domain with deploy domain; and convert feed files and references from index.html to index.xml. Note that the method of search and replace is blunt - all occurrences will be replaced!"
 
 archive=y
 archive__desc='Add the mirror site to an archive (y/n)?'
@@ -392,7 +413,7 @@ add_extras__info="Option to supplement the static snapshot with further files so
 
 allOptions_deps=(
 require_login="(site_user site_password)"
-wget_extra_urls="(wget_post_processing)"
+wget_extra_urls="(site_post_processing)"
 wp_cli="(wp_cli_remote source_host source_protocol source_port source_user site_path wp_helper_plugins add_search wp_search_plugin wp_restore_settings)"
 wp_cli_remote="(source_host source_protocol source_port source_user)"
 wp_helper_plugins="()"
@@ -412,5 +433,5 @@ options_allow_empty=(extra_domains wget_extra_options input_urls_file)
 options_check_cmd=(wget_cmd htmltidy_cmd)
 options_check_dir=(site_path)
 options_check_url=(url)
-options_check_yesno=(ssl_checks wget_extra_urls wget_post_processing archive wp_cli wp_cli_remote wp_helper_plugins add_search wp_restore_settings use_snippets upload_zip deploy deploy_remote deploy_remote_rsync htmltidy add_extras)
+options_check_yesno=(ssl_checks wget_extra_urls site_post_processing archive wp_cli wp_cli_remote wp_helper_plugins add_search wp_restore_settings use_snippets upload_zip deploy deploy_remote deploy_remote_rsync htmltidy add_extras)
 
