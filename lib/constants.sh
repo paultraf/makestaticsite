@@ -22,8 +22,8 @@
 ################################################
 # MakeStaticSite info
 ################################################
-version=0.27
-version_date='12 July 2023'
+version=0.27.0.1
+version_date='13 July 2023'
 version_header="MakeStaticSite version $version, released on $version_date."
 mss_license="GNU Affero General Public License version 3"
 mss_download="https://makestaticsite.sh/download/makestaticsite_latest.tar.gz"
@@ -141,7 +141,7 @@ wayback_machine_downloader_url=https://github.com/hartator/wayback-machine-downl
 wayback_machine_downloader_cmd=wayback_machine_downloader # [Path to] binary for the Wayback Machine Downloader
 wayback_machine_only=           # Restrict downloading to URLs that match this filter (enclose in slashes // to treat as a regex and place in quotes)
 wayback_machine_excludes=       # Skip downloading of URLs that match this filter (enclose in slashes // to treat as a regex and place in quotes)
-
+wayback_machine_statuscodes=    # Accepted status codes. The default is '200' - OK.  Enter 'all for 30x (redirections), 40x (not found, forbidden) and 50x (server error). 
 
 ################################################
 # CMS-specific constants

@@ -390,7 +390,8 @@ initialise_variables() {
       url_slashes=${url1//[!\/]};
       url_depth=$(( ${#url_slashes}+1 ))
       url=$(echo "$url" | cut -d/ -f${url_depth}-)
-      wayback_date_to=$(echo "$url" | cut -d/ -f${url_depth})
+      (( url_depth-- ))
+      [ "$wayback_date_to" = "" ] && wayback_date_to=$(echo "$url_original" | cut -d/ -f${url_depth})
       printf "\nWayback Machine detected at %s, hosted on %s.\n" "$url_original" "$domain_original"
       if [ "$url1" = "" ] || ! validate_url "$url"; then
         printf "%s: The extracted URL, %s, is considered invalid.\n" "$msg_error" "$url"
@@ -771,9 +772,10 @@ wmd_get_wayback_site() {
   [ -n "${wayback_machine_excludes+x}" ] && [ "$wayback_machine_excludes" != "" ] && wmd_get_options+=(-x "$wayback_machine_excludes") 
   [ -n "${wayback_date_from+x}" ] && [ "$wayback_date_from" != "" ] && wmd_get_options+=(-f "$wayback_date_from") 
   [ -n "${wayback_date_to+x}" ] && [ "$wayback_date_to" != "" ] && wmd_get_options+=(-t "$wayback_date_to") 
-
+  [ -n "${wayback_machine_statuscodes+x}" ] && [ "$wayback_machine_statuscodes" = "all" ] && wmd_get_options+=(-a)
+  
   wmd_get_options+=(-d "$mirror_archive_dir" "$url")
-  echo "Executing: $wayback_machine_downloader_cmd ${wmd_get_options[*]}"
+  echo " "; echo "Executing: $wayback_machine_downloader_cmd ${wmd_get_options[*]}"
   $wayback_machine_downloader_cmd "${wmd_get_options[@]}"
 }
 
