@@ -73,6 +73,55 @@ validate_dir() {
   [ -d "$1" ] || { echo "There doesn't appear to be a valid directory at $1"; return 1; }
 }
 
+# Timestamp validation (up to year 2999)
+# Expected format: YYYYMMDDhhmmss
+# Allows substring matches (YYYY, YYYYMM, and so on)
+validate_timestamp() {
+  # First, test special cases: YYYY, YYYYMM
+  local y="^[0-2][0-9]{3}"
+  local t_y="${1:0:4}"
+  local t_m1="${1:4:1}"; local t_m2="${1:5:1}"
+
+  case ${#1} in
+    "4")
+      if [[ $1 =~ ^$y ]]; then
+        return 0
+      else
+        return 1
+      fi
+      exit
+      ;;
+    "6")
+      if [[ $1 =~ ^$y ]] && { (( t_m1 == 0 )) || { (( t_m1 == 1 )) && (( t_m2 <= 2 )); }; }; then
+        return 0
+      else
+        return 1
+      fi
+      exit
+      ;;
+     *)
+      echo 
+      ;; 
+  esac
+
+  # convert fully numeric timestamp to one acceptable to date command
+  local t="${1:0:4}-${1:4:2}-${1:6:2} ${1:8:2}:${1:10:2}:${1:12:2}"
+
+  local date_options=()
+  if [ "$ostype" = "BSD" ]; then
+    date_options+=(-j)
+    date_options+=(-f "%Y-%m-%d %H:%M:%S")
+  else
+    date_options+=(-d)
+  fi
+  date_options+=("$t")
+  if [[ $1 =~ ^[0-2][0-9]{3}[0-1][0-9][0-3][0-9][0-2][0-9][0-5][0-9][0-5][0-9]$ ]] && date "${date_options[@]}" >/dev/null 2>&1; then
+    return 0
+  else
+    return 1  
+  fi
+}
+
 validate_url() {
   url_regex='(https?|ftp|file)://[-[:alnum:]\+&@#/%?=~_|!:,.;]+'
   if [[ ! $1 =~ $url_regex ]]; then
@@ -96,7 +145,7 @@ validate_http() {
   if [ "$status" = "200" ]; then
     echo "Connection established OK."
   elif [ "$status" = "301" ] || [ "$status" = "302" ]; then
-    echo "WARNING: redirect detected (HTTP code $status), proceed with caution"
+    echo "WARNING: redirect detected (HTTP code $status), proceed with caution."
   elif [ "$status" = "401" ]; then
     echo "WARNING: unauthorised (HTTP code $status).  This means that you will need to enter a username and password as wget parameters for wget_extra_options (which you can set a bit later)."
   else
@@ -153,34 +202,4 @@ validate_range() {
     return 1
   fi
 }
-
-# check URL for Wayback Machine service
-# using two methods:
-# 1. check list membership
-# 2. check header response with cURL
-#
-# Expects two parameters:
-# - URL being tested
-# - Wayback list
-wayback_check_url(){
-  # Read parameters and assign to variables
-  local url="$1"
-  local wayback_list="$2"
-  local host=$(printf "%s" "$url" | awk -F/ '{print $3}' | awk -F: '{print $1}')
-
-  # Check list of known Wayback Machine hosts
-  if echo ",$wayback_list," | grep -q ",$host,"; then
-    return 0
-  fi
-
-  # cURL check (-I : header, -s: silent, -k: don't check SSL certs)
-  wayback_header="Memento-Datetime:"
-  if curl -skI "$url" | grep -Fiq "$wayback_header"; then
-    return 0
-  fi
-
-  # Failed both checks, so return error status
-  return 1
-}
-
 

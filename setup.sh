@@ -23,6 +23,9 @@
 source "lib/constants.sh"  # load constants, particularly runtime options
 source "lib/general.sh"    # load general functions library
 source "lib/validate.sh"   # load the validation library functions
+# shellcheck source=lib/mod_wayback.sh
+source "lib/$mod_wayback";
+
 
 main() {
   # Step 0: Initialisation
@@ -244,13 +247,14 @@ read_option() {
       if [ "$optvar" = "url" ]; then
         host=$(printf "%s" "$input_value" | awk -F/ '{print $3}' | awk -F: '{print $1}')
         # Check for Wayback Machine
-        if [ "$wayback_enable" = "yes" ] && wayback_check_url "$input_value" "$wayback_hosts"; then
-          echo "Wayback Machine URL detected."
+        if [ "$wayback_enable" = "yes" ] && check_wayback_url "$input_value" "$wayback_hosts"; then
           archived_domain_path=$(echo "${input_value//:\/\//|}" | cut -d\| -f3)
           if [ "$archived_domain_path" = "" ]; then
             echo "$msg_error: Sorry, no archive URL found at the Wayback Machine!  For guidance on acceptable URLs, please consult https://help.archive.org/help/using-the-wayback-machine/ and then try again."; exit
           else
+            echo "Wayback Machine URL detected with archive having domain and path: $archived_domain_path."
             host=$(echo "$archived_domain_path" | cut -d/ -f1)
+            process_wayback_url "$input_value"
           fi
         fi
       fi

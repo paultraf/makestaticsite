@@ -375,30 +375,19 @@ initialise_variables() {
   use_wayback= 
   wayback_enable=$(yesno "$wayback_enable")
   if [ "$wayback_enable" = "yes" ]; then
+# shellcheck source=lib/mod_wayback.sh
+    source "lib/$mod_wayback";
     if (( phase < 4 )) && ! validate_internet; then
       echo " "; echo "$msg_error: Unable to establish Internet access. Please check your network connectivity."
       echo "Aborting."
       exit
-    fi 
-    if wayback_check_url "$url" "$wayback_hosts"; then
+    fi
+    if check_wayback_url "$url" "$wayback_hosts"; then
       use_wayback=yes
       wget_extra_urls=no
-      url_original="$url"
-      hostport_original=$(printf "%s" "$url_original" | awk -F/ '{print $3}')
-      domain_original=$(printf "%s" "$hostport_original" | awk -F: '{print $1}')
-      url1=${url%http*}
-      url_slashes=${url1//[!\/]};
-      url_depth=$(( ${#url_slashes}+1 ))
-      url=$(echo "$url" | cut -d/ -f${url_depth}-)
-      (( url_depth-- ))
-      [ "$wayback_date_to" = "" ] && wayback_date_to=$(echo "$url_original" | cut -d/ -f${url_depth})
-      printf "\nWayback Machine detected at %s, hosted on %s.\n" "$url_original" "$domain_original"
-      if [ "$url1" = "" ] || ! validate_url "$url"; then
-        printf "%s: The extracted URL, %s, is considered invalid.\n" "$msg_error" "$url"
-        printf "It is recommended that you modify the value of 'url' in %s and re-run\n." "$myconfig.cfg"
-        echo "Aborting."
-        exit
-      fi
+      domain_wayback_machine=$(printf "%s" "$url" | awk -F/ '{print $3}' | awk -F: '{print $1}')
+      printf "\nWayback Machine detected at %s, hosted on %s.\n" "$url" "$domain_wayback_machine."
+      process_wayback_url "$url" # will change the value of $url to be that of the archived site
     fi
   fi
 
@@ -755,31 +744,6 @@ wget_mirror() {
 }
 
 
-# Call Wayback Machine Downloader, a tool in Ruby
-# https://github.com/hartator/wayback-machine-downloader
-# Expects one parameter: URL
-# optional parameters:
-# - date from
-# - date to
-wmd_get_wayback_site() {
-  local url="$1"
-  [ -n "${2+x}" ] && wayback_date_from="$2" 
-  [ -n "${3+x}" ] && wayback_date_to="$3" 
-
-  wmd_get_options=()
-  [ "$wayback_matchtype" = "exact" ] && wmd_get_options+=(-e)
-  [ -n "${wayback_machine_only+x}" ] && [ "$wayback_machine_only" != "" ] && wmd_get_options+=(-o "$wayback_machine_only") 
-  [ -n "${wayback_machine_excludes+x}" ] && [ "$wayback_machine_excludes" != "" ] && wmd_get_options+=(-x "$wayback_machine_excludes") 
-  [ -n "${wayback_date_from+x}" ] && [ "$wayback_date_from" != "" ] && wmd_get_options+=(-f "$wayback_date_from") 
-  [ -n "${wayback_date_to+x}" ] && [ "$wayback_date_to" != "" ] && wmd_get_options+=(-t "$wayback_date_to") 
-  [ -n "${wayback_machine_statuscodes+x}" ] && [ "$wayback_machine_statuscodes" = "all" ] && wmd_get_options+=(-a)
-  
-  wmd_get_options+=(-d "$mirror_archive_dir" "$url")
-  echo " "; echo "Executing: $wayback_machine_downloader_cmd ${wmd_get_options[*]}"
-  $wayback_machine_downloader_cmd "${wmd_get_options[@]}"
-}
-
-
 # Capture a site
 # The method used depends on the service;
 # currently two kinds are supported:
@@ -801,7 +765,7 @@ mirror_site() {
     # Check for Wayback Machine Downloader binary, else report error (in the absence of an alternative)
     if cmd_check "$wayback_machine_downloader_cmd" "1"; then
       printf "Running Wayback Machine Downloader on %s ... " "$url."
-      if [ "$domain_original" != "web.archive.org" ]; then
+      if [ "$domain_wayback_machine" != "web.archive.org" ]; then
         echo "$msg_error: The Wayback Machine Downloader only supports web.archive.org and we don't have any custom alternative.  You might be able to retrieve some files by setting wayback_enable=no in constants.sh (to treat like any other site) and then re-running, though this is not recommended."
         exit
       else

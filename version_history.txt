@@ -19,6 +19,27 @@
 ##########################################################################
 
 
+0.27.1 (released on 2023-07-18)
+      * Added support for Wayback Machine URLs extended with date ranges * 
+      [lib/constants.sh]
+       Added constant, mod_wayback, to specify name of module file name
+      [lib/mod_wayback.sh]
+       A new library module for use specifically with the Wayback Machine;
+       moved wmd_get_wayback_site() from makestaticsite.sh;
+       moved wayback_check_url() from lib/validate.sh and renamed
+       check_wayback_url(); 
+       added function, process_wayback_url(), to extract and validate the
+       archive URL and date or date range respectively.   
+      [lib/validate.sh]
+       Added function validate_timestamp() to validate partial and complete
+       timestamps.
+      [setup.sh]
+       read_option(): inserted call to process_wayback_url "$input_value" to
+       validate input.
+      [makestaticsite.sh]
+       initialise_variables(): removed processing of Wayback URLs, replaced
+       with call to process_wayback_url() in mod_wayback.sh.
+
 0.27.0.1 (released on 2023-07-13)
       * Maintenance release and refinement *
       [lib/constants.sh]

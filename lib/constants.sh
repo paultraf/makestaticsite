@@ -22,8 +22,8 @@
 ################################################
 # MakeStaticSite info
 ################################################
-version=0.27.0.1
-version_date='13 July 2023'
+version=0.27.1
+version_date='18 July 2023'
 version_header="MakeStaticSite version $version, released on $version_date."
 mss_license="GNU Affero General Public License version 3"
 mss_download="https://makestaticsite.sh/download/makestaticsite_latest.tar.gz"
@@ -123,8 +123,9 @@ sitemap_file_extensions=htm,html # List of file extensions allowed for inclusion
 
 
 ################################################
-# Wayback Machine settings
+# [module] Wayback Machine settings
 ################################################
+mod_wayback=mod_wayback.sh      # Wayback Machine module filename
 wayback_enable=yes              # Enable Wayback Machine module (y/n)?  If not enabled, then any Wayback sites will be retrieved using default (Wget).
 wayback_hosts=web.archive.org,www.webarchive.org.uk  # Domains where Wayback Machine is hosted
 wayback_date_from=              # Earliest date timestamp for Wayback Machine snapshot files
@@ -155,7 +156,7 @@ wget_reject_clause="*login*,*logout*" # wget --reject parameter (uses wildcard *
 
 
 ################################################
-# WordPress-specific settings
+# [module] WordPress-specific settings
 ################################################
 mod_wp="mod_wp.sh"              # WordPress module filename
 php_version_atleast=5.6         # Minimum PHP version for running WP-CLI
