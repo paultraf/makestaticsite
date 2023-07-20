@@ -29,7 +29,7 @@ source "lib/$mod_wayback";
 
 main() {
   # Step 0: Initialisation
-  get_configfile "$@"
+  read_config "$@"
   get_inks
   print_welcome
   init_mssconfig
@@ -49,6 +49,59 @@ main() {
 ################################################
 #              Support functions
 ################################################
+
+read_config() {
+  cfgfile=
+  cfg_string=
+  log_filename=
+  local OPTIND
+  while getopts ":o:l:L:u" option; do
+    case "$option" in
+      l)
+        level="$OPTARG"
+        validate_range 0 "$max_setup_level" "$level" ||{ printf "Sorry, the setup level of $level is out of range (it should be an integer between 0 and %s).  Please try again.\n" "$max_setup_level"; exit; }
+        ;;
+      L)
+        log_filename="$OPTARG"
+        ;;
+      u)
+        level=0
+        run_unattended=yes
+        ;;
+      o)
+        cfgfile="$OPTARG.cfg";
+        cfg_string=", $cfgfile,"
+        ;;
+      : )
+        # Print argument error
+        printf "Invalid option: %s requires an argument. Please try again.\n" "$OPTARG" 1>&2
+        exit
+        ;;
+      \? )
+        # Print option error
+        printf "Invalid option: %s. Please try again.\n" "$OPTARG" 1>&2
+        exit
+        ;;
+    esac
+  done
+
+  echo 
+  shift "$((OPTIND-1))"
+
+  if [ "$*" != "" ]; then
+    url="$*";
+    validate_url "$url" || { printf "Sorry, the syntax of the URL appears to be invalid.  Please try again.\n"; exit; }
+    echo
+  fi
+
+  if [ -n "${level+x}" ]; then
+    validate_range 0 "$max_setup_level" "$level" || { printf "Sorry, the setup level is out of range (it should be an integer between 0 and %s).  Please try again.\n" "$max_setup_level"; return; }
+  fi
+
+  if [ "$run_unattended" = "yes" ] && [ -z ${url+x} ]; then
+    printf "You have run setup in unattended mode (-u flag), but not supplied a URL. Please try again.\n"; exit;
+  fi
+}
 
 print_welcome() {
   printf "Welcome to MakeStaticSite for the generation and deployment of static websites.  This is free software released under the %s, the latest version being available from %s.\n\n" "$mss_license" "${mss_download}"
@@ -105,56 +158,6 @@ init_mssconfig(){
 EOF
 
   content+=$'\n'$'\n'
-}
-
-get_configfile() {
-  cfgfile=
-  cfg_string=
-  local OPTIND
-  while getopts ":o:l:u" option; do
-    case "${option}" in
-      l)
-        level="$OPTARG"
-        validate_range 0 "$max_setup_level" "$level" ||{ printf "Sorry, the setup level of $level is out of range (it should be an integer between 0 and %s).  Please try again.\n" "$max_setup_level"; exit; }
-      ;;
-      u)
-        level=0
-        run_unattended=yes
-      ;;
-      o)
-        cfgfile="$OPTARG.cfg";
-        cfg_string=", $cfgfile,"
-      ;;
-      : )
-        # Print argument error
-        printf "Invalid option: %s requires an argument. Please try again.\n" "$OPTARG" 1>&2
-        exit
-      ;;
-      \? )
-        # Print option error
-        printf "Invalid option: %s. Please try again.\n" "$OPTARG" 1>&2
-        exit
-      ;;
-    esac
-  done
-
-  echo 
-  shift "$((OPTIND-1))"
-
-  if [ "$*" != "" ]; then
-    url="$*";
-    validate_url "$url" || { printf "Sorry, the syntax of the URL appears to be invalid.  Please try again.\n"; exit; }
-    echo
-  fi
-
-  if [ -n "${level+x}" ]; then
-    validate_range 0 "$max_setup_level" "$level" || { printf "Sorry, the setup level is out of range (it should be an integer between 0 and %s).  Please try again.\n" "$max_setup_level"; return; }
-  fi
-
-  if [ "$run_unattended" = "yes" ] && [ -z ${url+x} ]; then
-    printf "You have run setup in unattended mode (-u flag), but not supplied a URL. Please try again.\n"; exit;
-  fi
-
 }
 
 # Read options through stdin
@@ -403,6 +406,7 @@ conclude() {
     if [ "$confirm" = "y" ] || [ "$confirm" = "Y" ]; then
       echo "Proceeding to make the static site ... "
       args=(-i "$cfgfile")
+      [ "$log_filename" != "" ] && args+=(-L "$log_filename")
       [ "$run_unattended" = "yes" ] && args+=(-u)
       ./makestaticsite.sh "${args[@]}"
       echo

@@ -32,12 +32,14 @@ source lib/validate.sh     # load the validation functions library
 source lib/config.sh       # load the config functions library
 
 main() {
+  echo "Welcome to MakeStaticSite version $version"
+
   # Phase 0: Initialisation
   ((max_phase_num=${#all_phases[@]}-1)) # Number of phases minus one
   get_inks
   whichos
-  initialise_layout
   read_config "$@"
+  initialise_layout
   initialise_variables
 
   # Phase 1: Prepare the CMS
@@ -73,72 +75,17 @@ main() {
   # Phase 10: Finish
   conclude
 }
-################## END OF STEPS ###################
+################## END OF PHASES ##################
 
 
 ###################################################
 #                Support functions
 ###################################################
 
-initialise_layout() {
-  # Local context - this directory
-  script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
-
-  # Set up temporary directory
-  tmp_dir_path="$script_dir/$tmp_dir"
-  [ -d "$tmp_dir_path" ] || mkdir -p "$tmp_dir_path"
-  tmp_mirror_path="$script_dir/$tmp_dir/mirror"
-  [ -d "$tmp_mirror_path" ] || mkdir -p "$tmp_mirror_path"
-
-  # Set up logging
-  log_file_dir="$script_dir/log"
-  [ -d "$log_file_dir" ] || mkdir -p "$log_file_dir"
-  log_file="$log_file_dir/$log_filename"
-  touch "$log_file"
-
-  # Local target directory and web server deployment
-  mirror_dir="$script_dir/mirror"         # path to Wget output root folder
-  [ -d "$mirror_dir" ] || { mkdir -p "$mirror_dir"; echo "Created folder for mirror files at $mirror_dir."; }
-
-  # Substitute files for zip download (used for embeds, etc.)
-  sub_dir=subs                            # This must be sit under $script_dir
-  sub_files_dir=files                     # This must be sit under $sub_dir
-  sub_files_path="$script_dir/$sub_dir/$sub_files_dir"
-
-  snippets_dir="$script_dir/snippets"     # directory storing snippets (.html files)
-  snippets_data_file="$snippets_dir/snippets.data" # list of directories/files relative to
-                                          # zip root inside the $sub_files_dir 
-                                          # (separated by space)
-                                          # Default is just the home page
-                                          # Script will generate this dynamically
-                                          # using this data file where each row is
-                                          # path_to_html_file:<list of snippet ids>
-
-  lib_files=lib/files                     # library files (defaults/templates) directory
-
-  if [ "$log_level" = "silent" ]; then
-    exec 2>/dev/null
-  else
-    exec 2> >(tee -a "$log_file" >&2) # additionally, append stderr to logfile
-  fi
-
-  # If output_level is silent, then don't echo anything to the terminal
-  # and set run un_attended=yes
-  if [ "$output_level" = "silent" ]; then
-    exec 1>/dev/null
-    if [ "$run_unattended" = "no" ]; then
-      echo "NOTICE: run_unattended=yes (to keep terminal output silent)" 0
-    fi  
-    run_unattended=yes
-  fi
-
-  return 0
-}
-
 # Override built-in echo and also write to log file
 # This takes an optional priority parameter (number) to constrain output, 
 # stored in echo_num:
-#  0 (liberal)    - echo unless level is silent
+#  0 (liberal)    - echo unless output level is silent
 #  1 (normal)     - echo normally 
 #  2 (restricted) - echo only for full logging (this priority is meant for 
 #                   internal processing)
@@ -191,7 +138,7 @@ echo() {
   if [ "$echo_tty" != "" ]; then
     env echo "${params[@]}"
   fi
-  if [ "$echo_log" != "" ] && [ "$log_level" != "silent" ]; then
+  if [ "$echo_log" != "" ] && [ "$log_level" != "silent" ] && [ -n "${log_file+x}" ]; then
     env echo "${params[@]}" >> "$log_file"
   fi
 
@@ -199,7 +146,7 @@ echo() {
 }
 
 read_config() {
-  local run_params="$*"
+  run_params="$*"
   myconfig=default
   phase=0
   end_phase=$max_phase_num
@@ -208,28 +155,31 @@ read_config() {
   mirror_id_flag=off # flag to denote whether or not -m option set
 
   local OPTIND
-  while getopts "ui:p:q:m:vh" option; do
-    case "${option}" in
+  while getopts "ui:p:q:m:L:vh" option; do
+    case "$option" in
       u)
         run_unattended=yes
         ;;
       i)
-        myconfig="${OPTARG}"
+        myconfig="$OPTARG"
         config_flag=on
         ;;
       m)
-        mirror_archive_dir="${OPTARG}"
+        mirror_archive_dir="$OPTARG"
         mirror_id_flag=on
         ;;
       p)
-        phase="${OPTARG}"
+        phase="$OPTARG"
         ;;
       q)
-        end_phase="${OPTARG}"
+        end_phase="$OPTARG"
         ;;
       v)
         echo "$version_header"
         exit
+        ;;
+      L)
+        log_filename="$OPTARG"
         ;;
       h)
         echo "$version_header"
@@ -237,7 +187,7 @@ read_config() {
         echo
         echo "Allowable options are:"
         echo " -u                 Run unattended."
-        echo " -i FILENAME        Input configuration file."
+        echo " -i FILENAME        Input configuration file name."
         echo " -p NUMBER          Run from phase NUMBER, where"
         echo "    0 (default)     Initialisation"
         echo "    1               Prepare the CMS"
@@ -252,6 +202,7 @@ read_config() {
         echo "                  and"
         echo " -m MIRROR_ID       use mirror with identifier MIRROR_ID."
         echo " -q NUMBER          End at phase NUMBER (default is 9, end)."
+        echo " -L FILENAME        log file name."        
         echo " -v                 Display MakeStaticSite version number."
         echo " -h                 Display help."
         echo
@@ -279,9 +230,65 @@ read_config() {
     esac
   done
   shift $((OPTIND-1))
+}
 
-  echo "Welcome to MakeStaticSite version $version"
-  echo "Running with command line options: $run_params" 1>/dev/null
+initialise_layout() {
+  # Local context - this directory
+  script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+
+  # Set up temporary directory
+  tmp_dir_path="$script_dir/$tmp_dir"
+  [ -d "$tmp_dir_path" ] || mkdir -p "$tmp_dir_path"
+  tmp_mirror_path="$script_dir/$tmp_dir/mirror"
+  [ -d "$tmp_mirror_path" ] || mkdir -p "$tmp_mirror_path"
+
+  # Set up logging
+  log_file_dir="$script_dir/log"
+  [ -d "$log_file_dir" ] || mkdir -p "$log_file_dir"
+  log_file="$log_file_dir/$log_filename"
+
+  timestamp_start=$(timestamp "$timezone")
+  printf "Starting run of MakeStaticSite, version %s\n" "$version" > "$log_file"
+  printf "Timestamp: %s\n" "$timestamp_start" >> "$log_file"
+  printf "Running with command line options: %s\n" "$run_params" >> "$log_file"
+
+  # Local target directory and web server deployment
+  mirror_dir="$script_dir/mirror"         # path to Wget output root folder
+  [ -d "$mirror_dir" ] || { mkdir -p "$mirror_dir"; echo "Created folder for mirror files at $mirror_dir."; }
+
+  # Substitute files for zip download (used for embeds, etc.)
+  sub_dir=subs                            # This must be sit under $script_dir
+  sub_files_dir=files                     # This must be sit under $sub_dir
+  sub_files_path="$script_dir/$sub_dir/$sub_files_dir"
+
+  snippets_dir="$script_dir/snippets"     # directory storing snippets (.html files)
+  snippets_data_file="$snippets_dir/snippets.data" # list of directories/files relative to
+                                          # zip root inside the $sub_files_dir 
+                                          # (separated by space)
+                                          # Default is just the home page
+                                          # Script will generate this dynamically
+                                          # using this data file where each row is
+                                          # path_to_html_file:<list of snippet ids>
+
+  lib_files=lib/files                     # library files (defaults/templates) directory
+
+  if [ "$log_level" = "silent" ]; then
+    exec 2>/dev/null
+  else
+    exec 2> >(tee -a "$log_file" >&2) # additionally, append stderr to logfile
+  fi
+
+  # If output_level is silent, then don't echo anything to the terminal
+  # and set run un_attended=yes
+  if [ "$output_level" = "silent" ]; then
+    exec 1>/dev/null
+    if [ "$run_unattended" = "no" ]; then
+      echo "NOTICE: run_unattended=yes (to keep terminal output silent)" 0
+    fi  
+    run_unattended=yes
+  fi
+
+  return 0
 }
 
 initialise_variables() {
@@ -1141,7 +1148,6 @@ site_postprocessing() {
   done
   printf "Converting feed files and references from index.html to index.xml ... "
   find ./ -depth -type f -path "*feed/index.html" -exec sh -c 'mv "$1" "${1%.html}.xml"' _ '{}' \;
-
   IFS=" " read -r -a webpages <<< "$(find_web_pages "." "$feed_html")"
   if [ ${#webpages[@]} -ne 0 ]; then
     for opt in "${webpages[@]}"; do
@@ -1586,8 +1592,11 @@ conclude() {
   if [[ -n ${msg_deploy+x} ]]; then
     printf "%s\n\n" "$msg_deploy"
   fi 
-  printf "Thank you for using MakeStaticSite, free software released under the %s. The latest version is available from %s.\n" "$mss_license" "$mss_download"
-  echo
+  printf "\nThank you for using MakeStaticSite, free software released under the %s. The latest version is available from %s.\n" "$mss_license" "$mss_download"
+  echo " "
+  timestamp_end=$(timestamp "$timezone")
+  printf "Ending run of MakeStaticSite.\n" >> "$log_file"
+  printf "Timestamp: %s\n" "$timestamp_end" >> "$log_file"
 }
 
 ################# END OF FUNCTIONS ################
