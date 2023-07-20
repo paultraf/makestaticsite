@@ -31,7 +31,7 @@
 
 # Check whether WP-CLI is installed and whether to run locally
 wp_cli_check() {
-  command -v wp cli &> /dev/null || { printf "ERROR.  WP-CLI is not installed.\nPlease follow the installation instructions at $wp_cli_install and then try again.\n"; exit; }
+  command -v wp cli &> /dev/null || { printf "ERROR.  WP-CLI is not installed.\nPlease follow the installation instructions at %s and then try again.\n" "$wp_cli_install"; exit; }
   wp_cli_msg="WP-CLI is installed"
   [ "${wp_cli_remote}" != "yes" ] && wp_cli_msg+=" and will be run locally"
   env echo "$wp_cli_msg"
@@ -49,7 +49,7 @@ wp_option_set() {
 # Streamline the WP install ahead of being crawled by wget
 wp_clean() {
   # Check that there is a WP site at the relevant WP directory (not http)
-  wp core is-installed "$wp_location" || { printf "ERROR: No WordPress site found at $wp_location\nAborting."; exit; }
+  wp core is-installed "$wp_location" || { printf "ERROR: No WordPress site found at %s\nAborting." "$wp_location"; exit; }
   [ "$source_protocol" = '' ] && echo "Found WordPress site at $site_path" || echo "Found WordPress site at $wp_location"
 
   # Ensure that no-follow option is disabled
@@ -105,13 +105,13 @@ wp_clean() {
         # it's not empty, so we now check the serialized option for remove_query_strings
         # and insert/update a value as necessary:
         echo -n "Updating Perform options ... "
-        [ "$wp_remove_query_strings"="yes" ] && wp_option_set "remove_query_strings"
-        [ "$wp_remove_shortlink"="yes" ] && wp_option_set "remove_shortlink"
-        [ "$wp_disable_embeds"="yes" ] && wp_option_set "disable_embeds"
-        [ "$wp_disable_xmlrpc"="yes" ] && wp_option_set "disable_xmlrpc"
-        [ "$wp_remove_wlwmanifest_link"="yes" ] && wp_option_set "remove_wlwmanifest_link"
-        [ "$wp_remove_rest_api_links"="yes" ] && wp_option_set "remove_rest_api_links"
-        [ "$wp_remove_rsd_link"="yes" ] && wp_option_set "remove_rsd_link"
+        [ "$wp_remove_query_strings" = "yes" ] && wp_option_set "remove_query_strings"
+        [ "$wp_remove_shortlink" = "yes" ] && wp_option_set "remove_shortlink"
+        [ "$wp_disable_embeds" = "yes" ] && wp_option_set "disable_embeds"
+        [ "$wp_disable_xmlrpc" = "yes" ] && wp_option_set "disable_xmlrpc"
+        [ "$wp_remove_wlwmanifest_link" = "yes" ] && wp_option_set "remove_wlwmanifest_link"
+        [ "$wp_remove_rest_api_links" = "yes" ] && wp_option_set "remove_rest_api_links"
+        [ "$wp_remove_rsd_link" = "yes" ] && wp_option_set "remove_rsd_link"
         echo "Done." 
       fi
     fi
@@ -165,7 +165,7 @@ wp_install_search() {
 # main WordPress preparation loop
 wp_prep() {
   # Check that we have the necessary command line interfaces and versions
-  cmd_check "php" "1" || { printf "ERROR.  A PHP command line interpreter (CLI) is needed to support the use of WP-CLI, but could not be found.\nPlease check that you have PHP installed (at least version $php_version_atleast) and that it is available in your PATH.  An installation guide for various platforms is available from $php_tutorial_install.\nAborting.\n"; exit; }
+  cmd_check "php" "1" || { printf "ERROR.  A PHP command line interpreter (CLI) is needed to support the use of WP-CLI, but could not be found.\nPlease check that you have PHP installed (at least version %s) and that it is available in your PATH.  An installation guide for various platforms is available from %s.\nAborting.\n" "$php_version_atleast" "$php_tutorial_install"; exit; }
   php_cli_version="$(which_version "php" "PHP ")" 
   version_check "$php_cli_version" "$php_version_atleast" || { echo "$msg_checking";  printf "WARNING. The version of %s is %s, which is old, so some functionality may be lost.  Version %s or later is recommended.\n" "PHP" "$php_cli_version" "$php_version_atleast";}
   wp_cli_check  

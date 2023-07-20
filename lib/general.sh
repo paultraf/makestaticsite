@@ -38,13 +38,13 @@ error_set() {
 # or if second (optional) parameter is not set.
 # Otherwise, return original value.
 yesno() {
-  a=$(echo "$1" | tr '[A-Z]' '[a-z]')
+  a=$(echo "$1" | tr '[:upper:]' '[:lower:]')
   if [ "${a:0:1}" = "n" ] || [ "${a:0:3}" = "off" ]; then
     printf "no"
   elif [ -z ${2+x} ] || [ "${a:0:1}" = "y" ] || [ "${a:0:2}" = "on" ]; then
     printf "yes"
   else
-    printf "$1"
+    printf "%s" "$1"
   fi
 }
 
@@ -59,40 +59,40 @@ pluralize() {
 colorize() {
   case "$1" in
     black)
-      printf "%s" $(tput setaf 0)
+      printf "%s" "$(tput setaf 0)"
       ;;
     red)
-      printf "%s" $(tput setaf 1)
+      printf "%s" "$(tput setaf 1)"
       ;;
     green)
-      printf "%s" $(tput setaf 2)
+      printf "%s" "$(tput setaf 2)"
       ;;
     yellow)
-      printf "%s" $(tput setaf 3)
+      printf "%s" "$(tput setaf 3)"
       ;;
     blue)
-      printf "%s" $(tput setaf 4)
+      printf "%s" "$(tput setaf 4)"
       ;;
     magenta)
-      printf "%s" $(tput setaf 5)
+      printf "%s" "$(tput setaf 5)"
       ;;
     cyan)
-      printf "%s" $(tput setaf 6)
+      printf "%s" "$(tput setaf 6)"
       ;;
     white)
-      printf "%s" $(tput setaf 7)
+      printf "%s" "$(tput setaf 7)"
       ;;
     amber)
-      printf "%s" $(tput setaf 130)
+      printf "%s" "$(tput setaf 130)"
       ;;
     paleblue)
-      printf "%s" $(tput setaf 153)
+      printf "%s" "$(tput setaf 153)"
       ;;
     lime)
-      printf "%s" $(tput setaf 190)
+      printf "%s" "$(tput setaf 190)"
       ;;
     reset)
-      printf "%s" $(tput sgr0)
+      printf "%s" "$(tput sgr0)"
       ;;
   esac
 }
@@ -220,17 +220,12 @@ assets_search_string() {
   echo "$url_path"
 }
 
-
 # Generate a list of web pages according to given criteria
 # Expects two parameters: directory, search query
-# returns a string with s
+# returns a string with a space-separated list of pages
 find_web_pages() {
   local webpages=()
-  local opt
-  local line
-  for opt in "$2"; do
-    while IFS='' read -r line; do webpages+=("$line"); done < <(grep -Erl "$opt" "$1" --include "*\.html")
-  done
+  while IFS='' read -r line; do webpages+=("$line"); done < <(grep -Erl "$2" "$1" --include "*\.html")
   echo "${webpages[@]}"
 }
 
@@ -240,7 +235,7 @@ print_to_file() {
   local a=("$@")
   ((last_idx=${#a[@]} - 1))
   local output_file=${a[last_idx]}
-  unset a[last_idx]
+  unset 'a[last_idx]'
   touch "$output_file" || { echo "ERROR: Unable to write to file at $output_file. Please check the directory and file permissions."; exit; }
 #  printf "%s\n" "${a[@]}" | sort -u > "$output_file"
   printf "%s\n" "${a[@]}" > "$output_file"
@@ -376,7 +371,7 @@ stopclock() {
 # One optional parameter:
 #  - timezone
 timestamp() {
-  if [ -n "{1+x}" ]; then
+  if [ -n "${1+x}" ]; then
     timezone="$1"
   else
     timezone="utc"
@@ -389,5 +384,5 @@ timestamp() {
   else
     timestamp=$(TZ=UTC date "+%Y%m%d_%H%M%S")"Z"
   fi
-  echo $timestamp
+  printf "%s" "$timestamp"
 }

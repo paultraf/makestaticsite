@@ -104,7 +104,8 @@ check_wayback_url(){
   # Read parameters and assign to variables
   local url="$1"
   local wayback_list="$2"
-  local host=$(printf "%s" "$url" | awk -F/ '{print $3}' | awk -F: '{print $1}')
+  local host
+  host=$(printf "%s" "$url" | awk -F/ '{print $3}' | awk -F: '{print $1}')
 
   # Check list of known Wayback Machine hosts
   if echo ",$wayback_list," | grep -q ",$host,"; then

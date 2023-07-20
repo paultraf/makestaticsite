@@ -133,7 +133,7 @@ validate_url() {
 # ping default gateway with aid of ip command or, if not available, use netcat
 validate_internet() {
   if command -v "ip" 1> /dev/null; then
-    ping -q -w 1 -c 1 `ip r | grep default | cut -d ' ' -f 3` > /dev/null 2>&1 && return 0 || return 1
+    ping -q -w 1 -c 1 "$(ip r | grep default | cut -d ' ' -f 3)" > /dev/null 2>&1 && return 0 || return 1
   else
     printf "GET http://google.com HTTP/1.0\n\n" | nc google.com 80 > /dev/null 2>&1 && return 0 || return 1
   fi  
