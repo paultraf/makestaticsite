@@ -19,6 +19,22 @@
 ##########################################################################
 
 
+0.27.2 (released on 2023-07-20)
+      * Maintenance and enhanced support for logging *
+       Bug fixes (errors/warnings) in library files aided by ShellCheck:
+       lib/general.sh; lib/mod_wayback.sh; lib/mod_wp.sh; lib/validate.sh
+      [lib/setup.sh]
+       Renamed get_configfile() as read_config() and added
+       command line option for log file name
+       conclude(): added log file name, when non-empty, as command-line
+       option for makestaticsite.sh
+      [makestaticsite.sh]
+       read_config(): added command line option for log file name, 
+       promoting read_config() ahead of initialise_layout();
+       reordered the functions and tweaked echo() accordingly.
+       Added timestamps to start and end of logging.
+       A few other, mainly cosmetic, changes.
+
 0.27.1 (released on 2023-07-18)
       * Added support for Wayback Machine URLs extended with date ranges * 
       [lib/constants.sh]
