@@ -57,6 +57,9 @@ pluralize() {
 }
 
 colorize() {
+  if [ -z "$TERM" ] || [ "$TERM" = "dumb" ]; then
+    printf ""; return 0;
+  fi
   case "$1" in
     black)
       printf "%s" "$(tput setaf 0)"
