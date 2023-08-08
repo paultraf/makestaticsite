@@ -38,7 +38,7 @@ error_set() {
 # or if second (optional) parameter is not set.
 # Otherwise, return original value.
 yesno() {
-  a=$(echo "$1" | tr '[:upper:]' '[:lower:]')
+  a=$(env echo "$1" | tr '[:upper:]' '[:lower:]')
   if [ "${a:0:1}" = "n" ] || [ "${a:0:3}" = "off" ]; then
     printf "no"
   elif [ -z ${2+x} ] || [ "${a:0:1}" = "y" ] || [ "${a:0:2}" = "on" ]; then

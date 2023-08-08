@@ -108,7 +108,7 @@ check_wayback_url(){
   host=$(printf "%s" "$url" | awk -F/ '{print $3}' | awk -F: '{print $1}')
 
   # Check list of known Wayback Machine hosts
-  if echo ",$wayback_list," | grep -q ",$host,"; then
+  if env echo ",$wayback_list," | grep -q ",$host,"; then
     return 0
   fi
 

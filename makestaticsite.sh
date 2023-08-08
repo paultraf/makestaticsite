@@ -246,9 +246,10 @@ initialise_layout() {
   log_file_dir="$script_dir/log"
   [ -d "$log_file_dir" ] || mkdir -p "$log_file_dir"
   log_file="$log_file_dir/$log_filename"
+  touch "$log_file"
 
   timestamp_start=$(timestamp "$timezone")
-  printf "Starting run of MakeStaticSite, version %s\n" "$version" > "$log_file"
+  printf "Starting run of MakeStaticSite, version %s\n" "$version" >> "$log_file"
   printf "Timestamp: %s\n" "$timestamp_start" >> "$log_file"
   printf "Running with command line options: %s\n" "$run_params" >> "$log_file"
 
