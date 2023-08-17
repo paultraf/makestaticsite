@@ -249,9 +249,9 @@ initialise_layout() {
   touch "$log_file"
 
   timestamp_start=$(timestamp "$timezone")
-  printf "Starting run of MakeStaticSite, version %s\n" "$version" >> "$log_file"
-  printf "Timestamp: %s\n" "$timestamp_start" >> "$log_file"
-  printf "Running with command line options: %s\n" "$run_params" >> "$log_file"
+  { printf "Starting run of MakeStaticSite, version %s\n" "$version";
+    printf "Timestamp: %s\n" "$timestamp_start";
+    printf "Running with command line options: %s\n" "$run_params"; } >> "$log_file"
 
   # Local target directory and web server deployment
   mirror_dir="$script_dir/mirror"         # path to Wget output root folder
@@ -1016,9 +1016,13 @@ site_postprocessing() {
       fi
       for extra_dir in "${extra_domains_list[@]}"; do
         if [ -d "$mirror_dir/$mirror_archive_dir/$extra_dir" ]; then
-          asset_move="$mirror_dir/$mirror_archive_dir/$extra_dir to $mirror_assets_directory/"
-          mv "$mirror_dir/$mirror_archive_dir/$extra_dir" "$mirror_assets_directory/" || { echo "$msg_error: Unable to move $asset_move."; exit; }
-          echo "Moved $asset_move." "1"
+          mirror_extra_dir="$mirror_dir/$mirror_archive_dir/$extra_dir"
+          asset_move="$mirror_extra_dir to $mirror_assets_directory/"
+          # move only if latter is not a subdirectory of former
+          if [[ ! $mirror_assets_directory/ = $mirror_extra_dir/* ]]; then
+            mv "$mirror_extra_dir" "$mirror_assets_directory/" || { echo "$msg_error: Unable to move $asset_move."; exit; }
+            echo "Moved $asset_move." "1"
+          fi
         fi
       done
     fi
