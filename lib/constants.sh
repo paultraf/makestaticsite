@@ -22,8 +22,8 @@
 ################################################
 # MakeStaticSite info
 ################################################
-version=0.27.2
-version_date='20 July 2023'
+version=0.27.3
+version_date='18 August 2023'
 version_header="MakeStaticSite version $version, released on $version_date."
 mss_license="GNU Affero General Public License version 3"
 mss_download="https://makestaticsite.sh/download/makestaticsite_latest.tar.gz"
@@ -278,7 +278,7 @@ ssl_checks=n
 ssl_checks__desc='Validate certificate in encrypted (SSL/TLS) connections (y/n)?'
 ssl_checks__info="If you trust the SSL certificate of the site for which you are making a static version, then enter 'n'.  Otherwise, enter 'y' and store the certificate on your file system in PEM format.  Then either enter --ca_certificate={the_cert_file_path} in .wgetrc or --ca-certificate={the_cert_file_path} in wget_extra_options below."
 
-extra_domains=
+extra_domains=auto
 extra_domains__desc='Additional domains for asset retrieval and offline access'
 extra_domains__info="Provide a comma-separated list of domains, typically hosted on CDNs, for static assets stored external to the main domain. MakeStaticSite can retrieve these and incorporate in the mirror output. Enter 'auto' (without quotes) to generate this list automatically.  Leave empty if there are no extra domains."
 

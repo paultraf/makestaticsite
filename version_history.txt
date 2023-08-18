@@ -19,6 +19,20 @@
 ##########################################################################
 
 
+0.27.3 (released on 2023-08-18)
+      * Maintenance *
+      [makestaticsite.sh]
+       site_postprocessing(): bug fix: added condition preventing 
+       directories being moved into subdirectories;
+       initialise_layout(): bug fix: append - not write - to log file, 
+      [lib/constants.sh]
+       set extra_domains=auto, for fuller mirroring 'out of the box'
+      [lib/general.sh]
+       Made use of tput dependent on an appropriate terminal
+       yesno(): Removed superfluous logging by prepending echo() with 'env'
+      [lib/mod_wayback.sh]
+       check_wayback_url(): removed superfluous logging (as above)
+
 0.27.2 (released on 2023-07-20)
       * Maintenance and enhanced support for logging *
        Bug fixes (errors/warnings) in library files aided by ShellCheck:
