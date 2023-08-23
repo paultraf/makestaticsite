@@ -793,6 +793,28 @@ post_get_site_checks() {
   echo
 }
 
+generate_extra_domains() {
+# Generate search URL prefixes combining primary domain and extra domains
+  if [ "$extra_domains" = "auto" ]; then
+    printf "Searching for extra asset domains (working in %s) ... " "$working_mirror_dir"
+    domain_grep="https?:\\\?/\\\?/[^\"'/< ]+\.[^\"'/< ]+\\\?/[^\"'< ]+[^\"'/< ]+\.[^\"'/< ]+"
+    domain_grep2="https?:\\\?/\\\?/[^\"'/< ]+\.[^\"'/< ]+\\\?/"
+    domain_grep3="[^\"'/< ]+\.[^\"'/< ]+\\\?/"
+    add_domains=()
+    while IFS='' read -r line; do add_domains+=("$line"); done < <(grep -Eroh "$domain_grep" "$working_mirror_dir" --include "*\.html" | grep -Eo "$domain_grep2" | grep -Eo "$domain_grep3" )
+    echo "add_domains array has ${#add_domains[@]} elements" "2"
+    # Store unique elements only
+    add_domains_unique=()
+    while IFS='' read -r line; do add_domains_unique+=("$line"); done < <(for item in "${add_domains[@]}"; do printf "%s\n" "${item}"; done | sort -u)
+    echo "add_domains_unique array has ${#add_domains_unique[@]} elements" "2"
+    # Convert array to domain list (string), removing any trailing slashes
+    extra_domains=$(printf "%s" "${add_domains_unique[*]}" | sed 's/ /,/g' | sed 's/\\\?\/,/,/g' | sed "s/$domain,//g" | sed "s/,$domain//g" | sed 's/\/$//')
+  fi
+  if [ "$extra_domains" != "" ]; then
+    all_domains="$domain,$extra_domains"
+  fi
+}
+
 # Augment Wget's snapshot by retrieving missed URLs
 # (this needs to be done before site_postprocessing)
 # We use Wget instead of cURL to avoid repeated overwrites -
@@ -813,24 +835,7 @@ wget_extra_urls() {
   touch "$input_file_extra"; echo > "$input_file_extra"
 
   # Generate search URL prefixes combining primary domain and extra domains
-  if [ "$extra_domains" = "auto" ]; then
-    printf "Searching for extra asset domains (working in %s) ... " "$working_mirror_dir"
-    domain_grep="https?:\\\?/\\\?/[^\"'/< ]+\.[^\"'/< ]+\\\?/[^\"'< ]+[^\"'/< ]+\.[^\"'/< ]+"
-    domain_grep2="https?:\\\?/\\\?/[^\"'/< ]+\.[^\"'/< ]+\\\?/"
-    domain_grep3="[^\"'/< ]+\.[^\"'/< ]+\\\?/"
-    add_domains=()
-    while IFS='' read -r line; do add_domains+=("$line"); done < <(grep -Eroh "$domain_grep" "$working_mirror_dir" --include "*\.html" | grep -Eo "$domain_grep2" | grep -Eo "$domain_grep3" )
-    echo "add_domains array has ${#add_domains[@]} elements" "2"
-    # Store unique elements only
-    add_domains_unique=()
-    while IFS='' read -r line; do add_domains_unique+=("$line"); done < <(for item in "${add_domains[@]}"; do printf "%s\n" "${item}"; done | sort -u)
-    echo "add_domains_unique array has ${#add_domains_unique[@]} elements" "2"
-    # Convert array to domain list (string), removing any trailing slashes
-    extra_domains=$(printf "%s" "${add_domains_unique[*]}" | sed 's/ /,/g' | sed 's/\\\?\/,/,/g' | sed "s/$domain,//g" | sed "s/,$domain//g" | sed 's/\/$//')
-  fi
-  if [ "$extra_domains" != "" ]; then
-    all_domains="$domain,$extra_domains"
-  fi
+  generate_extra_domains
   url_grep="$(assets_search_string "$all_domains" "[^\"'<) ]+")"
   
   webassets_all=()
@@ -943,6 +948,12 @@ site_postprocessing() {
   # First, generate a list of all the web pages that contain relevant URLs to process
   # (makes subsequent sed replacements more targeted than searching all web pages).
   webpages=()
+
+  # Ensure that $all_domains includes the extra domains
+  if (( phase > 3 )); then
+    generate_extra_domains
+  fi
+  
   [ -z ${url_grep+x} ] && url_grep="$(assets_search_string "$all_domains" "[^\"'<) ]+")" # define $url_grep as necessary
   for opt in "${url_grep[@]}"; do
     while IFS='' read -r line; do webpages+=("$line"); done < <(grep -Erl "$opt" . --include "*\.html")
