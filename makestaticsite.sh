@@ -64,7 +64,7 @@ main() {
   (( phase < 8 )) && (( end_phase >= 7 )) && [ "$use_snippets" = "yes" ] && process_snippets
 
   # Phase 7-8 Interval: MSS cut directories
-  [ "$mss_cut_dirs" = "yes" ] && cut_mss_dirs
+  (( phase < 8 )) && (( end_phase >= 4 )) && [ "$mss_cut_dirs" = "yes" ] && cut_mss_dirs
 
   # Phase 8: Create an offline zip archive
   (( phase < 9 )) && (( end_phase >= 8 )) && [ "$upload_zip" = "yes" ] && create_zip || echo "Creation of ZIP archive skipped, as per preferences." "1"
@@ -532,6 +532,9 @@ initialise_variables() {
   if [ "$cut_dirs" != "0" ]; then
     echo "$msg_warning: You have specified Wget --cut-dirs option. Ignoring mss_cut_dirs."
   fi
+
+  # Define a timestamp 
+  timestamp=$(timestamp "$timezone")
 }
 
 prepare_static_generation() {
@@ -759,9 +762,6 @@ wget_mirror() {
 # - the rest (Wget)
 mirror_site() {
   cd "$mirror_dir" || { echo; echo "$msg_error: can't access working directory for the mirror ($mirror_dir)" >&2; exit 1; }
-
-  # Define a timestamp 
-  timestamp=$(timestamp "$timezone")
 
   if [ "$use_wayback" = "yes" ]; then
     echo "Retrieving archive for $domain... "
