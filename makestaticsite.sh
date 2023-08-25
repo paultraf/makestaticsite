@@ -961,14 +961,26 @@ site_postprocessing() {
 
   # Prepare adjustment for relative paths with assets directory
   if [ "$assets_directory" != "" ] && [ "$cut_dirs" = "0" ]; then
-    hp_prefix=/
+    assets_dir_suffix=/
     # Also, check for duplication of assets directory label
     if [ "$(find . -name "$assets_directory" -type d -print)" != "" ]; then 
-      echo -n "$msg_warning: website contains a directory with the same name as your assets directory, $assets_directory.  To avoid confusion (and errors), a timestamp is being appended to your assets directory, but it is recommended that you modify the assets_directory constant and re-run. ... "
+      echo -n "$msg_warning: website already contains a directory, $assets_directory.  To avoid confusion (and errors), a timestamp is being appended to the MakeStaticSite-generated assets directory, but it is recommended that you modify the assets_directory constant and re-run. ... "
       assets_directory="$assets_directory$timestamp"
     fi 
   else
-    hp_prefix=
+    assets_dir_suffix=
+  fi
+
+  # Similarly, prepare adjustment for relative paths with imports directory
+  if [ "$imports_directory" != "" ]; then 
+    imports_dir_suffix=/
+    # Also, check for duplication of assets directory label
+    if [ "$(find . -name "$imports_directory" -type d -print)" != "" ]; then 
+      echo -n "$msg_warning: website already contains a directory, $imports_directory.  To avoid confusion (and errors), a timestamp is being appended to the MakeStaticSite-generated imports directory, but it is recommended that you modify the imports_directory constant and re-run. ... "
+      imports_directory="$imports_directory$timestamp"
+    fi 
+  else
+    imports_dir_suffix=
   fi
 
   # General case: conversion of absolute links to relative links
@@ -1003,14 +1015,14 @@ site_postprocessing() {
       # Loop over all non-primary-domain assets
       # if working with extra domains or a directory URL,
       if [ ${#urls_array[@]} -ne 0 ] && { [ "$extra_domains" != "" ] || [ "$url" != "$url_base/" ]; }; then
-        for hp in "${urls_array[@]}"; do
-          hpdomain=$(echo "$hp" | cut -d/ -f3)
-          if [ "$hpdomain" = "$domain" ]; then
+        for url_extra in "${urls_array[@]}"; do
+          url_extra_domain=$(echo "$url_extra" | cut -d/ -f3)
+          if [ "$url_extra_domain" = "$domain" ]; then
             continue
           fi
-          hppath=$(echo "$hp" | cut -d/ -f3-)
-          hppath="$assets_directory$hp_prefix$hppath"
-          sed_subs=('s~'"$hp"'~'"$pathpref$hppath"'~g' "$opt")
+          asset_rel_path=$(echo "$url_extra" | cut -d/ -f3-)
+          asset_rel_path="$assets_directory$assets_dir_suffix$imports_directory$imports_dir_suffix$asset_rel_path"
+          sed_subs=('s~'"$url_extra"'~'"$asset_rel_path"'~g' "$opt")
           sed "${sed_options[@]}" "${sed_subs[@]}"
         done
       fi    
@@ -1019,19 +1031,19 @@ site_postprocessing() {
     if [ "$all_domains" != "$domain" ] && [ "$extra_assets_mode" = "contain" ]; then
       # Move folders
       IFS="," read -r -a extra_domains_list <<< "$extra_domains"
-      if [ "$assets_directory" != "" ]; then
-        mirror_assets_directory="$working_mirror_dir/$assets_directory"
-        mkdir -p "$mirror_assets_directory"
+      if [ "$imports_directory" != "" ]; then
+        mirror_imports_directory="$working_mirror_dir/$imports_directory"
+        mkdir -p "$mirror_imports_directory"
       else
-        mirror_assets_directory="$working_mirror_dir"
+        mirror_imports_directory="$working_mirror_dir"
       fi
       for extra_dir in "${extra_domains_list[@]}"; do
         if [ -d "$mirror_dir/$mirror_archive_dir/$extra_dir" ]; then
           mirror_extra_dir="$mirror_dir/$mirror_archive_dir/$extra_dir"
-          asset_move="$mirror_extra_dir to $mirror_assets_directory/"
+          asset_move="$mirror_extra_dir to $mirror_imports_directory/"
           # move only if latter is not a subdirectory of former
-          if [[ ! $mirror_assets_directory/ = $mirror_extra_dir/* ]]; then
-            mv "$mirror_extra_dir" "$mirror_assets_directory/" || { echo "$msg_error: Unable to move $asset_move."; exit; }
+          if [[ ! $mirror_imports_directory/ = $mirror_extra_dir/* ]]; then
+            mv "$mirror_extra_dir" "$mirror_imports_directory/" || { echo "$msg_error: Unable to move $asset_move."; exit; }
             echo "Moved $asset_move." "1"
           fi
         fi
@@ -1040,7 +1052,7 @@ site_postprocessing() {
   echo "Done."
   fi
 
-  # Special case: mirroring a directory not a whole domain
+  # Special case: mirroring a directory not a whole domain: readjust internal links
   if [ "$url" != "$url_base/" ] && [ "$cut_dirs" = "0" ]; then
     extra_dirs_list=()
     while IFS= read -r line; do extra_dirs_list+=("$line"); done <<<"$(find "." -name "*" -type d -print | grep -v "$url_path" | grep -vx "." | sed s'/^..//')"
@@ -1073,7 +1085,7 @@ site_postprocessing() {
             src_path=$(printf "%s" "$pathpref" | cut -b -"$pathpref_length" | tr -d '\n'; printf "%s" "${pd_array[$j]}")
             (( k=j+1 ))
             asset_path=$(echo "$pd" | cut -d/ -f 1-$k)
-            rep_path="$assetpref$assets_directory$hp_prefix$asset_path/"
+            rep_path="$assetpref$assets_directory$assets_dir_suffix$asset_path/"
             if [ "$pd" != "" ] && [[ "$src_path" != */ ]]; then    # ensure the search is relative to a named directory
               sed_subs=('s~'"$src_path/"'~'"$rep_path"'~g' "$opt")
               sed "${sed_options[@]}" "${sed_subs[@]}"
