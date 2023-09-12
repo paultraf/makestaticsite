@@ -68,9 +68,16 @@ version_check() {
   fi
 }
 
+# Expects 1 parameter + 2 optional
+# - directory path
+# - (optional) prefix
 validate_dir() {
   echo "$1"
-  [ -d "$1" ] || { echo "There doesn't appear to be a valid directory at $1"; return 1; }
+  local prefix=
+  if [ -n "${2+x}" ]; then
+    prefix="$2 "
+  fi
+  ${prefix}[ -d "$1" ] || { echo "There doesn't appear to be a valid directory at $1"; return 1; }
 }
 
 # Timestamp validation (up to year 2999)
@@ -139,17 +146,25 @@ validate_internet() {
   fi  
 }
 
+
 validate_http() {
   echo "Checking connection to $1 ..."
-  status="$(curl -s -k --head -w "%{http_code}" "$1" -o /dev/null)"
+  status="$(curl -s -k -L --max-redirs 5 --head -w "%{http_code}" "$1" -o /dev/null)"
+  # -s (--silent): no download progress bar
+  # -k (--insecure): don't verify security of connection
+  # -L: follow redirects up to the value of max-redirs = 5
+  # -w (--write-out): on completion, display HTTP code (variable) on stdout
+  # -o: send output to null device
   if [ "$status" = "200" ]; then
     echo "Connection established OK."
   elif [ "$status" = "301" ] || [ "$status" = "302" ]; then
     echo "WARNING: redirect detected (HTTP code $status), proceed with caution."
   elif [ "$status" = "401" ]; then
     echo "WARNING: unauthorised (HTTP code $status).  This means that you will need to enter a username and password as wget parameters for wget_extra_options (which you can set a bit later)."
+  elif [ "$run_unattended" = "yes" ]; then
+    echo "ERROR – failed to connect; the response code was $status (exit code: $?). Aborting.  Please check the URL and your network connectivity."; exit
   else
-    echo "ERROR – failed to connect; the response code was $status. Please try again."
+    echo "ERROR – failed to connect; the response code was $status (exit code: $?). Please try again."
     return 1
   fi
 }
@@ -162,6 +177,10 @@ validate_yesno() {
   fi
 }
 
+# Expects three parameters:
+# - prompt text
+# - description
+# - option variable name
 validate_input() {
   while true; do
     if [ "$1" != "" ]; then
@@ -181,7 +200,13 @@ validate_input() {
       cmd_check "$input_value" "" || { echo; continue; }
     fi
     if [[ " ${options_check_dir[*]} " =~ " $3 " ]]; then
-      validate_dir "$input_value" || { echo; continue; }
+      if [[ " ${options_check_remote[*]} " =~ " $3 " ]] &&  [ "$(yesno "$wp_cli_remote")" = "yes" ]; then
+        # We are using remote wp-cli
+        cmd_prefix=$(remote_command_prefix "$content")
+        validate_dir "$input_value" "$cmd_prefix" || { echo; continue; }
+      else
+        validate_dir "$input_value" || { echo; continue; }
+      fi
     fi
     if [[ " ${options_check_url[*]} " =~ " $3 " ]]; then
       validate_http "$input_value" || { echo; continue; }

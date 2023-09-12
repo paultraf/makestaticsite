@@ -151,15 +151,6 @@ which_version() {
   "$1" --version | grep "$2" | grep -o -m 1 -- "[0-9]\{1,2\}\.[0-9]\{1,2\}\(\.[0-9]\{1,2\}\)*[ \-]" | head -1 | tr -d '[:space:]-'
 }
 
-wget_error_check() {
-  # expects one parameters: error level (integer)
-  if [ "$wget_error_level" -le "$1" ]; then
-    confirm_continue
-  else
-    echo "Aborting due to wget_error_level setting in constants.sh. To allow continuation, please set its value to less than $1 and rerun."; exit
-  fi
-}
-
 confirm_continue() {
   if [ "$run_unattended" != "yes" ]; then
     read -r -e -p "Do you wish to continue (y/n)? " confirm
@@ -178,6 +169,30 @@ get_phase_desc() {
       printf "%s" "$phase_desc"; return
     fi
   done
+}
+
+# Determine protocol-based command for
+# executing remote commands
+remote_command_prefix() {
+  if [ -z "${1+x}" ] ; then
+    return 1
+  fi
+  if [ "$source_protocol" = "ssh" ]; then
+    echo "ssh $source_user@$source_host -p $source_port"
+  else
+    echo
+    return # there's not yet support for checking with other protocols  
+  fi
+}
+
+
+wget_error_check() {
+  # expects one parameters: error level (integer)
+  if [ "$wget_error_level" -le "$1" ]; then
+    confirm_continue
+  else
+    echo "Aborting due to wget_error_level setting in constants.sh. To allow continuation, please set its value to less than $1 and rerun."; exit
+  fi
 }
 
 # Make some wget options canonical

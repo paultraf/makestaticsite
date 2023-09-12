@@ -22,8 +22,8 @@
 ################################################
 # MakeStaticSite info
 ################################################
-version=0.27.4
-version_date='25 August 2023'
+version=0.27.5
+version_date='12 September 2023'
 version_header="MakeStaticSite version $version, released on $version_date."
 mss_license="GNU Affero General Public License version 3"
 mss_download="https://makestaticsite.sh/download/makestaticsite_latest.tar.gz"
@@ -316,10 +316,6 @@ wp_cli_remote=n
 wp_cli_remote__desc='Is the use of WP-CLI on a remote server (through ssh) (y/n)?'
 wp_cli_remote__info="WP-CLI supports remote connections over ssh, though this depends on the remote version and the remote shell."
 
-site_path=/var/www/mywpdirectory
-site_path__desc='Full path to WordPress directory'
-site_path__info='Full path to WordPress directory, which is commonly inside the Web root, e.g. /var/www/somedirectory'
-
 source_host=examplehost.net
 source_host__desc="The server hosting your WordPress site - ip address or domain"
 source_host__info="For WP-CLI, the server hosting your WordPress site - ip address or domain."
@@ -335,6 +331,10 @@ source_port__info='ssh port. If left as empty string, then the default (usually 
 source_user=
 source_user__desc="User account on source (remote host)"
 source_user__info="The user account on remote host (assumes the use of ssh private-public key pair).  Leave blank if accessing locally."
+
+site_path=/var/www/mywpdirectory
+site_path__desc='Full path to WordPress directory'
+site_path__info='Full path to WordPress directory, which is commonly inside the Web root, e.g. /var/www/somedirectory'
 
 wp_helper_plugins=y
 wp_helper_plugins__desc='Try to install WordPress plugins to configure site snapshot (y/n)?'
@@ -437,4 +437,5 @@ options_check_cmd=(wget_cmd htmltidy_cmd)
 options_check_dir=(site_path)
 options_check_url=(url)
 options_check_yesno=(ssl_checks wget_extra_urls site_post_processing archive wp_cli wp_cli_remote wp_helper_plugins add_search wp_restore_settings use_snippets upload_zip deploy deploy_remote deploy_remote_rsync htmltidy add_extras)
+options_check_remote=(site_path)
 
