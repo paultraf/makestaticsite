@@ -19,6 +19,36 @@
 ##########################################################################
 
 
+0.27.5 (released on 2023-09-12)
+      * Enhanced setup validation and maintenance *
+       Bug fixes for remote site directory checking and cookie files;
+       extended validation and unattended error reporting in setup.
+      [lib/constants.sh]
+       allOptions array: moved site_path underneath source_user, as remote
+       validation dependent on source details.
+       Added array variable, options_check_remote for variables that may
+       apply to remote hosts.
+      [lib/general.sh]
+       Reordered functions, grouping wget-related functions together;
+       added function remote_command_prefix() to determine command, protocol
+       plus options for executing remote checks (currently only ssh).
+      [lib/validate.sh]
+       validate_dir(): extended to allow for remote usage
+       validate_http(): limited curl status check with limit on number of
+       redirects and added explanatory comments on options; added support
+       for running unattended
+       validate_input(): extended check to remote site location directories.
+      [setup.sh]
+       read_option(): added error reporting (with abort) for unattended runs;
+       added variable assignment for options, to be used throughout script.
+      [makestaticsite.sh]
+       Moved core variable assignment, script_dir and log_file, from
+       initialise_layout() to start of main().
+       mirror_site(): modified terminal output for Wayback Machine Downloader
+       to facilitate remote error trapping.
+       wget_mirror(): touch cookie files when not defined.
+       clean_mirror(): Added command to remove empty directories.
+
 0.27.4 (released on 2023-08-25)
       * Maintenance and refinement *
        Extended workflow support for extra domains
