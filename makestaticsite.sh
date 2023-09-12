@@ -32,6 +32,15 @@ source lib/validate.sh     # load the validation functions library
 source lib/config.sh       # load the config functions library
 
 main() {
+  # Local context - this directory
+  script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+  
+  # Set up logging
+  log_file_dir="$script_dir/log"
+  [ -d "$log_file_dir" ] || mkdir -p "$log_file_dir"
+  log_file="$log_file_dir/$log_filename"
+  touch "$log_file"
+
   echo "Welcome to MakeStaticSite version $version"
 
   # Phase 0: Initialisation
@@ -233,20 +242,11 @@ read_config() {
 }
 
 initialise_layout() {
-  # Local context - this directory
-  script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
-
   # Set up temporary directory
   tmp_dir_path="$script_dir/$tmp_dir"
   [ -d "$tmp_dir_path" ] || mkdir -p "$tmp_dir_path"
   tmp_mirror_path="$script_dir/$tmp_dir/mirror"
   [ -d "$tmp_mirror_path" ] || mkdir -p "$tmp_mirror_path"
-
-  # Set up logging
-  log_file_dir="$script_dir/log"
-  [ -d "$log_file_dir" ] || mkdir -p "$log_file_dir"
-  log_file="$log_file_dir/$log_filename"
-  touch "$log_file"
 
   timestamp_start=$(timestamp "$timezone")
   { printf "Starting run of MakeStaticSite, version %s\n" "$version";
@@ -664,8 +664,8 @@ wget_mirror() {
   msg_mirror_start="Creating a mirror of $url in $working_mirror_dir ... "
   wget_options=("$wget_ssl" --directory-prefix "$mirror_archive_dir" "$input_options")
 
-  cookies_path="$tmp_dir_path/$wget_cookies"
-  cookies_tmppath="$tmp_dir_path/tmp$wget_cookies"
+  cookies_path="$tmp_dir_path/$wget_cookies"; touch "$cookies_path"
+  cookies_tmppath="$tmp_dir_path/tmp$wget_cookies"; touch "$cookies_tmppath"
   wget_login_options=("$wget_ssl" --directory-prefix "$tmp_mirror_path" --save-cookies "$cookies_path" --keep-session-cookies "$login_address" --delete-after)
 
   url_robots="$url/robots.txt"
@@ -772,15 +772,15 @@ mirror_site() {
 
     # Check for Wayback Machine Downloader binary, else report error (in the absence of an alternative)
     if cmd_check "$wayback_machine_downloader_cmd" "1"; then
-      printf "Running Wayback Machine Downloader on %s ... " "$url."
+      echo "Running Wayback Machine Downloader on $url ... " 
       if [ "$domain_wayback_machine" != "web.archive.org" ]; then
-        echo "$msg_error: The Wayback Machine Downloader only supports web.archive.org and we don't have any custom alternative.  You might be able to retrieve some files by setting wayback_enable=no in constants.sh (to treat like any other site) and then re-running, though this is not recommended."
+        echo "$msg_error: The Wayback Machine Downloader only supports web.archive.org and we don't have any custom alternative.  You might be able to retrieve some files by setting wayback_enable=no in constants.sh (to treat like any other site) and then re-running, though this is not recommended. Aborting."
         exit
       else
         wmd_get_wayback_site "$url"
       fi
     else
-      printf "%s: Wayback Machine Downloader not found (wayback_machine_downloader_cmd is set to %s) - please check that it is installed according to instructions at %s. Aborting.\n" "$msg_error" "$wayback_machine_downloader_cmd" "$wayback_machine_downloader_url"
+      echo "$msg_error: Wayback Machine Downloader not found (wayback_machine_downloader_cmd is set to $wayback_machine_downloader_cmd) - please check that it is installed according to instructions at $wayback_machine_downloader_url. Aborting."
       exit
     fi
   else
@@ -1341,6 +1341,9 @@ clean_mirror() {
   sed_subs=(-e ':a' -e 'N' -e '$!ba' -e 's/[\r\n][\r\n]*[[:space:]]*\([^<]*<\/title>\)/ \1/g')
   find . -type f -name "*.html" -exec sed "${sed_options[@]}" "${sed_subs[@]}" {} +
   echo "Done."
+
+  # Remove empty directories
+  find . -type d -empty -delete
   
   cd "$mirror_dir" || { printf "Unable to enter %s.\nAborting.\n" "$mirror_dir"; exit; }
 }
