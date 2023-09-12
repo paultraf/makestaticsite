@@ -232,8 +232,12 @@ read_option() {
           echo "You have entered as URL: $url"
           input_value="$url"
           if ! validate_http "$input_value"; then
-            input_line="Please enter the value for $optvar$input_hint: "
-            validate_input "$input_text" "$input_line" "$optvar"
+            if [ "$run_unattended" = "yes" ]; then
+              echo "Unable to connect to URL.  Aborting."; exit
+            else
+              input_line="Please enter the value for $optvar$input_hint: "
+              validate_input "$input_text" "$input_line" "$optvar"
+            fi
           fi
         else
           echo
@@ -246,6 +250,10 @@ read_option() {
       fi
       # Print tidy output - should be able to put most # in a column
       printf -v CONFIGLINE "%-38s %s %s\n" "$optvar=$input_value" '#' "$opt_desc"
+
+      # Assign value to variable for use elsewhere in the script
+      printf -v "${optvar}" '%s' "${input_value}"
+      
       content+="$CONFIGLINE"
       if [ "$optvar" = "url" ]; then
         host=$(printf "%s" "$input_value" | awk -F/ '{print $3}' | awk -F: '{print $1}')
