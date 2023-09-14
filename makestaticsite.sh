@@ -35,14 +35,6 @@ main() {
   # Local context - this directory
   script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
   
-  # Set up logging
-  log_file_dir="$script_dir/log"
-  [ -d "$log_file_dir" ] || mkdir -p "$log_file_dir"
-  log_file="$log_file_dir/$log_filename"
-  touch "$log_file"
-
-  echo "Welcome to MakeStaticSite version $version"
-
   # Phase 0: Initialisation
   ((max_phase_num=${#all_phases[@]}-1)) # Number of phases minus one
   get_inks
@@ -242,6 +234,14 @@ read_config() {
 }
 
 initialise_layout() {
+  # Set up logging
+  log_file_dir="$script_dir/log"
+  [ -d "$log_file_dir" ] || mkdir -p "$log_file_dir"
+  log_file="$log_file_dir/$log_filename"
+  touch "$log_file"
+
+  printf "Welcome to MakeStaticSite version %s\n" "$version"
+
   # Set up temporary directory
   tmp_dir_path="$script_dir/$tmp_dir"
   [ -d "$tmp_dir_path" ] || mkdir -p "$tmp_dir_path"
@@ -1627,7 +1627,7 @@ conclude() {
   echo " "
   timestamp_end=$(timestamp "$timezone")
   printf "Ending run of MakeStaticSite.\n" >> "$log_file"
-  printf "Timestamp: %s\n" "$timestamp_end" >> "$log_file"
+  printf "Timestamp: %s\n\n" "$timestamp_end" >> "$log_file"
 }
 
 ################# END OF FUNCTIONS ################
