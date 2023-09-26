@@ -22,8 +22,8 @@
 ################################################
 # MakeStaticSite info
 ################################################
-version=0.27.5
-version_date='12 September 2023'
+version=0.27.5+1
+version_date='26 September 2023'
 version_header="MakeStaticSite version $version, released on $version_date."
 mss_license="GNU Affero General Public License version 3"
 mss_download="https://makestaticsite.sh/download/makestaticsite_latest.tar.gz"
@@ -45,8 +45,10 @@ etc_hosts=/etc/hosts            # Location of hosts file
 
 
 ################################################
-# Layout settings
+# File and Layout settings
 ################################################
+mss_file_permissions=600        # Default Unix file permissions for file creation
+mss_dir_permissions=700         # Default Unix file permissions for directory creation
 tmp_dir=tmp                     # Directory where temporary files are to be stored
 tab="  "                        # tab spacing for file outputs
 host_dir=auto                   # Host directory mode; for Wget, empty or no corresponds to -nh, else host directory included 
@@ -145,6 +147,7 @@ wayback_machine_downloader_cmd=wayback_machine_downloader # [Path to] binary for
 wayback_machine_only=           # Restrict downloading to URLs that match this filter (enclose in slashes // to treat as a regex and place in quotes)
 wayback_machine_excludes=       # Skip downloading of URLs that match this filter (enclose in slashes // to treat as a regex and place in quotes)
 wayback_machine_statuscodes=    # Accepted status codes. The default is '200' - OK.  Enter 'all for 30x (redirections), 40x (not found, forbidden) and 50x (server error). 
+
 
 ################################################
 # CMS-specific constants

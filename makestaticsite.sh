@@ -238,7 +238,7 @@ initialise_layout() {
   log_file_dir="$script_dir/log"
   [ -d "$log_file_dir" ] || mkdir -p "$log_file_dir"
   log_file="$log_file_dir/$log_filename"
-  touch "$log_file"
+  touchmod "$log_file"
 
   printf "Welcome to MakeStaticSite version %s\n" "$version"
 
@@ -622,7 +622,7 @@ wget_mirror() {
 
   # Input file for Wget (generated)
   input_file="$script_dir/$tmp_dir/$wget_inputs_main"
-  touch "$input_file"
+  touchmod "$input_file"
   printf "%s\n" "$url" > "$input_file"
 
   # Generate the input-file option for Wget from the corresponding array.
@@ -664,8 +664,8 @@ wget_mirror() {
   msg_mirror_start="Creating a mirror of $url in $working_mirror_dir ... "
   wget_options=("$wget_ssl" --directory-prefix "$mirror_archive_dir" "$input_options")
 
-  cookies_path="$tmp_dir_path/$wget_cookies"; touch "$cookies_path"
-  cookies_tmppath="$tmp_dir_path/tmp$wget_cookies"; touch "$cookies_tmppath"
+  cookies_path="$tmp_dir_path/$wget_cookies"; touchmod "$cookies_path"
+  cookies_tmppath="$tmp_dir_path/tmp$wget_cookies"; touchmod "$cookies_tmppath"
   wget_login_options=("$wget_ssl" --directory-prefix "$tmp_mirror_path" --save-cookies "$cookies_path" --keep-session-cookies "$login_address" --delete-after)
 
   url_robots="$url/robots.txt"
@@ -832,7 +832,7 @@ wget_extra_urls() {
   printf "Searching for additional URLs to retrieve with Wget (working in %s) ... " "$working_mirror_dir"
 
   # Refresh file for Wget (generated)
-  touch "$input_file_extra"; echo > "$input_file_extra"
+  touchmod "$input_file_extra"; echo > "$input_file_extra"
 
   # Generate search URL prefixes combining primary domain and extra domains
   generate_extra_domains
@@ -1300,7 +1300,7 @@ clean_mirror() {
     if [ -f "$robots_default" ]; then
       cp "$robots_default" "$robots_path"
     else
-      touch "$robots_path"
+      touchmod "$robots_path"
     fi  
     printf "\nSitemap: %s\n" "https://$deploy_domain/$sitemap_file" >> "$robots_path"
   fi

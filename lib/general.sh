@@ -404,3 +404,14 @@ timestamp() {
   fi
   printf "%s" "$timestamp"
 }
+
+# Touch a file and change its permissions, avoiding overwrites
+# Expects two parameters: file path and permissions
+touchmod() {
+  touch "$1"
+  if [ -z ${2+x} ]; then
+    chmod "$mss_file_permissions" "$1"
+  else
+    chmod "$2" "$1"
+  fi
+}
