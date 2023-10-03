@@ -102,10 +102,10 @@ colorize() {
 
 get_inks(){
   colour_reset=$(colorize "reset")
-  colour_error=$(colorize $ink_error)
-  colour_warning=$(colorize $ink_warning)
-  colour_ok=$(colorize $ink_ok)
-  colour_info=$(colorize $ink_info)
+  colour_error="$(colorize $ink_error)"
+  colour_warning="$(colorize "$ink_warning")"
+  colour_ok="$(colorize "$ink_ok")"
+  colour_info="$(colorize "$ink_info")"
   # message constants
   msg_info=${colour_info}INFO${colour_reset}
   msg_error=${colour_error}ERROR${colour_reset}

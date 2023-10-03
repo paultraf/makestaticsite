@@ -45,7 +45,8 @@ bash_check() {
       fi
       echo " another version of Bash and add it to /etc/shells"
     fi
-    read -r -e -p "Please press Enter to continue ... " confirm
+    echo "Please press any key to continue ... "
+    read -r -s -n 1
   fi
 }
 
@@ -70,14 +71,15 @@ version_check() {
 
 # Expects 1 parameter + 2 optional
 # - directory path
-# - (optional) prefix
+# - (optional) prefix, such as remote ssh
 validate_dir() {
   echo "$1"
-  local prefix=
+  local err_msg="There doesn't appear to be a valid directory at $1"
   if [ -n "${2+x}" ]; then
-    prefix="$2 "
+    "$2" [ -d "$1" ] || { echo "$err_msg"; return 1; }
+  else
+    [ -d "$1" ] || { echo "$err_msg"; return 1; }
   fi
-  ${prefix}[ -d "$1" ] || { echo "There doesn't appear to be a valid directory at $1"; return 1; }
 }
 
 # Timestamp validation (up to year 2999)
@@ -86,7 +88,6 @@ validate_dir() {
 validate_timestamp() {
   # First, test special cases: YYYY, YYYYMM
   local y="^[0-2][0-9]{3}"
-  local t_y="${1:0:4}"
   local t_m1="${1:4:1}"; local t_m2="${1:5:1}"
 
   case ${#1} in
@@ -189,18 +190,18 @@ validate_input() {
       IFS= read -r -e -p "$2" input_value
     fi
     if [ "$input_value" = "" ]; then
-      if [[ ! " ${options_allow_empty[*]} " =~ " $3 " ]]; then
+      if [[ ! ' '${options_allow_empty[*]}' ' =~ ' '$3' ' ]]; then
         echo "Sorry, this field doesn't permit the value to be empty."
         continue
       fi
     fi
     # trim preceding and trailing whitespace
     input_value="$(echo -e "${input_value}" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
-    if [[ " ${options_check_cmd[*]} " =~ " $3 " ]]; then
+    if [[ ' '${options_check_cmd[*]}' ' =~ ' '$3' ' ]]; then
       cmd_check "$input_value" "" || { echo; continue; }
     fi
-    if [[ " ${options_check_dir[*]} " =~ " $3 " ]]; then
-      if [[ " ${options_check_remote[*]} " =~ " $3 " ]] &&  [ "$(yesno "$wp_cli_remote")" = "yes" ]; then
+    if [[ ' '${options_check_dir[*]}' ' =~ ' '$3' ' ]]; then
+      if [[ ' '${options_check_remote[*]}' ' =~ ' '$3' ' ]] &&  [ "$(yesno "$wp_cli_remote")" = "yes" ]; then
         # We are using remote wp-cli
         cmd_prefix=$(remote_command_prefix "$content")
         validate_dir "$input_value" "$cmd_prefix" || { echo; continue; }
@@ -208,10 +209,10 @@ validate_input() {
         validate_dir "$input_value" || { echo; continue; }
       fi
     fi
-    if [[ " ${options_check_url[*]} " =~ " $3 " ]]; then
+    if [[ ' '${options_check_url[*]}' ' =~ ' '$3' ' ]]; then
       validate_http "$input_value" || { echo; continue; }
     fi
-    if [[ " ${options_check_yesno[*]} " =~ " $3 " ]]; then
+    if [[ ' '${options_check_yesno[*]}' ' =~ ' '$3' ' ]]; then
       validate_yesno "$input_value" || { echo; continue; }
     fi
     break
