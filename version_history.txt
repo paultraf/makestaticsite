@@ -19,6 +19,23 @@
 ##########################################################################
 
 
+0.27.6 (released on 2023-10-05)
+      * Maintenance: fixed syntactical issues plus a bit of file management
+      [lib/constants.sh]
+       Added constants, mss_file_permissions and mss_dir_permissions for
+       default file and directory permissions respectively;
+      [lib/general.sh] 
+       get_inks(): inks wrapped in double quotes to prevent word splitting.
+       Added new function touchmod() to touch a file and assign permissions.
+      [lib/validate.sh] 
+       validate_dir(): made separate cases for local and remote usage
+       validate_input(): Modified code (quoting of spaces) when testing a
+       string for array membership
+      [makestaticsite.sh]
+       Replaced occurrences of touch with touchmod command.
+       Log file definition moved (back) to start of initialise_layout()
+       to ensure log file name can be set as input option.
+
 0.27.5 (released on 2023-09-12)
       * Enhanced setup validation and maintenance *
        Bug fixes for remote site directory checking and cookie files;
