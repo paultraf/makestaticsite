@@ -19,6 +19,34 @@
 ##########################################################################
 
 
+0.27.7 (released on 2023-10-09)
+      * Refined handling of assets from additional domains plus maintenance *
+      [lib/constants.sh]
+       Augmented asset_extensions with font file extensions;
+       Added a new constant, asset_extensions_external, a more limited set
+       of file extensions for assets gleaned from external domains
+       Added new constant, page_element_domains, to designate domains used
+       to construct and style web pages rather than downloadable assets.
+       This now assumes the default of auto over asset_domains, which should
+       now be a specific list.
+      [setup.sh]
+       read_config(): when running unattended, check that run level is 0 or
+       else abort.
+      [makestaticsite.sh]
+       initialise_variables(): extended processing to take account of new
+       constant, page_element_domains, and revised extra_domains;
+       references to extra_domains replaced by asset_domains; 
+       generate_extra_domains(): references to extra_domains replaced by
+       page_element_domains; extended processing to take account of new
+       constant, page_element_domains.
+       wget_extra_urls(): cosmetic changes to terminal output;
+       modified HTML assets filter to reference page_element_domains.
+       site_postprocessing(): Moved code to process asset locations to new
+       function, process_assets(); this is called within a new conditional
+       that checks whether there are URLs to process or the site URL has a
+       path (with assets to gather); for clarity, 'extra_domains_array' label
+       replaced by 'extra_domains_array'
+
 0.27.6 (released on 2023-10-05)
       * Maintenance: fixed syntactical issues plus a bit of file management
       [lib/constants.sh]
