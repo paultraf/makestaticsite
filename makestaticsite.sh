@@ -409,7 +409,8 @@ initialise_variables() {
   fi
 
   # Additional, supported extensions and domains for stored assets
-  extra_domains="$(config_get extra_domains "$myconfig")"
+  asset_domains="$(config_get asset_domains "$myconfig")"
+  page_element_domains="$(config_get page_element_domains "$myconfig")"
 
   # For backwards-compatibility check whether URL defined instead in url_base
   if [ "$url_domain" = "example.com" ]; then
@@ -423,11 +424,21 @@ initialise_variables() {
   domain=$(printf "%s" "$hostport" | awk -F: '{print $1}') # refer to this as the 'primary domain'
 
   # initialise list of all domains incorporated in the site
-  if [ "$extra_domains" != "" ] && [ "$extra_domains" != "auto" ] ; then
-    all_domains="$domain,$extra_domains"
-  else
-    all_domains="$domain"
+  extra_domains=
+  all_domains="$domain"
+  if [ "$asset_domains" != "" ]; then
+    all_domains+=",$asset_domains"
+    extra_domains="$asset_domains"
   fi
+  if [ "$page_element_domains" != "" ] && [ "$page_element_domains" != "auto" ]; then
+    all_domains+=",$page_element_domains"
+    if [ "$extra_domains" != "" ]; then
+      extra_domains+=",$page_element_domains"
+    else
+      extra_domains="$page_element_domains"
+    fi  
+  fi
+
   protocol=$(printf "%s" "$url" | awk -F/ '{print $1}' | awk -F: '{print $1}')
   url_base="$protocol://$hostport"
   login_address="$url_base$login_path"
@@ -795,7 +806,7 @@ post_get_site_checks() {
 
 generate_extra_domains() {
 # Generate search URL prefixes combining primary domain and extra domains
-  if [ "$extra_domains" = "auto" ]; then
+  if [ "$page_element_domains" = "auto" ]; then
     printf "Searching for extra asset domains (working in %s) ... " "$working_mirror_dir"
     domain_grep="https?:\\\?/\\\?/[^\"'/< ]+\.[^\"'/< ]+\\\?/[^\"'< ]+[^\"'/< ]+\.[^\"'/< ]+"
     domain_grep2="https?:\\\?/\\\?/[^\"'/< ]+\.[^\"'/< ]+\\\?/"
@@ -808,11 +819,17 @@ generate_extra_domains() {
     while IFS='' read -r line; do add_domains_unique+=("$line"); done < <(for item in "${add_domains[@]}"; do printf "%s\n" "${item}"; done | sort -u)
     echo "add_domains_unique array has ${#add_domains_unique[@]} elements" "2"
     # Convert array to domain list (string), removing any trailing slashes
-    extra_domains=$(printf "%s" "${add_domains_unique[*]}" | sed 's/ /,/g' | sed 's/\\\?\/,/,/g' | sed "s/$domain,//g" | sed "s/,$domain//g" | sed 's/\/$//')
+    page_element_domains=$(printf "%s" "${add_domains_unique[*]}" | sed 's/ /,/g' | sed 's/\\\?\/,/,/g' | sed "s/$domain,//g" | sed "s/,$domain//g" | sed 's/\/$//')
   fi
-  if [ "$extra_domains" != "" ]; then
-    all_domains="$domain,$extra_domains"
+  if [ "$page_element_domains" != "" ]; then
+    if [ "$extra_domains" != "" ]; then
+      extra_domains+=","
+    fi
+    extra_domains+="$page_element_domains"
+    all_domains+="$extra_domains"
   fi
+
+  IFS="," read -r -a page_element_domains_array <<< "$page_element_domains"
 }
 
 # Augment Wget's snapshot by retrieving missed URLs
@@ -826,10 +843,10 @@ wget_extra_urls() {
   for opt in "${accept_list[@]}"; do
     sed_subs=('s~\([\"'\''][^>]*\.'"$opt"'\)?[^'\''\"]*~\1~g')
     find "$working_mirror_dir" -type f \( -name '*.html' -o -name '*.xml' -o -name '*.txt' \) -print0 | xargs -0 sed "${sed_options[@]}" "${sed_subs[@]}"
-  done  
+  done
   echo " " "1"
 
-  printf "Searching for additional URLs to retrieve with Wget (working in %s) ... " "$working_mirror_dir"
+  echo "Searching for additional URLs to retrieve with Wget (working in $working_mirror_dir) ... " "1"
 
   # Refresh file for Wget (generated)
   touchmod "$input_file_extra"; echo > "$input_file_extra"
@@ -837,10 +854,10 @@ wget_extra_urls() {
   # Generate search URL prefixes combining primary domain and extra domains
   generate_extra_domains
   url_grep="$(assets_search_string "$all_domains" "[^\"'<) ]+")"
-  
+
   webassets_all=()
   while IFS='' read -r line; do webassets_all+=("$line"); done < <(grep -Eroh "$url_grep" "$working_mirror_dir" --include "*\.html")
-  echo "webassets_all array has ${#webassets_all[@]} elements" "2"
+  echo "webassets_all array has ${#webassets_all[@]} elements" "1"
 
   # Return if empty (nothing further found)
   [ ${#webassets_all[@]} -eq 0 ] && { echo "None found. " "1"; echo "Done."; return 0; }
@@ -863,11 +880,18 @@ wget_extra_urls() {
   echo "Filter out web pages and newsfeeds (limit to non-HTML assets, such as images and JS files)" "1"
   webassets_nohtml=()
   assets_or='\.('${asset_extensions//,/|}')'
+  assets_or_external='\.('${asset_extensions_external//,/|}')'
   while IFS='' read -r line; do webassets_nohtml+=("$line"); done < <(for opt in "${webassets_http[@]}"; do
     if [ "$asset_extensions" != "" ]; then
       # Loop over an inclusion list of allowable extensions
-      echo "$opt" | grep -E "$assets_or" > /dev/null && printf "%s\n" "$opt";
+      opt_domain=$(printf "%s\n" "$opt" | awk -F/ '{print $3}' | awk -F: '{print $1}')
+      if [[ ' '${page_element_domains_array[*]}' ' =~ ' '$opt_domain' ' ]]; then
+        echo "$opt" | grep -E "$assets_or_external" > /dev/null && printf "%s\n" "$opt";
+      else
+        echo "$opt" | grep -E "$assets_or" > /dev/null && printf "%s\n" "$opt";
+      fi
     else
+      # Remove HTML assets
       type=$(curl -skI "$opt" -o/dev/null -w '%{content_type}\n')
       if [[ "$type" != *"text/html"* ]] && [[ "$type" != *"application/rss+xml"* ]] && [[ "$type" != *"application/atom+xml"* ]]; then
         printf "%s\n" "$opt";
@@ -934,16 +958,9 @@ wget_extra_urls() {
   error_set -e
 }
 
-# Carry out further processing of output:
-#  1. For the primary domain, convert absolute paths to relative paths.
-#  2. For extra domains, convert absolute paths to relatives paths and
-#     optionally incorporate respective content in a designated assets folder.
-#  3. Replace remaining occurrences of primary domain with the deployment domain
-#     (subject to user confirmation).
-#  4. If Wget --cut-dirs options set, then only carry out option 3.
-site_postprocessing() {
-  cd "$working_mirror_dir" || { printf "Unable to enter %s.\nAborting.\n" "$working_mirror_dir"; exit; }
-  echo -n "Carrying out site postprocessing in $working_mirror_dir ... " 
+
+process_assets() {
+  echo "Processing the location of assets ..."
 
   # First, generate a list of all the web pages that contain relevant URLs to process
   # (makes subsequent sed replacements more targeted than searching all web pages).
@@ -953,7 +970,7 @@ site_postprocessing() {
   if (( phase > 3 )); then
     generate_extra_domains
   fi
-  
+
   [ -z ${url_grep+x} ] && url_grep="$(assets_search_string "$all_domains" "[^\"'<) ]+")" # define $url_grep as necessary
   for opt in "${url_grep[@]}"; do
     while IFS='' read -r line; do webpages+=("$line"); done < <(grep -Erl "$opt" . --include "*\.html")
@@ -963,7 +980,7 @@ site_postprocessing() {
   if [ "$assets_directory" != "" ] && [ "$cut_dirs" = "0" ]; then
     assets_dir_suffix=/
     # Also, check for duplication of assets directory label
-    if [ "$(find . -name "$assets_directory" -type d -print)" != "" ]; then 
+    if [ "$(find . -name "$assets_directory" -type d -print)" != "" ]; then
       echo -n "$msg_warning: website already contains a directory, $assets_directory.  To avoid confusion (and errors), a timestamp is being appended to the MakeStaticSite-generated assets directory, but it is recommended that you modify the assets_directory constant and re-run. ... "
       assets_directory="$assets_directory$timestamp"
     fi 
@@ -975,7 +992,7 @@ site_postprocessing() {
   if [ "$imports_directory" != "" ]; then 
     imports_dir_suffix=/
     # Also, check for duplication of assets directory label
-    if [ "$(find . -name "$imports_directory" -type d -print)" != "" ]; then 
+    if [ "$(find . -name "$imports_directory" -type d -print)" != "" ]; then
       echo -n "$msg_warning: website already contains a directory, $imports_directory.  To avoid confusion (and errors), a timestamp is being appended to the MakeStaticSite-generated imports directory, but it is recommended that you modify the imports_directory constant and re-run. ... "
       imports_directory="$imports_directory$timestamp"
     fi 
@@ -1030,14 +1047,14 @@ site_postprocessing() {
 
     if [ "$all_domains" != "$domain" ] && [ "$extra_assets_mode" = "contain" ]; then
       # Move folders
-      IFS="," read -r -a extra_domains_list <<< "$extra_domains"
+      IFS="," read -r -a extra_domains_array <<< "$extra_domains"
       if [ "$imports_directory" != "" ]; then
         mirror_imports_directory="$working_mirror_dir/$imports_directory"
         mkdir -p "$mirror_imports_directory"
       else
         mirror_imports_directory="$working_mirror_dir"
       fi
-      for extra_dir in "${extra_domains_list[@]}"; do
+      for extra_dir in "${extra_domains_array[@]}"; do
         if [ -d "$mirror_dir/$mirror_archive_dir/$extra_dir" ]; then
           mirror_extra_dir="$mirror_dir/$mirror_archive_dir/$extra_dir"
           asset_move="$mirror_extra_dir to $mirror_imports_directory/"
@@ -1049,7 +1066,7 @@ site_postprocessing() {
         fi
       done
     fi
-  echo "Done."
+    echo "Done."
   fi
 
   # Special case: mirroring a directory not a whole domain: readjust internal links
@@ -1094,6 +1111,7 @@ site_postprocessing() {
         done
       fi    
     done
+
     # Move directories and files
     if [ ${#extra_dirs_list[@]} -ne 0 ] && [ "$parent_dirs_mode" = "contain" ]; then
       if [ "$assets_directory" != "" ]; then
@@ -1132,6 +1150,23 @@ site_postprocessing() {
         fi 
       done
     fi
+  fi
+}
+
+# Carry out further processing of output:
+#  1. For the primary domain, convert absolute paths to relative paths.
+#  2. For extra domains, convert absolute paths to relatives paths and
+#     optionally incorporate respective content in a designated assets folder.
+#  3. Replace remaining occurrences of primary domain with the deployment domain
+#     (subject to user confirmation).
+#  4. If Wget --cut-dirs options set, then only carry out option 3.
+site_postprocessing() {
+  cd "$working_mirror_dir" || { printf "Unable to enter %s.\nAborting.\n" "$working_mirror_dir"; exit; }
+  echo "Carrying out site postprocessing in $working_mirror_dir ... " 
+
+  # Adjust storage locations of assets, where applicable
+  if [ -s "$input_file_extra" ] || [ "$url" != "$url_base/" ]; then
+    process_assets
   fi
 
   # Check for occurrences of $domain as distinct from $deploy_domain.
