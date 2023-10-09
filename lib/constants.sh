@@ -289,8 +289,8 @@ asset_domains__desc='Additional domains for asset retrieval and offline access'
 asset_domains__info="Provide a comma-separated list of domains, typically hosted on CDNs, for static assets stored external to the main domain. MakeStaticSite can retrieve these and incorporate in the mirror output.  Leave empty if there are no extra domains."
 
 page_element_domains=auto
-page_element__desc='Additional domains for web page elements'
-page_element__info="Provide a comma-separated list of domains that contain embedded content and/or contribute to the styling of a page.  These typically include fonts, CSS, images and other multimedia, provided by 3rd-party services.  MakeStaticSite can retrieve these and incorporate in the mirror output. Enter 'auto' (without quotes) to generate this list automatically.  Leave empty if all these elements are located under your primary domain."
+page_element_domains__desc='Additional domains for web page elements'
+page_element_domains__info="Provide a comma-separated list of domains that contain embedded content and/or contribute to the styling of a page.  These typically include fonts, CSS, images and other multimedia, provided by 3rd-party services.  MakeStaticSite can retrieve these and incorporate in the mirror output. Enter 'auto' (without quotes) to generate this list automatically.  Leave empty if all these elements are located under your primary domain."
 
 wget_extra_options="-X/wp-json,/wp-admin --reject xmlrpc*,'index.html?'* --limit-rate=500k"
 wget_extra_options__desc='Additional command line options for Wget'
