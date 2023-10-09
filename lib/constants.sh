@@ -440,7 +440,7 @@ htmltidy="(htmltidy_cmd htmltidy_options)"
 
 options_min=(url)
 options_std=(url extra_domains local_sitename wp_cli site_path wp_helper_plugins add_search use_snippets upload_zip zip_filename zip_download_folder deploy deploy_domain deploy_remote deploy_remote_rsync deploy_host deploy_user deploy_path htmltidy add_extras)
-options_allow_empty=(extra_domains wget_extra_options input_urls_file)
+options_allow_empty=(asset_domains wget_extra_options input_urls_file)
 options_check_cmd=(wget_cmd htmltidy_cmd)
 options_check_dir=(site_path)
 options_check_url=(url)
