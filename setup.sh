@@ -99,8 +99,13 @@ read_config() {
   fi
 
   if [ "$run_unattended" = "yes" ] && [ -z ${url+x} ]; then
-    printf "You have run setup in unattended mode (-u flag), but not supplied a URL. Please try again.\n"; exit;
+    printf "You have run setup in unattended mode (-u flag), but not supplied a URL. Please try again. Aborting.\n"; exit;
   fi
+
+  if [ "$run_unattended" = "yes" ] && (( level > 0 )); then
+    printf "You can only run setup in unattended mode (-u flag) at level 0. Please try again. Aborting.\n"; exit;
+  fi
+  
 }
 
 print_welcome() {
