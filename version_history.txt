@@ -19,6 +19,13 @@
 ##########################################################################
 
 
+0.27.7.1 (released on 2023-10-09)
+        * Bug fixes *
+        [lib/constants.sh]
+         Corrected info and description labels for page_element_domains;
+         modified options_allow_empty to allow asset_domains to be empty
+         during setup.
+
 0.27.7 (released on 2023-10-09)
       * Refined handling of assets from additional domains plus maintenance *
       [lib/constants.sh]
@@ -48,7 +55,7 @@
        replaced by 'extra_domains_array'
 
 0.27.6 (released on 2023-10-05)
-      * Maintenance: fixed syntactical issues plus a bit of file management
+      * Maintenance: fixed syntactical issues plus a bit of file management *
       [lib/constants.sh]
        Added constants, mss_file_permissions and mss_dir_permissions for
        default file and directory permissions respectively;
