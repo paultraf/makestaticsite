@@ -22,8 +22,8 @@
 ################################################
 # MakeStaticSite info
 ################################################
-version=0.27.7.1
-version_date='9 October 2023'
+version=0.27.8
+version_date='10 October 2023'
 version_header="MakeStaticSite version $version, released on $version_date."
 mss_license="GNU Affero General Public License version 3"
 mss_download="https://makestaticsite.sh/download/makestaticsite_latest.tar.gz"
@@ -53,10 +53,11 @@ tmp_dir=tmp                     # Directory where temporary files are to be stor
 tab="  "                        # tab spacing for file outputs
 host_dir=auto                   # Host directory mode; for Wget, empty or no corresponds to -nh, else host directory included 
 
+
 ################################################
-# Wget settings - initial and phase 2
+# Wget settings - main run and Wget extra URLs
 ################################################
-# input file names for Wget (phase 1 and 2 respectively)
+# input file names for Wget (phase 2 and 3 respectively)
 wget_cmd=wget                   # [Path to] wget binary
 wget_version_atleast=1.21
 wget_error_level=6              # The lowest Wget error code tolerated or else aborts (>8 for no tolerance)
@@ -97,7 +98,7 @@ query_accept_list="js,css,svg"  # list of file extensions that may have query st
 extra_assets_mode=contain       # how assets from extra domains should be incorporated
                                 # - empty or 'off' to keep in separate directories under mirror ID
                                 # - 'contain' will move the directories inside the assets directory (see below)
-assets_directory=assets         # directory immediately under main domain directory for storing extra assets - from parent directories and extra domains
+assets_directory=webassets      # directory immediately under main domain directory for storing extra assets - from parent directories and extra domains
                                 # (set empty to place assets in root, only if there is not an assets folder already)
 imports_directory=imports       # directory immediately inside assets_directory for storing assets imported for extra domains
 
@@ -112,6 +113,7 @@ mss_cut_dirs=yes                # Option to cut directories.  When this is enabl
                                 # - 'yes' or 'on' for a MakeStaticSite-specific cut that moves content of URL path to root
                                 # - empty, 'no' or 'off' to support Wget --cut-dirs and not carry out further MakeStaticSite-specific processing
                                 # - 'auto' to support Wget --cut-dirs and carry out further processing (not yet implemented)
+
 
 ################################################
 # Robot and site map settings
@@ -438,12 +440,13 @@ deploy_netlify="(deploy_netlify_name)"
 htmltidy="(htmltidy_cmd htmltidy_options)"
 )
 
-options_min=(url)
-options_std=(url extra_domains local_sitename wp_cli site_path wp_helper_plugins add_search use_snippets upload_zip zip_filename zip_download_folder deploy deploy_domain deploy_remote deploy_remote_rsync deploy_host deploy_user deploy_path htmltidy add_extras)
-options_allow_empty=(asset_domains wget_extra_options input_urls_file)
-options_check_cmd=(wget_cmd htmltidy_cmd)
-options_check_dir=(site_path)
-options_check_url=(url)
-options_check_yesno=(ssl_checks wget_extra_urls site_post_processing archive wp_cli wp_cli_remote wp_helper_plugins add_search wp_restore_settings use_snippets upload_zip deploy deploy_remote deploy_remote_rsync htmltidy add_extras)
-options_check_remote=(site_path)
+options_min=(url)               # Level 0 options
+options_std=(url extra_domains local_sitename wp_cli site_path wp_helper_plugins add_search use_snippets upload_zip zip_filename zip_download_folder deploy deploy_domain deploy_remote deploy_remote_rsync deploy_host deploy_user deploy_path htmltidy add_extras) # Level 1 options
+options_allow_empty=(asset_domains page_element_domains wget_extra_options input_urls_file) # Options that can have empty/null values
+options_check_cmd=(wget_cmd htmltidy_cmd) # Command line applications that need to be checked for existence
+options_check_dir=(site_path)   # Directories that need to be checked for existence
+options_check_url=(url)         # URLs that need to be validated
+options_check_yesno=(ssl_checks wget_extra_urls site_post_processing archive wp_cli wp_cli_remote wp_helper_plugins add_search wp_restore_settings use_snippets upload_zip deploy deploy_remote deploy_remote_rsync htmltidy add_extras) # Options that take yes/no values
+options_check_remote=(site_path) # options that need to be checked on a remote server
+
 

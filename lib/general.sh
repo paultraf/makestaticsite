@@ -191,7 +191,7 @@ wget_error_check() {
   if [ "$wget_error_level" -le "$1" ]; then
     confirm_continue
   else
-    echo "Aborting due to wget_error_level setting in constants.sh. To allow continuation, please set its value to less than $1 and rerun."; exit
+    echo "Aborting due to wget_error_level setting in constants.sh. To allow continuation, please set its value to $1 or less and rerun."; exit
   fi
 }
 

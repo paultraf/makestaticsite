@@ -807,7 +807,7 @@ post_get_site_checks() {
 generate_extra_domains() {
 # Generate search URL prefixes combining primary domain and extra domains
   if [ "$page_element_domains" = "auto" ]; then
-    printf "Searching for extra asset domains (working in %s) ... " "$working_mirror_dir"
+    echo -n "Searching for extra asset domains (working in $working_mirror_dir) ... "
     domain_grep="https?:\\\?/\\\?/[^\"'/< ]+\.[^\"'/< ]+\\\?/[^\"'< ]+[^\"'/< ]+\.[^\"'/< ]+"
     domain_grep2="https?:\\\?/\\\?/[^\"'/< ]+\.[^\"'/< ]+\\\?/"
     domain_grep3="[^\"'/< ]+\.[^\"'/< ]+\\\?/"
@@ -820,13 +820,14 @@ generate_extra_domains() {
     echo "add_domains_unique array has ${#add_domains_unique[@]} elements" "2"
     # Convert array to domain list (string), removing any trailing slashes
     page_element_domains=$(printf "%s" "${add_domains_unique[*]}" | sed 's/ /,/g' | sed 's/\\\?\/,/,/g' | sed "s/$domain,//g" | sed "s/,$domain//g" | sed 's/\/$//')
+    echo "Done."
   fi
   if [ "$page_element_domains" != "" ]; then
     if [ "$extra_domains" != "" ]; then
       extra_domains+=","
     fi
     extra_domains+="$page_element_domains"
-    all_domains+="$extra_domains"
+    all_domains+=",$extra_domains"
   fi
 
   IFS="," read -r -a page_element_domains_array <<< "$page_element_domains"
@@ -853,6 +854,8 @@ wget_extra_urls() {
 
   # Generate search URL prefixes combining primary domain and extra domains
   generate_extra_domains
+
+  echo -n "Generating list of extra asset URLs ... " 
   url_grep="$(assets_search_string "$all_domains" "[^\"'<) ]+")"
 
   webassets_all=()
@@ -960,7 +963,7 @@ wget_extra_urls() {
 
 
 process_assets() {
-  echo "Processing the location of assets ..."
+  echo -n "Processing asset storage locations ... "
 
   # First, generate a list of all the web pages that contain relevant URLs to process
   # (makes subsequent sed replacements more targeted than searching all web pages).
@@ -1007,7 +1010,7 @@ process_assets() {
     # Populate URLs array from Wget's additional input file
     urls_array=()
     if [ -f "$input_file_extra" ]; then
-      if read -d '' -r -a urls_array; then :; fi <"$input_file_extra"
+      if read -d '' -r -a urls_array; then :; fi < <(grep -v "//$domain" "$input_file_extra")
     fi
 
     # Convert absolute links to relative links
@@ -1033,16 +1036,12 @@ process_assets() {
       # if working with extra domains or a directory URL,
       if [ ${#urls_array[@]} -ne 0 ] && { [ "$extra_domains" != "" ] || [ "$url" != "$url_base/" ]; }; then
         for url_extra in "${urls_array[@]}"; do
-          url_extra_domain=$(echo "$url_extra" | cut -d/ -f3)
-          if [ "$url_extra_domain" = "$domain" ]; then
-            continue
-          fi
-          asset_rel_path=$(echo "$url_extra" | cut -d/ -f3-)
+          asset_rel_path=$(env echo "$url_extra" | cut -d/ -f3-)
           asset_rel_path="$assets_directory$assets_dir_suffix$imports_directory$imports_dir_suffix$asset_rel_path"
           sed_subs=('s~'"$url_extra"'~'"$asset_rel_path"'~g' "$opt")
           sed "${sed_options[@]}" "${sed_subs[@]}"
         done
-      fi    
+      fi
     done
 
     if [ "$all_domains" != "$domain" ] && [ "$extra_assets_mode" = "contain" ]; then
@@ -1066,7 +1065,6 @@ process_assets() {
         fi
       done
     fi
-    echo "Done."
   fi
 
   # Special case: mirroring a directory not a whole domain: readjust internal links
@@ -1151,6 +1149,7 @@ process_assets() {
       done
     fi
   fi
+  echo "Done."
 }
 
 # Carry out further processing of output:
