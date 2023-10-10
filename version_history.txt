@@ -19,6 +19,22 @@
 ##########################################################################
 
 
+0.27.7 (released on 2023-10-10)
+      * Performance speed-up and maintenance, including bug fixes
+      [lib/constants.sh]
+       changed value of assets_directory from 'assets' to 'webassets';
+       added page_element_domains to options_allow_empty array. 
+      [makestaticsite.sh]
+       generate_extra_domains(): bug fix: inserted comma for augmenting
+       all_domains with extra_domains; a minor tweak to terminal output.
+       wget_extra_urls(): "Generating list of extra asset URLs" added to
+       terminal output.
+       process_assets(): populating URLs array from Wget's additional
+       input file constrained to URLs other than those of $domain;
+       removed superfluous echo statements from log.
+      [lib/general.sh]
+       wget_error_check(): on abort, changed advice about setting level.
+
 0.27.7.1 (released on 2023-10-09)
         * Bug fixes *
         [lib/constants.sh]
