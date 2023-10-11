@@ -377,7 +377,8 @@ initialise_variables() {
   [ "$ssl_checks" = "no" ] && wget_ssl="--no-check-certificate" || wget_ssl=''
 
   # Web server details (to be snapped by Wget, etc.)
-  url="$(config_get url "$myconfig" | sed s'/\/\?$/\//')"  # ensure URL ends in trailing slash
+  url="$(config_get url "$myconfig")"
+  [[ ${url:length-1:1} != "/" ]] && url="$url/"; # ensure URL ends in trailing slash
 
   # Wayback Machine support
   use_wayback= 
