@@ -19,11 +19,20 @@
 ##########################################################################
 
 
-0.27.7 (released on 2023-10-10)
+0.27.8.1 (released on 2023-10-09)
+        * Bug fixes for handling URLs *
+        [lib/general.sh]
+         assets_search_string(): removed opening delimiter from URLs list
+        [makestaticsite.sh]
+         initialise_variables(): changed method of ensuring URL ends in
+         trailing slash (to support macOS).
+
+0.27.8 (released on 2023-10-10)
       * Performance speed-up and maintenance, including bug fixes
       [lib/constants.sh]
        changed value of assets_directory from 'assets' to 'webassets';
-       added page_element_domains to options_allow_empty array. 
+       added page_element_domains to options_allow_empty array.
+       Added explanatory comments for various option-related arrays.
       [makestaticsite.sh]
        generate_extra_domains(): bug fix: inserted comma for augmenting
        all_domains with extra_domains; a minor tweak to terminal output.
@@ -47,7 +56,7 @@
       [lib/constants.sh]
        Augmented asset_extensions with font file extensions;
        Added a new constant, asset_extensions_external, a more limited set
-       of file extensions for assets gleaned from external domains
+       of file extensions for assets gleaned from external domains.
        Added new constant, page_element_domains, to designate domains used
        to construct and style web pages rather than downloadable assets.
        This now assumes the default of auto over asset_domains, which should
