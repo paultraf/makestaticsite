@@ -19,7 +19,15 @@
 ##########################################################################
 
 
-0.27.8.1 (released on 2023-10-09)
+0.27.8.2 (released on 2023-10-03)
+        * Bug fix for processing domains *
+        [makestaticsite.sh]
+         generate_extra_domains(): bug fix for macOS: additional tweak to
+         ensure domains don't end in trailing slash (impacts asset directory
+         moves).
+         process_assets(): clarify wording for moving directories.
+
+0.27.8.1 (released on 2023-10-11)
         * Bug fixes for handling URLs *
         [lib/general.sh]
          assets_search_string(): removed opening delimiter from URLs list
