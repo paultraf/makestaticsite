@@ -817,7 +817,7 @@ generate_extra_domains() {
     echo "add_domains array has ${#add_domains[@]} elements" "2"
     # Store unique elements only
     add_domains_unique=()
-    while IFS='' read -r line; do add_domains_unique+=("$line"); done < <(for item in "${add_domains[@]}"; do printf "%s\n" "${item}"; done | sort -u)
+    while IFS='' read -r line; do add_domains_unique+=("$line"); done < <(for item in "${add_domains[@]}"; do printf "%s\n" "${item%/}"; done | sort -u)
     echo "add_domains_unique array has ${#add_domains_unique[@]} elements" "2"
     # Convert array to domain list (string), removing any trailing slashes
     page_element_domains=$(printf "%s" "${add_domains_unique[*]}" | sed 's/ /,/g' | sed 's/\\\?\/,/,/g' | sed "s/$domain,//g" | sed "s/,$domain//g" | sed 's/\/$//')
@@ -1058,7 +1058,7 @@ process_assets() {
         if [ -d "$mirror_dir/$mirror_archive_dir/$extra_dir" ]; then
           mirror_extra_dir="$mirror_dir/$mirror_archive_dir/$extra_dir"
           asset_move="$mirror_extra_dir to $mirror_imports_directory/"
-          # move only if latter is not a subdirectory of former
+          # Move only if mirror_imports_directory is not a subdirectory of mirror_extra_dir
           if [[ ! $mirror_imports_directory/ = $mirror_extra_dir/* ]]; then
             mv "$mirror_extra_dir" "$mirror_imports_directory/" || { echo "$msg_error: Unable to move $asset_move."; exit; }
             echo "Moved $asset_move." "1"
