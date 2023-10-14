@@ -19,6 +19,72 @@
 ##########################################################################
 
 
+0.28 (released on 2023-10-14)
+    * Extended support for authentication and credentials management *
+     Added measures to make use of bash http authentication and web form
+     logins more secure through a combination of encryption and credentials
+     management, using 'pass'. Some maintenance.
+    [lib/constants.sh]
+     Added a new set of options for credentials processing and storage:
+      credentials_rc_file (.wgetrc or .netrc) - the 'run commands' file for
+     (temporary) storage of credentials;
+      credentials_cleanup: delete references to credentials in temp files and
+     .rc file on completion of run (y/n)?
+      credentials_manage_cmd - [path to] binary for managing (and encrypting)
+     credentials;
+      credentials_manage_cmd_url - credentials manager download URL;
+      credentials_storage_namespace - MakeStaticSite-specific directory for
+     storing credentials (usernames, passwords, tokens, etc.); 
+      credentials_storage_mode - how to store credentials (with support for
+     encryption);
+      credentials_extension - encryption file type extension; 
+      credentials_home - directory in which credentials are stored;
+      credentials_namespace_suffix, credentials_path_prefix used to determine
+     full path to credentials home.
+     Added further options for Wget:
+      wget_http_login_field - Wget user login field for HTTP authentication; 
+      wget_http_password_field - Wget password field for HTTP authentication;
+      wget_post=wget_post.txt - name of file containing POST data.
+     allOptions array: Modified wget_extra_options__info to clarify how (not)
+     to enter the password as an option; added option options_credentials
+     for credentials that may/should be encrypted.
+    [setup.sh]
+     New function, read_credentials(), support function for read_option(),
+     that reads user input in several ways.  Dependent on the value of
+     credentials_storage_mode, may be encrypted or kept as plain text, and
+     stored in the dedicate storage area, under credentials_home.  This is
+     handled by the credentials_manage_cmd (i.e, the 'pass' command,
+     https://www.passwordstore.org/).  Even if stored as plain text, the
+     input of passwords is hidden.
+     Alternatively, the existing (deprecated) method of storing passwords
+     in the .cfg file is also available.
+     read_option(): inserted checks on the current option (optvar).  If it
+     is a member of options_credentials array, then call read_credentials.
+     If is wget_extra_options and this option contains --user and not
+     --password then call read_credentials
+     process_options(): added clause to exclude site_password from being
+     requested when credentials_storage_mode not equal to 'config'.
+     write_config(): added touch and chmod commands for output file to ensure
+     correct file permissions
+    [makestaticsite.sh]
+     initialise_layout(): set up run commands file with correct permissions;
+     initialise_variables(): retrieve credentials from relevant credentials
+     store and process.
+     New function, wget_process_credentials(), to retrieve and process
+     credentials, using the run command file as temporary storage for Wget.
+     wget_mirror(): modified wording to account for support for credentials;
+     inserted new section to handle the case of a website (form-based) login:
+     support for working with credentials (plain and encrypted); a temporary
+     file for Wget --post-file option (to hide the password from ps and logs).
+     clean_mirror(): remove the temporary Wget files plus credentials from
+     run command files.
+    [lib/general.sh]
+     Added function input_encrypted_password() for inputing a password using
+     the 'pass' command.
+    [lib/config.sh]
+     config_get(): added a further option parameter for the full path to
+     configuration (.cfg) files, allowing wider script usage.
+
 0.27.8.2 (released on 2023-10-03)
         * Bug fix for processing domains *
         [makestaticsite.sh]
@@ -212,7 +278,7 @@
       [makestaticsite.sh]
        initialise_variables(): bug fix for reading value of wayback_date_to
        wmd_get_wayback_site(): added support for all HTTP status codes
-      
+
 0.27 (released on 2023-07-12)
     * Added support for Wayback Machine Downloader*
      Renamed constant, wget_post_processing to site_post_processing, updated
