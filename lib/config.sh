@@ -24,15 +24,23 @@ config_read_file() {
 }
 
 
-# determine a parameter value from the supplied config file
-# or set a default 
+# Determine a parameter value from the supplied config file
+# or set a default.
+# Expects two parameters:
+#  - option variable
+#  - config file (less extension)
+# plus one optional:
+#  - full path to configuration files
 config_get() {
-
-  val="$(config_read_file config/"$2".cfg "$1")";
-  if [ "${val}" = "__UNDEFINED__" ]; then
+  config_home=
+  if [ -n "${3+x}" ]; then
+    config_home="$3/"
+  fi
+  val="$(config_read_file "${config_home}config/$2".cfg "$1")";
+  if [ "$val" = "__UNDEFINED__" ]; then
     val="$(config_read_file config/default.cfg "$1")";
     inputvar="$1"
-    if [ "${val}" = "__UNDEFINED__" ]; then
+    if [ "$val" = "__UNDEFINED__" ]; then
       val=""                              # Assume empty string if not defined    
       for opt in "${allOptions[@]}"; do
         defaultvar=$(expr "$opt" : '\([^=]*\)')       # Everything up to '='
@@ -49,7 +57,6 @@ config_get() {
   val=$(expr "$val" : '\([^#]*[^ #]\)')    # ignore appended spaces and hash
   val=$(env echo "$val" | tr -d "\"" | xargs) # remove any surrounding quotes + excess whitespace
   printf -- "%s" "${val}";
-
 }
 
 
