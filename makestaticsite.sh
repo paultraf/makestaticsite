@@ -242,6 +242,9 @@ initialise_layout() {
 
   printf "Welcome to MakeStaticSite version %s\n" "$version"
 
+  # Set up 'Run commands' file
+  touchmod "$HOME/$credentials_rc_file"
+
   # Set up temporary directory
   tmp_dir_path="$script_dir/$tmp_dir"
   [ -d "$tmp_dir_path" ] || mkdir -p "$tmp_dir_path"
@@ -490,6 +493,15 @@ initialise_variables() {
   # If $wget_plus_ops contains '--spider' then don't deploy, use snippets or postprocess
   [[ "$wget_plus_ops" == *"--spider"* ]] && { use_snippets="no"; wget_extra_urls="no"; site_post_processing="no"; }
 
+  # Retrieve any credentials from relevant credentials store and process
+  if [ "$credentials_storage_mode" != "config" ]; then
+    re_user='\-\-'"$wget_http_login_field"' ([^ \-]*)'
+    if [[ $wget_extra_options_tmp =~ $re_user ]]; then
+      wget_http_user="${BASH_REMATCH[1]}" # determined by last expression in conditional
+      wget_process_credentials
+    fi
+  fi
+
   htmltidy=$(yesno "$(config_get htmltidy "$myconfig")")
   add_extras=$(yesno "$(config_get add_extras "$myconfig")")
 
@@ -619,15 +631,123 @@ wget_error_codes() {
 }
 
 
+# Retrieve and process credentials
+wget_process_credentials() {
+  credentials_insert_path="${credentials_path_prefix}$domain/$wget_http_login_field/$wget_http_user"
+  credentials_path="$credentials_home/$credentials_insert_path"
+  if [ "$credentials_storage_mode" = "encrypt" ]; then
+    if [ -z ${pass_check+x} ]; then
+      cmd_check "$credentials_manage_cmd" || { printf "\n%s: Unable to find binary: $credentials_manage_cmd ("'$'"PATH contains %s).\nThis command is essential for working with encrypted credentials.  It may be downloaded from %s.  Alternatively,  modify the value of credentials_storage_mode in constants.sh to 'plain', and re-run the setup, but with less security. \nAborting.\n" "$msg_error" "$PATH" "$credentials_manage_cmd_url"; exit; }
+      pass_check=1
+    fi
+    if [ ! -f "$credentials_path.$credentials_extension" ]; then
+      input_encrypted_password "HTTP authentication: a password for $wget_http_user is required to access the web server"
+    fi
+    wget_http_password=$(pass show "$credentials_insert_path" 2>/dev/null) || { echo "$msg_error: Unable to retrieve the password from the credentials store at $credentials_insert_path. Aborting."; exit; }
+  elif [ "$credentials_storage_mode" = "plain" ]; then
+    if [ ! -f "$credentials_path" ]; then
+      # Get user input for credentials (expected to be requested during setup; basically copy that code here)
+      mkdir -p "$mss_dir_permissions" "$(dirname "$credentials_path")" 
+      touchmod "$credentials_path"
+
+      # Read password and write to "$credentials_path"
+      printf "\n"
+      read -r -s -e -p "Please enter the password for $wget_http_user: " wget_http_password
+      if [ "$wget_http_password" = "" ]; then
+        echo "$msg_warning: No password was set!"
+      fi  
+      printf "%s" "$wget_http_password" > "$credentials_path"
+      printf "\n"
+    fi
+    wget_http_password=$(<"$credentials_path")
+  fi
+
+  # Write credentials to run commands file
+  rc_process=Y # initially assume we are going to write to a rc file
+  rc_file="$HOME/$credentials_rc_file"
+  if [ "$credentials_rc_file" = ".netrc" ]; then
+    # Search for credentials based on $site_user and $domain, 
+    # assuming they are defined on a single line with space-separated values
+    if [ -f "$rc_file" ]; then
+      # Check to see if an entry exists (with superfluous "''" inserted to pass Shellcheck SC1087)
+      cred_pattern="machine[[:blank:]]\{1,\}$domain"''"[[:blank:]]\{1,\}login[[:blank:]]\{1,\}$wget_http_user"
+      search_rc="$(grep -m 1 "$cred_pattern" "$rc_file")"
+      if [ "$search_rc" != "" ]; then
+        confirm=y
+        if [ "$run_unattended" != "yes" ]; then
+          # ask if want to replace (y/n)?
+          printf "\n"
+          echo "$msg_warning: HTTP authentication (username and password) credentials for user $wget_http_user have already been defined in $rc_file."
+          read -r -e -p "Do you wish to overwrite (y/n)? " confirm
+          confirm=${confirm:0:1}
+        fi
+        if [ "$confirm" = "y" ] || [ "$confirm" = "Y" ]; then
+          # remove existing credentials
+          replace_rc="$(grep -v "^[[:blank:]]\{0,\}$cred_pattern" "$rc_file")"
+          printf "%s\n" "$replace_rc" > "$rc_file" || echo "$msg_warning: unable to remove existing credentials" 
+        else
+          ## leave credentials and don't do any further processing
+          rc_process=N
+        fi
+      fi
+    else
+      touchmod "$rc_file"
+    fi
+    if [ "$rc_process" = "Y" ]; then
+      echo "machine $domain login $wget_http_user password $wget_http_password" >> "$rc_file"
+      chmod 0600 "$rc_file"
+    fi
+  elif [ "$credentials_rc_file" = ".wgetrc" ]; then
+    # Search for credentials based on $site_user, assuming that it and
+    # the password are on separate lines
+    if [ -f "$rc_file" ]; then
+      # Check to see if an entry exists
+      cred_pattern="http_user="
+      cred_pattern_pwd="http_password="
+      search_rc="$(grep -m 1 "^[[:blank:]]\{0,\}$cred_pattern" "$rc_file")"
+      if [ "$search_rc" != "" ]; then
+        confirm=y
+        if [ "$run_unattended" != "yes" ]; then
+          printf "\n"
+          # ask if want to replace (y/n)?
+          echo "$msg_warning: a login has already been defined (as $search_rc).  Only one user/password pair may be defined."
+          read -r -e -p "Do you wish to overwrite (y/n)? " confirm
+          confirm=${confirm:0:1}
+        fi
+        if [ "$confirm" = "y" ] || [ "$confirm" = "Y" ]; then
+          # remove existing credentials
+          replace_rc="$(grep -v "^[[:blank:]]\{0,\}$cred_pattern\|^[[:blank:]]\{0,\}$cred_pattern_pwd" "$rc_file")"
+          printf "%s\n" "$replace_rc" > "$rc_file" || echo "$msg_warning: unable to remove existing credentials" 
+        else
+          ## leave credentials and don't do any further processing
+          rc_process=N
+        fi
+      fi
+    else
+      touchmod "$rc_file"
+    fi
+    if [ "$rc_process" = "Y" ]; then
+      printf "http_user=%s\nhttp_password=%s\n" "$wget_http_user" "$wget_http_password " >> "$rc_file"
+      chmod 0600 "$rc_file"
+    fi
+  else
+    # No run commands file defined
+    echo "$msg_warning: no recognisable (.netrc or .wgetrc) run commands file specified, assuming none."
+    echo "This means that credentials will be included directly in Wget."
+    confirm_continue
+  fi
+}
+
+
 # Mirror a site using Wget (main site capture)
 wget_mirror() {
   echo "Will capture snapshot from $url using $wget_cmd."
 
-  # First, test source host is available
+  # Test whether source host is available
   local wget_test_options=(-q "$wget_ssl" --spider --tries 3 "$url_base")
   if ! $wget_cmd "${wget_extra_options[@]}" "${wget_test_options[@]}"; then
-    echo "Unable to connect to $url_base.  Please check the spelling of the domain, that the web server is running and that the website exists. "
-    printf "GET http://google.com HTTP/1.0\n\n" | nc google.com 80 > /dev/null 2>&1 ||  echo "Also, there appears to be no Internet connectivity (tested with http://google.com)."
+    echo "Unable to connect to $url_base.  Please check the spelling of the domain, that the web server is running, that the website exists and any http authentication credentials are correct. "
+    printf "GET http://google.com HTTP/1.0\n\n" | nc google.com 80 > /dev/null 2>&1 ||  echo "Actually, there appears to be no Internet connectivity (tested with http://google.com)."
     echo "Aborting."
     exit
   fi
@@ -706,22 +826,57 @@ wget_mirror() {
 
   # If access to site restricted then log in and fetch cookie as required
   if [ "$require_login" = "yes" ]; then
+    site_user="$(config_get site_user "$myconfig" "$script_dir")"
+    credentials_insert_path="${credentials_path_prefix}$domain/site_user/$site_user"
+    credentials_path="$credentials_home/$credentials_insert_path"
+    if [ "$credentials_storage_mode" = "encrypt" ]; then
+      if [ ! -f "$credentials_path.$credentials_extension" ]; then
+        input_encrypted_password "The website login requires a password for $site_user"
+      fi
+      site_password=$(pass show "$credentials_insert_path" 2>/dev/null) || { echo "$msg_error: $credentials_insert_path is not in the password store. Aborting."; exit; }
+    elif [ "$credentials_storage_mode" = "plain" ]; then
+      if [ ! -f "$credentials_path" ]; then
+        # Get login password (usually entered during setup)
+        mkdir -p "$mss_dir_permissions" "$(dirname "$credentials_path")" 
+        touchmod "$credentials_path"
+
+        # Read password and write to "$credentials_path"
+        read -r -s -e -p "Please enter the website login password for $site_user: " site_password
+        if [ "$site_password" = "" ]; then
+          echo "$msg_warning: No password was set!"
+        fi  
+        printf "%s" "$site_password" > "$credentials_path"
+        printf "\n"
+      fi
+      site_password=$(<"$credentials_path")
+    elif [ "$credentials_storage_mode" = "config" ]; then
+      site_password="$(config_get site_password "$myconfig")"
+    else
+      printf "\n%s: A login is required, but unable to determine the username for Wget.\nAborting.\n" "$msg_error"; exit;
+    fi
+    
+    # Generate a temporary file with credentials
+    post_tmppath="$tmp_dir_path/$wget_post"; touchmod "$post_tmppath"
+
+    printf "%s=%s&%s=%s&testcookie=1" "$login_user_field" "$site_user" "$login_pwd_field" "$site_password" > "$post_tmppath" || { printf "\n%s: Unable to prepare credentials for Wget.\nAborting.\n" "$msg_error"; exit; }
 
     # Now log in with supplied credentials
-    wget_credentials=(--post-data="${login_user_field}=${site_user}&${login_pwd_field}=${site_password}&testcookie=1")
+    wget_credentials=(--post-file="$post_tmppath")
     printf "Logging in to the site at %s using credentials: %s=%s&%s=******* %s ... " "$login_address" "${login_user_field}" "${site_user}" "${login_pwd_field}" "${wget_login_options[*]}"
     $wget_cmd "${wget_credentials[@]}" "${wget_extra_options[@]}" "${wget_login_options[@]}"
 
     # Determine whether login has succeeded by checking cookies file for addition
-    cookie_match=$(awk '$6 ~ /'"$cookie_session_string"'/' "$cookies_path")
+    valid_cookie_session=${cookie_session_string//[,]/|}
+    cookie_match=$(awk '$6 ~ /'"$valid_cookie_session"'/' "$cookies_path")
     if [ "$cookie_match" == "" ]; then
       printf "\n"
-      printf "%s: Unable to identify a login/session cookie in the generated cookie file, %s.  Please check the username and password in %s" "$msg_error" "$cookies_path" "$myconfig.cfg"
+      printf "%s: Unable to identify a login/session cookie in the generated cookie file, %s. Please " "$msg_error" "$cookies_path" 
       if [ "$cookie_session_string" = "" ]; then
-        echo " and to avoid this prompt, define the cookie_session_string in constants.sh."
+        echo "define the cookie_session_string in constants.sh."
       else
-        echo ", and also the value of cookie_session_string in constants.sh."
+        echo "note that it should be the same as the value of cookie_session_string (currently $cookie_session_string), as set in constants.sh."
       fi
+      printf "Also check the username and password in %s.\n" "$myconfig.cfg" 
       confirm_continue
     else
       echo "OK."
@@ -1240,7 +1395,9 @@ add_extras() {
 
   # Create necessary directories
   if [ ! -d "$extras_src" ]; then
-    echo; read -r -e -p "The folder for extra files, $extras_src, doesn't exist.  Do you wish it to be created(y/n)? " confirm
+    printf "\n";
+    echo "Your configuration file specifies 'add_extras=y', but the folder for extra files, $extras_src, doesn't exist."
+    read -r -e -p "Do you wish to create it (y/n)? " confirm
     confirm=${confirm:0:1}
     if [ "$confirm" = "y" ] || [ "$confirm" = "Y" ]; then
       mkdir -p "$extras_src"
@@ -1323,9 +1480,18 @@ clean_mirror() {
     # Access logout (or any) page with expired cookie -
     # should receive HTTP Error: 403 (Forbidden)
     wget_options_logout=(--spider "$wget_ssl" --directory-prefix "$mirror_archive_dir" "$url_base$logout_path")
-    $wget_cmd "${wget_extra_options[@]}" "${wget_options_logout[@]}"
+    $wget_cmd "${wget_credentials[@]}" "${wget_extra_options[@]}" "${wget_options_logout[@]}"
     # Delete cookies
-    rm "$cookies_path"
+    if [ -f "$cookies_path" ]; then
+      rm "$cookies_path"
+    else
+      echo "Tidy up: no cookies_path at $cookies_path" "1"
+    fi
+
+    # Delete temporary post data file
+    if [ -f "$post_tmppath" ]; then
+      rm "$post_tmppath"
+    fi    
   fi
 
   # Create robots file, where necessary
@@ -1379,6 +1545,34 @@ clean_mirror() {
 
   # Remove empty directories
   find . -type d -empty -delete
+
+  # Tidy up basic authentication entries - need to ensure we are updating only when required
+  if [ -n "${wget_http_user+x}" ] && [ "$credentials_cleanup" = "yes" ]; then
+    rc_file="$HOME/$credentials_rc_file"
+    if [ "$credentials_rc_file" = ".netrc" ]; then
+      # Search for credentials based on $site_user and $domain, 
+      # assuming they are defined on a single line with space-separated values
+      if [ -f "$rc_file" ]; then
+        # Check to see if an entry exists (with superfluous "''" inserted to pass Shellcheck SC1087)
+        cred_pattern="machine[[:blank:]]\{1,\}$domain"''"[[:blank:]]\{1,\}login[[:blank:]]\{1,\}$wget_http_user"
+        replace_rc="$(grep -v "$cred_pattern" "$rc_file")"
+        printf "%s\n" "$replace_rc" > "$rc_file" || echo "$msg_warning: unable to remove existing credentials" 
+        chmod 0600 "$rc_file"
+      fi
+    elif [ "$credentials_rc_file" = ".wgetrc" ]; then
+      # Search for credentials based on $site_user, assuming that it and
+      # the password are on separate lines
+      if [ -f "$rc_file" ]; then
+        # Check to see if an entry exists
+        cred_pattern="http_user="
+        cred_pattern_pwd="http_password="
+        # remove existing credentials
+        replace_rc="$(grep -v "^[[:blank:]]\{0,\}$cred_pattern\|^[[:blank:]]\{0,\}$cred_pattern_pwd" "$rc_file")"
+        printf "%s\n" "$replace_rc" > "$rc_file" || echo "$msg_warning: unable to remove existing credentials" 
+        touchmod "$rc_file"
+      fi
+    fi
+  fi
   
   cd "$mirror_dir" || { printf "Unable to enter %s.\nAborting.\n" "$mirror_dir"; exit; }
 }

@@ -22,8 +22,8 @@
 ################################################
 # MakeStaticSite info
 ################################################
-version=0.27.8.2
-version_date='13 October 2023'
+version=0.28
+version_date='14 October 2023'
 version_header="MakeStaticSite version $version, released on $version_date."
 mss_license="GNU Affero General Public License version 3"
 mss_download="https://makestaticsite.sh/download/makestaticsite_latest.tar.gz"
@@ -55,6 +55,28 @@ host_dir=auto                   # Host directory mode; for Wget, empty or no cor
 
 
 ################################################
+# Credentials processing and storage
+################################################
+credentials_rc_file=.netrc      # 'Run commands' file for (temporary) storage of credentials - either .wgetrc or .netrc
+credentials_cleanup=yes         # Delete references to credentials in temp files and .rc file
+                                # on completion of run (y/n)?
+credentials_manage_cmd=pass     # [Path to] binary for managing (and encrypting) credentials
+credentials_manage_cmd_url=https://www.passwordstore.org/#download # URL where credentials manager may be downloaded
+credentials_storage_namespace=MSS # define a MakeStaticSite-specific directory for storing credentials (usernames, passwords, tokens, etc.)
+credentials_storage_mode=plain  # How to store credentials:
+                                #  - 'config' to store in the configuration file, as-is;
+                                #  - 'plain' to store separately, as-is, in plain text;
+                                #  - 'encrypt' to store separately and encrypt;
+credentials_extension=gpg       # Encryption file type extension
+credentials_home="$HOME/.password-store" # Password-designated directory under which credentials are stored
+credentials_namespace_suffix=
+if [ "$credentials_storage_namespace" != "" ]; then
+  credentials_namespace_suffix="/"
+fi
+credentials_path_prefix="$credentials_storage_namespace$credentials_namespace_suffix"
+
+
+################################################
 # Wget settings - main run and Wget extra URLs
 ################################################
 # input file names for Wget (phase 2 and 3 respectively)
@@ -62,7 +84,10 @@ wget_cmd=wget                   # [Path to] wget binary
 wget_version_atleast=1.21
 wget_error_level=6              # The lowest Wget error code tolerated or else aborts (>8 for no tolerance)
 wget_user_agent=                # set browser user agent (empty for default), wrapped in quotes, e.g. "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15)"
+wget_http_login_field=user      # Wget's user login field for HTTP authentication
+wget_http_password_field=password # Wget's password field for HTTP authentication
 wget_cookies=cookies.txt        # name of cookies file
+wget_post=wget_post.txt         # name of file containing POST data
 wget_inputs_main=wget_inputs_main # name of input file stem for web content to be retrieved in main run of Wget in phase 2
 wget_inputs_extra=wget_inputs_extra # name of input file stem for additional assets to be retrieved by Wget in phase 3
 rename_wget_tmps=yes            # Remove .tmp.html suffixes from (Wget temp) file names
@@ -159,7 +184,7 @@ login_path=/wp-login.php        # Path to login page (with respect to web root)
 logout_path="/wp-login.php?action=logout" # Path to logout page (with respect to web root)
 login_user_field=log            # Field name for username
 login_pwd_field=pwd             # Field name for password
-cookie_session_string=wordpress_logged_in # Substring of name attribute denoting a login session
+cookie_session_string=wordpress_logged_in,wordpress_test_cookie # Comma-separated list of name attribute substrings denoting a valid login session
 wget_reject_clause="*login*,*logout*" # wget --reject parameter (uses wildcard *) to avoid following logout links
 
 
@@ -296,7 +321,7 @@ page_element_domains__info="Provide a comma-separated list of domains that conta
 
 wget_extra_options="-X/wp-json,/wp-admin --reject xmlrpc*,'index.html?'* --limit-rate=500k"
 wget_extra_options__desc='Additional command line options for Wget'
-wget_extra_options__info="Wget will be run with the following options as standard: --mirror --convert-links --adjust-extension --no-check-certificate.  You may add further options here, e.g., to supply http credentials: --user username --password password; to specify path to a certificate file: --ca-certificate={cert_file_path}; to exclude WordPress JSON directory: -X /wp-json; to exclude index files with query strings, --reject 'index.html?*'; to limit the download rate (N kilobytes/sec): --limit-rate=Nk. Otherwise leave empty."
+wget_extra_options__info="Wget will be run with the following options as standard: --mirror --convert-links --adjust-extension --no-check-certificate.  You may add further options here, e.g., to supply http credentials: --user username (password will then be asked separately); to specify path to a certificate file: --ca-certificate={cert_file_path}; to exclude WordPress JSON directory: -X /wp-json; to exclude index files with query strings, --reject 'index.html?*'; to limit the download rate (N kilobytes/sec): --limit-rate=Nk. Otherwise leave empty."
 
 input_urls_file=
 input_urls_file__desc='Name of Wget input file for custom crawl URLs'
@@ -448,5 +473,5 @@ options_check_dir=(site_path)   # Directories that need to be checked for existe
 options_check_url=(url)         # URLs that need to be validated
 options_check_yesno=(ssl_checks wget_extra_urls site_post_processing archive wp_cli wp_cli_remote wp_helper_plugins add_search wp_restore_settings use_snippets upload_zip deploy deploy_remote deploy_remote_rsync htmltidy add_extras) # Options that take yes/no values
 options_check_remote=(site_path) # options that need to be checked on a remote server
-
+options_credentials=(site_user) # credentials that may/should be encrypted
 

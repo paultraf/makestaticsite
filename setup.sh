@@ -165,6 +165,55 @@ EOF
   content+=$'\n'$'\n'
 }
 
+# A support function for read_option()
+# It requires the following parameters
+#  - input_line clause
+#  $input_value (stored separately from the configuration file)   |    Wget $wget_http_login_field $optvar_username
+#  - credentials_insert_path tail
+#  $optvar/$input_value   |   $wget_http_login_field/$optvar_username
+#  - option value to print out as part of guidance for user input
+#  $optvar password    |   --$wget_http_password_field
+
+read_credentials() {
+  input_value_backup="$input_value"
+  input_line="Please enter the password for $1"
+  domain=$(printf "%s\n" "$url" | awk -F/ '{print $3}' | awk -F: '{print $1}')
+  credentials_insert_path="${credentials_path_prefix}$domain/$2"
+  credentials_path="$credentials_home/$credentials_insert_path"
+  if [ "$credentials_storage_mode" = "encrypt" ]; then
+    if [ -z ${pass_check+x} ]; then
+      cmd_check "$credentials_manage_cmd" || { printf "\n%s: Unable to find binary: $credentials_manage_cmd ("'$'"PATH contains %s).\nThis command is essential for encrypting credentials.  It may be downloaded from %s.  Alternatively,  modify the value of credentials_storage_mode in constants.sh to 'plain', and re-run, but with less security. \nAborting.\n" "$msg_error" "$PATH" "$credentials_manage_cmd_url"; exit; }
+      pass_check=1
+    fi
+    input_line+=". It will be stored in encrypted form."
+    printf "%s: %s\n\n" "$(msg_ink "info" "$3")" "$input_line"
+    confirm=Y
+    if [ -f "$credentials_path.$credentials_extension" ]; then
+      read -r -e -p "An entry already exists for $credentials_path. Overwrite it? [y/N]? " confirm
+      confirm=${confirm:0:1}
+      if [ "$confirm" = "y" ] || [ "$confirm" = "Y" ]; then
+        rm "$credentials_path.$credentials_extension" || echo "$msg_error: unable to remove the existing file at $credentials_path.$credentials_extension."
+      fi
+    fi
+    if [ "$confirm" = "y" ] || [ "$confirm" = "Y" ]; then
+      input_encrypted_password "-"
+    fi
+  elif [ "$credentials_storage_mode" = "plain" ]; then
+    mkdir -p "$mss_dir_permissions" "$(dirname "$credentials_path")" 
+    touchmod "$credentials_path"
+
+    # read password and write to "$credentials_path"
+    input_text="-s"
+    validate_input "$input_text" "$input_line: " "$optvar"
+    if [ "$input_value" = "" ]; then
+      echo "$msg_warning! No password was set!"
+    fi
+    printf "%s" "$input_value" > "$credentials_path"
+    printf "\n"
+  fi
+  input_value="$input_value_backup"  # reinstate ahead of writing the username to .cfg
+}
+
 # Read options through stdin
 read_option() {
   opt=$1
@@ -249,6 +298,24 @@ read_option() {
           input_line="Please enter the value for $optvar$input_hint: "
           validate_input "$input_text" "$input_line" "$optvar"
         fi
+
+        ## Website (not HTTP basic authentication) login: enter credentials, as needed, according to credentials storage mode
+        if [[ ' '${options_credentials[*]}' ' =~ ' '$optvar' ' ]] && [ "$credentials_storage_mode" != "config" ]; then
+          printf "\n"
+          read_credentials "$input_value (stored separately from the configuration file)" "$optvar/$input_value" "$optvar password"
+        fi
+
+        ## HTTP basic authentication: enter credentials, as needed, according to credentials storage mode
+        re_user='\-\-'"$wget_http_login_field"' ([^ \-]*)'
+        re_password='\-\-'"$wget_http_password_field"' ([^ \-]*)'
+        if [ "$optvar" = "wget_extra_options" ] && [[ ! $input_value =~ $re_password ]] && [[ $input_value =~ $re_user ]]; then 
+          # interactive mode dependent on --user option, but no --password option
+          optvar_username="${BASH_REMATCH[1]}" # determined by last expression in conditional
+          if [ "$optvar_username" = "" ]; then
+            echo "$msg_error: no username specified as Wget --$wget_http_login_field option.  Aborting."; exit
+          fi
+          read_credentials "Wget $wget_http_login_field $optvar_username" "$wget_http_login_field/$optvar_username" "--$wget_http_password_field"
+        fi
       fi
       if [ "$opt_limits" = "n" ]; then
         echo
@@ -286,7 +353,9 @@ read_option() {
 
 process_options() {
   opt_excludes=()
-
+  if [ "$credentials_storage_mode" != "config" ]; then
+    opt_excludes+=("site_password")
+  fi
   for opt in "${allOptions[@]}"; do
     var=$(expr "$opt" : '\([^=]*\)'; return 0)       # Everything up to '='
     val=$(expr "$opt" : '[^=]*.\(.*\)'; return 0)    # Everything after '='
@@ -366,7 +435,7 @@ write_config() {
     if [ "$cfgfile" != "$cfgfile_original" ]; then
       printf "%s: only alphanumeric characters, dot, hyphen and underscore allowed in filenames.  Have stripped out any others.  The resulting file name is %s\n" "$msg_warning" "$cfgfile"
     fi
-    if [ "$cfgfile" = ".cfg" ];then
+    if [ "$cfgfile" = ".cfg" ]; then
       printf "%s: The file name (less extension) cannot be empty\n" "$msg_error"
       cfgfile=""
       continue
@@ -386,6 +455,8 @@ write_config() {
   done
   if [ "$status" = "1" ]; then
     printf "Writing configuration options to: %s ... " "$write_file"
+    touchmod "$write_file"
+
     printf "%s\n" "$content" > "$write_file" || { printf "\n%s: Unable to write the configuration file.\nAborting.\n" "$msg_error"; exit; }
     printf "Done.\n\n";
 
@@ -394,7 +465,7 @@ write_config() {
     if [ ! -f "$default_cfg" ]; then
       cp "$write_file" "$default_cfg"
       printf "Made a copy to default.cfg.  This means that you can run makestaticsite.sh without a parameter and it will load %s automatically.\n" "$cfgfile"
-    elif [ "$level" != 0 ];then
+    elif [ "$level" != 0 ]; then
       read -r -e -p "Would you like this configuration to be copied to default.cfg file, which is loaded automatically when you run makestaticsite.sh without a parameter (y/n)? " confirm
       confirm=${confirm:0:1}
       if [ "$confirm" = "y" ] || [ "$confirm" = "Y" ]; then

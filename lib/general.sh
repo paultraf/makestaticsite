@@ -222,6 +222,26 @@ wget_level_comment() {
 }
 
 
+# Input (encrypted) password
+# Takes one optional parameter:
+#  - guidance message
+input_encrypted_password() {
+  if [ -z ${1+x} ]; then
+    msg_guidance="A password is required"
+  else
+    msg_guidance="$1"
+  fi
+  if [ "$msg_guidance" != "-" ]; then
+    printf "\n$msg_guidance (you will need to enter it twice and it will be encrypted).\n"
+  fi
+  while true; do
+    "$credentials_manage_cmd" insert "$credentials_insert_path" || {
+      echo "Please try again."; continue;
+    }
+    break
+  done
+}
+
 # Build composite search string for Web assets
 # Expects two parameters: comma-separated list of domains, path
 assets_search_string() {
