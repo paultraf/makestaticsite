@@ -1807,33 +1807,26 @@ deploy() {
     # Deployment with rsync over ssh
     if [ "$deploy_remote_rsync" = "yes" ]; then
       prep_rsync
+      rsync_src=("$src/")
+      rsync_dest=("$dest")
+      [ "$rvol" != "" ] && rsync_options+=("$rvol")
+      if ! rsync "${rsync_options[@]}" "${rsync_src[@]}" "${rsync_dest[@]}"; then
+        printf "%s: there was a problem running rsync" "$msg_error"
+        msg_deploy="The site was not deployed."
+      else
+        msg_deploy+="The site has been deployed on $deploy_host, for web access at http[s]://$deploy_domain."
+      fi
     fi
   else
     # Deploy on local server (a single instance that gets overwritten at each run)
-    echo "Deploying locally:"
-    dest=$deploy_path
+    echo "Deploying locally, using 'cp' command ... "
+    dest="$deploy_path"
+    echo "From: $src/"
+    echo "To: $dest"
+    mkdir -p "$dest"
+    cp -r "$src/." "$dest/." || { echo "$msg_error: unable to make the copy."; msg_deploy="The site was not deployed locally."; }
   fi
-  echo "From: $src/"
-  echo "To: $dest"
-  rsync_src=("$src/")
-  rsync_dest=("$dest")
-
-  # First, try with rsync
-  [ "$rvol" != "" ] && rsync_options+=("$rvol")
-  if ! rsync "${rsync_options[@]}" "${rsync_src[@]}" "${rsync_dest[@]}"; then
-    printf "%s: there was a problem running rsync" "$msg_error"
-
-    # Use cp as a fallback for local
-    if [ "$deploy_remote" != "yes" ]; then
-      echo ", using 'cp' command"
-      cp -r "$src/." "$dest/."
-    else
-      echo ". Deployment failed."
-    fi
-  else
-    msg_deploy="The site has been deployed on $deploy_host, for web access at http[s]://$deploy_domain."
-  fi
-
+  
   if [ "$toggle_flag" = "1" ]; then
     # Invite user to restore Hosts file as it was
     read -r -e -p "The transfer is complete.  Would you like to restore $etc_hosts as it was (y/n)? " confirm
@@ -1849,7 +1842,7 @@ conclude() {
   printf "Completed in "; stopclock SECONDS
   msg_done=$(msg_ink "ok" 'All done.') 
   printf "%s\nA static mirror of %s has been created in %s\n" "$msg_done" "$url" "$working_mirror_dir"
-  if [[ -n ${msg_deploy+x} ]]; then
+  if [ -n "${msg_deploy+x}" ]; then
     printf "%s\n\n" "$msg_deploy"
   fi 
   printf "\nThank you for using MakeStaticSite, free software released under the %s. The latest version is available from %s.\n" "$mss_license" "$mss_download"
