@@ -694,7 +694,7 @@ wget_process_credentials() {
       touchmod "$rc_file"
     fi
     if [ "$rc_process" = "Y" ]; then
-      echo "machine $domain login $wget_http_user password $wget_http_password" >> "$rc_file"
+      env echo "machine $domain login $wget_http_user password $wget_http_password" >> "$rc_file"
       chmod 0600 "$rc_file"
     fi
   elif [ "$credentials_rc_file" = ".wgetrc" ]; then
