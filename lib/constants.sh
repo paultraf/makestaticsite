@@ -22,7 +22,7 @@
 ################################################
 # MakeStaticSite info
 ################################################
-version=0.28+2
+version=0.28.1
 version_date='20 October 2023'
 version_header="MakeStaticSite version $version, released on $version_date."
 mss_license="GNU Affero General Public License version 3"
@@ -180,11 +180,6 @@ wayback_machine_statuscodes=    # Accepted status codes. The default is '200' - 
 ################################################
 # CMS-specific constants
 ################################################
-login_path=/wp-login.php        # Path to login page (with respect to web root)
-logout_path="/wp-login.php?action=logout" # Path to logout page (with respect to web root)
-login_user_field=log            # Field name for username
-login_pwd_field=pwd             # Field name for password
-cookie_session_string=wordpress_logged_in,wordpress_test_cookie # Comma-separated list of name attribute substrings denoting a valid login session
 wget_reject_clause="*login*,*logout*" # wget --reject parameter (uses wildcard *) to avoid following logout links
 
 
@@ -299,9 +294,29 @@ require_login=n
 require_login__desc='Does the site require a login (y/n)?'
 require_login__info="If your website requires you to log in with a username and password (typically, via a web form) to see any content, then enter 'y' otherwise 'n'.  Normally this is only the case for an intranet or firewalled site."
 
+login_path='/wp-login.php'
+login_path__desc='Path to login page as a root relative URL'
+login_path__info='Path to login page with respect to the web root, i.e. omitting host and starting with a slash.'
+
+logout_path="/wp-login.php?action=logout"
+logout_path__desc='Path to logout page as a root relative URL'
+logout_path__info='Path to logout page with respect to the web root, i.e. omitting host and starting with a slash.'
+
+login_user_field=log
+login_user_field__desc='Web form username field'
+login_user_field__info='This is the username field, not the username itself, in the web form used for submitting login credentials.  It can usually be gleaned by viewing the HTML source of the login page.'
+
+login_pwd_field=pwd
+login_pwd_field__desc='Web form password field'
+login_pwd_field__info='This is the password field, not the password itself, in the web form used for submitting login credentials.  It can usually be gleaned by viewing the HTML source of the login page.'
+
+cookie_session_string=wordpress_logged_in,wordpress_test_cookie 
+cookie_session_string__desc='List of cookie names denoting a valid login session'
+cookie_session_string__info='Comma-separated list, typically comprising name-attribute substrings, denoting a valid login session'
+
 site_user=username
 site_user__desc='Website username'
-site_user__info='Please enter a site username.  This should usually be an account with minimal privileges, sufficient to access to content intended for the public.'
+site_user__info='Please enter a site username (as would be entered to log in).  This should usually be an account with minimal privileges, sufficient to access to content intended for the public.'
 
 site_password=password
 site_password__desc='Website password'
@@ -450,7 +465,7 @@ add_extras__info="Option to supplement the static snapshot with further files so
 )
 
 allOptions_deps=(
-require_login="(site_user site_password)"
+require_login="(login_path logout_path login_user_field login_pwd_field cookie_session_string site_user site_password)"
 wget_extra_urls="(site_post_processing)"
 wp_cli="(wp_cli_remote source_host source_protocol source_port source_user site_path wp_helper_plugins add_search wp_search_plugin wp_restore_settings)"
 wp_cli_remote="(source_host source_protocol source_port source_user)"
