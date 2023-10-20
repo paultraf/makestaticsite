@@ -795,7 +795,7 @@ wget_mirror() {
 
   msg_mirror_start="Creating a mirror of $url in $working_mirror_dir ... "
   wget_options=("$wget_ssl" --directory-prefix "$mirror_archive_dir" "$input_options")
-
+  wget_cookies+="-${myconfig}_${timestamp_start}.txt"
   cookies_path="$tmp_dir_path/$wget_cookies"; touchmod "$cookies_path"
   cookies_tmppath="$tmp_dir_path/tmp$wget_cookies"; touchmod "$cookies_tmppath"
   wget_login_options=("$wget_ssl" --directory-prefix "$tmp_mirror_path" --save-cookies "$cookies_path" --keep-session-cookies "$login_address" --delete-after)
@@ -856,6 +856,7 @@ wget_mirror() {
     fi
     
     # Generate a temporary file with credentials
+    wget_post+="-${myconfig}_${timestamp_start}.txt"
     post_tmppath="$tmp_dir_path/$wget_post"; touchmod "$post_tmppath"
 
     printf "%s=%s&%s=%s&testcookie=1" "$login_user_field" "$site_user" "$login_pwd_field" "$site_password" > "$post_tmppath" || { printf "\n%s: Unable to prepare credentials for Wget.\nAborting.\n" "$msg_error"; exit; }
@@ -1446,7 +1447,7 @@ clean_mirror() {
   echo "Done."
 
   error_set +e
-  html_errors_file="$script_dir/$tmp_dir/${htmltidy_errors_file}"
+  html_errors_file="$script_dir/$tmp_dir/${htmltidy_errors_file}-$myconfig.txt"
   if [ "$htmltidy" = "yes" ]; then
     if ! cmd_check "$htmltidy_cmd" "1"; then
       printf "Unable to run HTML Tidy (htmltidy_cmd is set to %s) - please check that it is installed according to instructions at %s. Skipping.\n" "$htmltidy_cmd" "$htmltidy_url";
@@ -1726,6 +1727,8 @@ deploy_on_netlify() {
     cmd_check "npm" "1" || { node_msg=' Also, the prerequisite, Node.JS, is not installed.'; }
     printf "%s: The netlify command is not available.\nCheck that it is installed and is within PATH.%s\nFor installation instructions, please refer to https://docs.netlify.com/cli/get-started/#installation.\nSkipping Netlify.\n" "$msg_error" "${node_msg}";
   else
+    # Remove any current link to Netlify
+    netlify unlink || { netlify login; }
     # Link to Netlify site name (else log in)
     netlify link --name "$deploy_netlify_name" || { netlify login; }
     # Deploy site to Netlify

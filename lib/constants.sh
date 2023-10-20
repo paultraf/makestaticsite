@@ -22,7 +22,7 @@
 ################################################
 # MakeStaticSite info
 ################################################
-version=0.28+1
+version=0.28+2
 version_date='20 October 2023'
 version_header="MakeStaticSite version $version, released on $version_date."
 mss_license="GNU Affero General Public License version 3"
@@ -86,10 +86,10 @@ wget_error_level=6              # The lowest Wget error code tolerated or else a
 wget_user_agent=                # set browser user agent (empty for default), wrapped in quotes, e.g. "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15)"
 wget_http_login_field=user      # Wget's user login field for HTTP authentication
 wget_http_password_field=password # Wget's password field for HTTP authentication
-wget_cookies=cookies.txt        # name of cookies file
-wget_post=wget_post.txt         # name of file containing POST data
-wget_inputs_main=wget_inputs_main # name of input file stem for web content to be retrieved in main run of Wget in phase 2
-wget_inputs_extra=wget_inputs_extra # name of input file stem for additional assets to be retrieved by Wget in phase 3
+wget_cookies=cookies            # cookies file name stem, no extension - added later
+wget_post=wget_post             # Wget POST data file name stem
+wget_inputs_main=wget_inputs_main # input file name stem for web content to be retrieved in main run of Wget in phase 2
+wget_inputs_extra=wget_inputs_extra # input file name stem for additional assets to be retrieved by Wget in phase 3
 rename_wget_tmps=yes            # Remove .tmp.html suffixes from (Wget temp) file names
 
 # Core options for Wget (array)
@@ -217,7 +217,7 @@ wp_remove_rsd_link=yes          # Remove Really Simple Discovery (RSD) <link> ta
 ################################################
 htmltidy_cmd=tidy               # [Path to] HTML Tidy binary
 htmltidy_url=https://www.html-tidy.org/ # URL of HTML Tidy project
-htmltidy_errors_file=errors_htmltidy.txt # HTML Tidy errors file
+htmltidy_errors_file=errors_htmltidy # HTML Tidy errors file stem
 htmltidy_options=(-m -q -indent --indent-spaces 2 --gnu-emacs yes --tidy-mark no) # Command line options for HTML Tidy (array).
 # -modify, -m:              modify the original input files
 # -quiet, -q:               suppress nonessential output
@@ -460,7 +460,7 @@ wp_restore_settings="()"
 upload_zip="(zip_filename zip_download_folder)"
 deploy="(deploy_remote deploy_remote_rsync deploy_host deploy_port deploy_user deploy_path deploy_domain deploy_netlify deploy_netlify_name)"
 deploy_remote="(deploy_remote_rsync deploy_host deploy_port deploy_user deploy_netlify deploy_netlify_name)"
-deploy_remote_rsync="(deploy_host deploy_port deploy_user)"
+deploy_remote_rsync="(deploy_host deploy_port deploy_user deploy_path)"
 deploy_netlify="(deploy_netlify_name)"
 htmltidy="(htmltidy_cmd htmltidy_options)"
 )
