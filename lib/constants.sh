@@ -22,8 +22,8 @@
 ################################################
 # MakeStaticSite info
 ################################################
-version=0.28
-version_date='14 October 2023'
+version=0.28+1
+version_date='20 October 2023'
 version_header="MakeStaticSite version $version, released on $version_date."
 mss_license="GNU Affero General Public License version 3"
 mss_download="https://makestaticsite.sh/download/makestaticsite_latest.tar.gz"
@@ -460,7 +460,7 @@ wp_restore_settings="()"
 upload_zip="(zip_filename zip_download_folder)"
 deploy="(deploy_remote deploy_remote_rsync deploy_host deploy_port deploy_user deploy_path deploy_domain deploy_netlify deploy_netlify_name)"
 deploy_remote="(deploy_remote_rsync deploy_host deploy_port deploy_user deploy_netlify deploy_netlify_name)"
-deploy_rsync="(deploy_host deploy_port deploy_user)"
+deploy_remote_rsync="(deploy_host deploy_port deploy_user)"
 deploy_netlify="(deploy_netlify_name)"
 htmltidy="(htmltidy_cmd htmltidy_options)"
 )
