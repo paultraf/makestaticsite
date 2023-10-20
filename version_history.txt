@@ -19,6 +19,31 @@
 ##########################################################################
 
 
+0.28.1 (released on 2023-10-20)
+      * Improved support for parallel runs, involving login sessions. *
+       Made setup more flexible to allow mirroring a range of sites requiring
+       logins. More granular file names and other measures for more robust
+       support for parallel runs.  Some essential maintenance.
+      [lib/constants.sh] 
+       Moved login_path, logout_path, login_user_field, login_pwd_field
+       and cookie_session_string into allOptions; added fields to
+       dependencies on require_login in allOptions_deps.
+       In allOptions_deps array, deploy_rsync relabelled deploy_remote_rsync
+       and deploy_path added as a dependent.
+       Removed extensions from wget_cookies, wget_post, htmltidy_errors_file
+      [makestaticsite.sh]
+       wget_mirror(): appended configuration id and timestamp to values of
+       wget_cookies and wget_post, allowing parallel processing of login
+       sessions.
+       clean_mirror(): appended configuration id to html_errors_file
+       wget_process_credentials(): security bug fix: prevented credentials
+       being written to log file
+       deploy(): refactored for cleaner separation between remote and local
+       deployment; made local deployment more robust, with error handling;
+       fixed errors reported with rsync when rysnc deployment not selected.
+       deploy_on_netlify(): inserted netlify unlink to ensure each deployment
+       is based on correct mirror.
+
 0.28 (released on 2023-10-14)
     * Extended support for authentication and credentials management *
      Added measures to make use of bash http authentication and web form
