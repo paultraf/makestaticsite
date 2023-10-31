@@ -22,8 +22,8 @@
 ################################################
 # MakeStaticSite info
 ################################################
-version=0.28.1
-version_date='20 October 2023'
+version=0.28.1+1
+version_date='31 October 2023'
 version_header="MakeStaticSite version $version, released on $version_date."
 mss_license="GNU Affero General Public License version 3"
 mss_download="https://makestaticsite.sh/download/makestaticsite_latest.tar.gz"
@@ -119,7 +119,7 @@ feed_xml=feed/index.xml         # tail of valid feed URLs as replacement
 # Assets collated from parent directories and extra domains
 asset_extensions="js,css,jpeg,jpg,gif,png,pdf,doc,docx,odt,ppt,xls,xlsx,svg,heic,webp,mp3,m4a,ogg,wav,avi,mpg,mp4,mov,ogv,wmv,3gp,3gp2,cff,ttf,eot,woff,woff2"  # list of file extensions for assets that may be retrieved by Wget in phase 3.  If no extensions are defined, then cURL will be used to remove non-HTML assets, but all other assets will be accepted
 asset_extensions_external="js,css,jpeg,jpg,gif,png,svg,cff,ttf,eot,woff,woff2" # a more limited set for assets gleaned from external domains
-query_accept_list="js,css,svg"  # list of file extensions that may have query string (version numbers) appended
+query_accept_list="js,css,svg"  # list of file extensions in requests that may have query string (version numbers) appended
 extra_assets_mode=contain       # how assets from extra domains should be incorporated
                                 # - empty or 'off' to keep in separate directories under mirror ID
                                 # - 'contain' will move the directories inside the assets directory (see below)
@@ -233,6 +233,13 @@ ink_error=red
 ink_warning=amber
 ink_ok=green
 ink_info=lime
+
+
+################################################
+# Cleanup settings
+################################################
+clean_query_extensions=no       # Remove query strings from filenames (yes/no)
+
 
 ################################################
 # Other runtime settings

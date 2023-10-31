@@ -1544,6 +1544,15 @@ clean_mirror() {
   find . -type f -name "*.html" -exec sed "${sed_options[@]}" "${sed_subs[@]}" {} +
   echo "Done."
 
+  # Remove files ending with query strings, as required
+  if [ "$deploy_netlify" = "yes" ]; then
+    clean_query_extensions="yes"
+    echo "Cleaning file names with question marks for Netlify." "1"
+  fi
+  if [ "$clean_query_extensions" = "yes" ]; then
+    find "$working_mirror_dir" -type f -name "*\?*" -exec sh -c 'mv "$0" "${0%%\?*}"' {} \;
+  fi
+
   # Remove empty directories
   find . -type d -empty -delete
 
@@ -1733,7 +1742,9 @@ deploy_on_netlify() {
     netlify link --name "$deploy_netlify_name" || { netlify login; }
     # Deploy site to Netlify
     netlify_options=(deploy --dir="$working_mirror_dir" --prod)
-    netlify "${netlify_options[@]}"
+    if ! netlify "${netlify_options[@]}"; then
+      echo "$msg_error: Failed to deploy to Netlify."
+    fi
   fi
   echo
 }
