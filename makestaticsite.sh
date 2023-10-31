@@ -8,16 +8,16 @@
 # makestaticsite.sh - main script for MakeStaticSite
 # This file is part of MakeStaticSite.
 #
-# MakeStaticSite is free software: you can redistribute it and/or modify 
-# it under the terms of the GNU Affero General Public License as published 
-# by the Free Software Foundation, either version 3 of the License, or 
-# (at your option) any later version. MakeStaticSite is distributed in the 
+# MakeStaticSite is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version. MakeStaticSite is distributed in the
 # hope that it will be useful, but WITHOUT ANY WARRANTY; without even the
-# implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. 
+# implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 # See the GNU Affero General Public License for more details.
-# You should have received a copy of the GNU General Public License along 
+# You should have received a copy of the GNU General Public License along
 # with MakeStaticSite. If not, see <https://www.gnu.org/licenses/>.
-# 
+#
 ##########################################################################
 
 # Prerequisites
@@ -34,7 +34,7 @@ source lib/config.sh       # load the config functions library
 main() {
   # Local context - this directory
   script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
-  
+
   # Phase 0: Initialisation
   ((max_phase_num=${#all_phases[@]}-1)) # Number of phases minus one
   get_inks
@@ -84,11 +84,11 @@ main() {
 ###################################################
 
 # Override built-in echo and also write to log file
-# This takes an optional priority parameter (number) to constrain output, 
+# This takes an optional priority parameter (number) to constrain output,
 # stored in echo_num:
 #  0 (liberal)    - echo unless output level is silent
-#  1 (normal)     - echo normally 
-#  2 (restricted) - echo only for full logging (this priority is meant for 
+#  1 (normal)     - echo normally
+#  2 (restricted) - echo only for full logging (this priority is meant for
 #                   internal processing)
 #
 echo() {
@@ -203,7 +203,7 @@ read_config() {
         echo "                  and"
         echo " -m MIRROR_ID       use mirror with identifier MIRROR_ID."
         echo " -q NUMBER          End at phase NUMBER (default is 9, end)."
-        echo " -L FILENAME        log file name."        
+        echo " -L FILENAME        log file name."
         echo " -v                 Display MakeStaticSite version number."
         echo " -h                 Display help."
         echo
@@ -223,6 +223,7 @@ read_config() {
         echo " -p NUMBER          Run from phase NUMBER (default is 0, start)."
         echo " -q NUMBER          End at phase NUMBER (default is 9, end)."
         echo " -m MIRROR_ID       Use mirror with identifier MIRROR_ID."
+        echo " -L FILENAME        log file name."        
         echo " -v                 Display MakeStaticSite version number."
         echo " -h                 Display help."
         echo "Please try again."
@@ -267,7 +268,7 @@ initialise_layout() {
 
   snippets_dir="$script_dir/snippets"     # directory storing snippets (.html files)
   snippets_data_file="$snippets_dir/snippets.data" # list of directories/files relative to
-                                          # zip root inside the $sub_files_dir 
+                                          # zip root inside the $sub_files_dir
                                           # (separated by space)
                                           # Default is just the home page
                                           # Script will generate this dynamically
@@ -288,7 +289,7 @@ initialise_layout() {
     exec 1>/dev/null
     if [ "$run_unattended" = "no" ]; then
       echo "NOTICE: run_unattended=yes (to keep terminal output silent)" 0
-    fi  
+    fi
     run_unattended=yes
   fi
 
@@ -339,8 +340,8 @@ initialise_variables() {
   echo "Starting at phase $phase: $start_phase_desc."
   ((end_phase<=max_phase_num)) && { end_phase_desc=$(get_phase_desc "$end_phase"); echo "Ending at phase $end_phase: $end_phase_desc."; }
 
-  # Check for mirror ID and, if necessary, derive input cfg file from it 
-  # (looking at the tail for the timestamp format) 
+  # Check for mirror ID and, if necessary, derive input cfg file from it
+  # (looking at the tail for the timestamp format)
   if [ "$myconfig" = "default" ] && [ "$mirror_id_flag" = "on" ]; then
     myconfig=$(printf "%s" "$mirror_archive_dir" | sed "s/20[[:digit:]]\{6\}_[[:digit:]]\{6\}$//")
   fi
@@ -407,7 +408,7 @@ initialise_variables() {
   url_path=$(printf "%s" "$url" | cut -d/ -f4- | sed s'/\/$//')
   if [ "$url_path" = "" ]; then
     url_path_depth=0
-  else  
+  else
     url_slashes=${url_path//[!\/]};
     url_path_depth=$(( ${#url_slashes}+1 ))
   fi
@@ -440,7 +441,7 @@ initialise_variables() {
       extra_domains+=",$page_element_domains"
     else
       extra_domains="$page_element_domains"
-    fi  
+    fi
   fi
 
   protocol=$(printf "%s" "$url" | awk -F/ '{print $1}' | awk -F: '{print $1}')
@@ -454,7 +455,7 @@ initialise_variables() {
 
   # Options to support Wget
   input_urls_file="$(config_get input_urls_file "$myconfig")"
-  
+
   [ "$use_wayback" != "yes" ] && wget_extra_urls=$(yesno "$(config_get wget_extra_urls "$myconfig")")
   site_post_processing=$(yesno "$(config_get site_post_processing "$myconfig")")
   archive=$(yesno "$(config_get archive "$myconfig")")
@@ -467,7 +468,7 @@ initialise_variables() {
     if [ "$wget_no_parent" = "auto" ] || [ "$wget_no_parent" = "yes" ]; then
       wget_extra_options_tmp+=" -np"
     fi
-  fi  
+  fi
 
   # Ensure that login pages are rejected by appending Wget --reject clause
   grep_clause="\-R[[:space:]][^[:space:]]*\|\-\-reject[[:space:]][^[:space:]]*"
@@ -530,7 +531,7 @@ initialise_variables() {
   if [[ $wget_extra_options_tmp =~ "--cut-dirs" ]]; then
     cut_dirs=$(echo "$wget_extra_options_tmp" | grep -o "cut-dirs=[0-9]*" | cut -d '=' -f2)
   fi
- 
+
   # Zip file of the site snapshot
   zip_filename="$(config_get zip_filename "$myconfig")"
   zip_download_folder="$(config_get zip_download_folder "$myconfig")"
@@ -557,8 +558,11 @@ initialise_variables() {
     echo "$msg_warning: You have specified Wget --cut-dirs option. Ignoring mss_cut_dirs."
   fi
 
-  # Define a timestamp 
+  # Define a timestamp
   timestamp=$(timestamp "$timezone")
+
+  # Script sign-off message
+  msg_signoff="Ending run of MakeStaticSite."
 }
 
 prepare_static_generation() {
@@ -647,7 +651,7 @@ wget_process_credentials() {
   elif [ "$credentials_storage_mode" = "plain" ]; then
     if [ ! -f "$credentials_path" ]; then
       # Get user input for credentials (expected to be requested during setup; basically copy that code here)
-      mkdir -p "$mss_dir_permissions" "$(dirname "$credentials_path")" 
+      mkdir -p "$mss_dir_permissions" "$(dirname "$credentials_path")"
       touchmod "$credentials_path"
 
       # Read password and write to "$credentials_path"
@@ -655,7 +659,7 @@ wget_process_credentials() {
       read -r -s -e -p "Please enter the password for $wget_http_user: " wget_http_password
       if [ "$wget_http_password" = "" ]; then
         echo "$msg_warning: No password was set!"
-      fi  
+      fi
       printf "%s" "$wget_http_password" > "$credentials_path"
       printf "\n"
     fi
@@ -666,7 +670,7 @@ wget_process_credentials() {
   rc_process=Y # initially assume we are going to write to a rc file
   rc_file="$HOME/$credentials_rc_file"
   if [ "$credentials_rc_file" = ".netrc" ]; then
-    # Search for credentials based on $site_user and $domain, 
+    # Search for credentials based on $site_user and $domain,
     # assuming they are defined on a single line with space-separated values
     if [ -f "$rc_file" ]; then
       # Check to see if an entry exists (with superfluous "''" inserted to pass Shellcheck SC1087)
@@ -684,7 +688,7 @@ wget_process_credentials() {
         if [ "$confirm" = "y" ] || [ "$confirm" = "Y" ]; then
           # remove existing credentials
           replace_rc="$(grep -v "^[[:blank:]]\{0,\}$cred_pattern" "$rc_file")"
-          printf "%s\n" "$replace_rc" > "$rc_file" || echo "$msg_warning: unable to remove existing credentials" 
+          printf "%s\n" "$replace_rc" > "$rc_file" || echo "$msg_warning: unable to remove existing credentials"
         else
           ## leave credentials and don't do any further processing
           rc_process=N
@@ -717,7 +721,7 @@ wget_process_credentials() {
         if [ "$confirm" = "y" ] || [ "$confirm" = "Y" ]; then
           # remove existing credentials
           replace_rc="$(grep -v "^[[:blank:]]\{0,\}$cred_pattern\|^[[:blank:]]\{0,\}$cred_pattern_pwd" "$rc_file")"
-          printf "%s\n" "$replace_rc" > "$rc_file" || echo "$msg_warning: unable to remove existing credentials" 
+          printf "%s\n" "$replace_rc" > "$rc_file" || echo "$msg_warning: unable to remove existing credentials"
         else
           ## leave credentials and don't do any further processing
           rc_process=N
@@ -778,7 +782,7 @@ wget_mirror() {
     zip_archive="$mirror_archive_dir.zip"
   fi
 
-  # Overwrite an existing mirror only if the -m and wget_refresh_mirror flags are unset 
+  # Overwrite an existing mirror only if the -m and wget_refresh_mirror flags are unset
   # and then only after run_unattended flag set or consent given
   if [ "$mirror_id_flag" = "off" ] && [ "$wget_refresh_mirror" = "yes" ]; then
     [ -d "$working_mirror_dir" ] && echo "$msg_warning: $working_mirror_dir already exists.";
@@ -837,14 +841,14 @@ wget_mirror() {
     elif [ "$credentials_storage_mode" = "plain" ]; then
       if [ ! -f "$credentials_path" ]; then
         # Get login password (usually entered during setup)
-        mkdir -p "$mss_dir_permissions" "$(dirname "$credentials_path")" 
+        mkdir -p "$mss_dir_permissions" "$(dirname "$credentials_path")"
         touchmod "$credentials_path"
 
         # Read password and write to "$credentials_path"
         read -r -s -e -p "Please enter the website login password for $site_user: " site_password
         if [ "$site_password" = "" ]; then
           echo "$msg_warning: No password was set!"
-        fi  
+        fi
         printf "%s" "$site_password" > "$credentials_path"
         printf "\n"
       fi
@@ -854,7 +858,7 @@ wget_mirror() {
     else
       printf "\n%s: A login is required, but unable to determine the username for Wget.\nAborting.\n" "$msg_error"; exit;
     fi
-    
+
     # Generate a temporary file with credentials
     wget_post+="-${myconfig}_${timestamp_start}.txt"
     post_tmppath="$tmp_dir_path/$wget_post"; touchmod "$post_tmppath"
@@ -871,13 +875,13 @@ wget_mirror() {
     cookie_match=$(awk '$6 ~ /'"$valid_cookie_session"'/' "$cookies_path")
     if [ "$cookie_match" == "" ]; then
       printf "\n"
-      printf "%s: Unable to identify a login/session cookie in the generated cookie file, %s. Please " "$msg_error" "$cookies_path" 
+      printf "%s: Unable to identify a login/session cookie in the generated cookie file, %s. Please " "$msg_error" "$cookies_path"
       if [ "$cookie_session_string" = "" ]; then
         echo "define the cookie_session_string in constants.sh."
       else
         echo "note that it should be the same as the value of cookie_session_string (currently $cookie_session_string), as set in constants.sh."
       fi
-      printf "Also check the username and password in %s.\n" "$myconfig.cfg" 
+      printf "Also check the username and password in %s.\n" "$myconfig.cfg"
       confirm_continue
     else
       echo "OK."
@@ -940,7 +944,7 @@ mirror_site() {
 
     # Check for Wayback Machine Downloader binary, else report error (in the absence of an alternative)
     if cmd_check "$wayback_machine_downloader_cmd" "1"; then
-      echo "Running Wayback Machine Downloader on $url ... " 
+      echo "Running Wayback Machine Downloader on $url ... "
       if [ "$domain_wayback_machine" != "web.archive.org" ]; then
         echo "$msg_error: The Wayback Machine Downloader only supports web.archive.org and we don't have any custom alternative.  You might be able to retrieve some files by setting wayback_enable=no in constants.sh (to treat like any other site) and then re-running, though this is not recommended. Aborting."
         exit
@@ -1012,7 +1016,7 @@ wget_extra_urls() {
   # Generate search URL prefixes combining primary domain and extra domains
   generate_extra_domains
 
-  echo -n "Generating list of extra asset URLs ... " 
+  echo -n "Generating list of extra asset URLs ... "
   url_grep="$(assets_search_string "$all_domains" "[^\"'<) ]+")"
 
   webassets_all=()
@@ -1111,7 +1115,7 @@ wget_extra_urls() {
   if (( wget_threads > 1 )); then
     xargs -a "$input_file_extra" -n 1 -P $wget_threads $wget_cmd "${wget_extra_core_options[@]}" "${wget_progress_indicator[@]}" "${wget_extra_options[@]}" "${wget_asset_options[@]}"
   else
-    wget_asset_options+=(--input-file="$input_file_extra")    
+    wget_asset_options+=(--input-file="$input_file_extra")
     $wget_cmd "${wget_extra_core_options[@]}" "${wget_progress_indicator[@]}" "${wget_extra_options[@]}" "${wget_asset_options[@]}"
   fi
   wget_error_codes "$?"
@@ -1143,19 +1147,19 @@ process_assets() {
     if [ "$(find . -name "$assets_directory" -type d -print)" != "" ]; then
       echo -n "$msg_warning: website already contains a directory, $assets_directory.  To avoid confusion (and errors), a timestamp is being appended to the MakeStaticSite-generated assets directory, but it is recommended that you modify the assets_directory constant and re-run. ... "
       assets_directory="$assets_directory$timestamp"
-    fi 
+    fi
   else
     assets_dir_suffix=
   fi
 
   # Similarly, prepare adjustment for relative paths with imports directory
-  if [ "$imports_directory" != "" ]; then 
+  if [ "$imports_directory" != "" ]; then
     imports_dir_suffix=/
     # Also, check for duplication of assets directory label
     if [ "$(find . -name "$imports_directory" -type d -print)" != "" ]; then
       echo -n "$msg_warning: website already contains a directory, $imports_directory.  To avoid confusion (and errors), a timestamp is being appended to the MakeStaticSite-generated imports directory, but it is recommended that you modify the imports_directory constant and re-run. ... "
       imports_directory="$imports_directory$timestamp"
-    fi 
+    fi
   else
     imports_dir_suffix=
   fi
@@ -1182,7 +1186,7 @@ process_assets() {
         pathpref+="../";
       done
       # Carry out universal search and replace on primary domain;
-      # in the case of directory URL with --no-parent, we need to limit matches 
+      # in the case of directory URL with --no-parent, we need to limit matches
       # to full URL and tweak the replacements
       if [ "$url" = "$url_base/" ] || { [ "$external_dir_links" != "" ] && [ "$external_dir_links" != "off" ]; }; then
         sed_subs=('s~https\?://'"$hostport/"'~'"$pathpref"'~g' "$opt")
@@ -1264,7 +1268,7 @@ process_assets() {
             fi
           done
         done
-      fi    
+      fi
     done
 
     # Move directories and files
@@ -1302,7 +1306,7 @@ process_assets() {
           fi
           mv "$mv_dir" "$mirror_assets_directory/$extra_dir_stem" || { echo "$msg_error: Unable to move $asset_move."; exit; }
           echo "Moved directory: $asset_move." "1"
-        fi 
+        fi
       done
     fi
   fi
@@ -1318,7 +1322,7 @@ process_assets() {
 #  4. If Wget --cut-dirs options set, then only carry out option 3.
 site_postprocessing() {
   cd "$working_mirror_dir" || { printf "Unable to enter %s.\nAborting.\n" "$working_mirror_dir"; exit; }
-  echo "Carrying out site postprocessing in $working_mirror_dir ... " 
+  echo "Carrying out site postprocessing in $working_mirror_dir ... "
 
   # Adjust storage locations of assets, where applicable
   if [ -s "$input_file_extra" ] || [ "$url" != "$url_base/" ]; then
@@ -1492,7 +1496,7 @@ clean_mirror() {
     # Delete temporary post data file
     if [ -f "$post_tmppath" ]; then
       rm "$post_tmppath"
-    fi    
+    fi
   fi
 
   # Create robots file, where necessary
@@ -1503,7 +1507,7 @@ clean_mirror() {
       cp "$robots_default" "$robots_path"
     else
       touchmod "$robots_path"
-    fi  
+    fi
     printf "\nSitemap: %s\n" "https://$deploy_domain/$sitemap_file" >> "$robots_path"
   fi
 
@@ -1560,13 +1564,13 @@ clean_mirror() {
   if [ -n "${wget_http_user+x}" ] && [ "$credentials_cleanup" = "yes" ]; then
     rc_file="$HOME/$credentials_rc_file"
     if [ "$credentials_rc_file" = ".netrc" ]; then
-      # Search for credentials based on $site_user and $domain, 
+      # Search for credentials based on $site_user and $domain,
       # assuming they are defined on a single line with space-separated values
       if [ -f "$rc_file" ]; then
         # Check to see if an entry exists (with superfluous "''" inserted to pass Shellcheck SC1087)
         cred_pattern="machine[[:blank:]]\{1,\}$domain"''"[[:blank:]]\{1,\}login[[:blank:]]\{1,\}$wget_http_user"
         replace_rc="$(grep -v "$cred_pattern" "$rc_file")"
-        printf "%s\n" "$replace_rc" > "$rc_file" || echo "$msg_warning: unable to remove existing credentials" 
+        printf "%s\n" "$replace_rc" > "$rc_file" || echo "$msg_warning: unable to remove existing credentials"
         chmod 0600 "$rc_file"
       fi
     elif [ "$credentials_rc_file" = ".wgetrc" ]; then
@@ -1578,12 +1582,12 @@ clean_mirror() {
         cred_pattern_pwd="http_password="
         # remove existing credentials
         replace_rc="$(grep -v "^[[:blank:]]\{0,\}$cred_pattern\|^[[:blank:]]\{0,\}$cred_pattern_pwd" "$rc_file")"
-        printf "%s\n" "$replace_rc" > "$rc_file" || echo "$msg_warning: unable to remove existing credentials" 
+        printf "%s\n" "$replace_rc" > "$rc_file" || echo "$msg_warning: unable to remove existing credentials"
         touchmod "$rc_file"
       fi
     fi
   fi
-  
+
   cd "$mirror_dir" || { printf "Unable to enter %s.\nAborting.\n" "$mirror_dir"; exit; }
 }
 
@@ -1591,7 +1595,7 @@ process_snippets() {
   # Create necessary directories for substitution files and snippets
   [ -d "$sub_files_path" ] || { mkdir -p "$sub_files_path"; echo "Created folders for substitute files at $sub_files_path."; }
   [ -d "$snippets_dir" ] || { mkdir -p "$snippets_dir"; echo "Created folder for snippet files at $snippets_dir."; }
-  
+
   # Change to subs directory
   cd "$script_dir/$sub_dir" || { echo "$msg_error: can't access substitutes directory ($script_dir/$sub_dir)" >&2; echo "No substitutions can be made." >&2;exit 1; }
 
@@ -1706,7 +1710,7 @@ cut_mss_dirs() {
   url_root_dir=$(echo "$url_path" | cut -d/ -f1)
   if [ -d "$url_root_dir" ]; then
     rm -rf "$url_root_dir"
-  fi  
+  fi
 }
 
 create_zip() {
@@ -1757,6 +1761,7 @@ prep_rsync() {
     echo "Unable to connect to the remote server, $deploy_host, on port $deploy_port, needed for rsync."
     echo "Use of rsync aborted."
     echo "Static archive created, but not deployed remotely using rsync."
+    echo "$msg_signoff"
     exit
   else
     dest=$deploy_user'@'$deploy_host':'$deploy_path'/'
@@ -1854,15 +1859,15 @@ deploy() {
 
 conclude() {
   printf "Completed in "; stopclock SECONDS
-  msg_done=$(msg_ink "ok" 'All done.') 
+  msg_done=$(msg_ink "ok" 'All done.')
   printf "%s\nA static mirror of %s has been created in %s\n" "$msg_done" "$url" "$working_mirror_dir"
   if [ -n "${msg_deploy+x}" ]; then
     printf "%s\n\n" "$msg_deploy"
-  fi 
+  fi
   printf "\nThank you for using MakeStaticSite, free software released under the %s. The latest version is available from %s.\n" "$mss_license" "$mss_download"
   echo " "
   timestamp_end=$(timestamp "$timezone")
-  printf "Ending run of MakeStaticSite.\n" >> "$log_file"
+  printf "$msg_signoff\n" >> "$log_file"
   printf "Timestamp: %s\n\n" "$timestamp_end" >> "$log_file"
 }
 
