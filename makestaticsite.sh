@@ -1256,7 +1256,7 @@ process_assets() {
             (( pathpref_length=${#pathpref}-(j*5) ))
             src_path=$(printf "%s" "$pathpref" | cut -b -"$pathpref_length" | tr -d '\n'; printf "%s" "${pd_array[$j]}")
             (( k=j+1 ))
-            asset_path=$(echo "$pd" | cut -d/ -f 1-$k)
+            asset_path=$(env echo "$pd" | cut -d/ -f 1-$k)
             rep_path="$assetpref$assets_directory$assets_dir_suffix$asset_path/"
             if [ "$pd" != "" ] && [[ "$src_path" != */ ]]; then    # ensure the search is relative to a named directory
               sed_subs=('s~'"$src_path/"'~'"$rep_path"'~g' "$opt")
