@@ -19,6 +19,21 @@
 ##########################################################################
 
 
+0.28.2 (released on 2023-10-31)
+      * Netlify deployment error traps and maintenance *
+      [lib/constants.sh]
+       Added cleanup section with new yes/no constant clean_query_extensions
+       to remove query strings from filenames output by Wget. 
+      [makestaticsite.sh]
+       Removed excess trailing spaces.
+       Added script sign-off message to output
+       read_config(): added log file name info to error message 
+       clean_mirror(): Added conditional pruning of filenames of appended
+       query strings. This is to ensure compliance with Netlify hosting.
+       deploy_on_netlify(): Added check for exit code when running Netlify
+       and report error, if necessary.
+       process_assets(): silenced log output from asset_path.
+
 0.28.1 (released on 2023-10-20)
       * Improved support for parallel runs, involving login sessions. *
        Made setup more flexible to allow mirroring a range of sites requiring
