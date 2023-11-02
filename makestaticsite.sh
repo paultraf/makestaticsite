@@ -758,6 +758,8 @@ wget_mirror() {
 
   # Input file for Wget (generated)
   input_file="$script_dir/$tmp_dir/$wget_inputs_main"
+  input_urls_file_path="$script_dir/$tmp_dir/$input_urls_file"
+  
   touchmod "$input_file"
   printf "%s\n" "$url" > "$input_file"
 
@@ -767,8 +769,8 @@ wget_mirror() {
   done
 
   # Append user URLs inputs
-  if [ "$input_urls_file" != "" ] && [ -f "$input_urls_file" ]; then
-    cat "$input_urls_file" >> "$input_file"
+  if [ "$input_urls_file" != "" ] && [ -f "$input_urls_file_path" ]; then
+    cat "$input_urls_file_path" >> "$input_file"
     echo "Reading list of additional URLs to crawl from $input_urls_file."
   fi
 
@@ -1396,7 +1398,7 @@ add_extras() {
   # For archival, copy subs files into the respective mirror directory
   extras_src="$script_dir/$extras_dir/$hostport"
   extras_dest="$working_mirror_dir"
-  printf "Copying additional files from %s to %s, the static mirror (for distribution) ... " "$extras_src" "$extras_dest"
+  echo "Copying additional files from $extras_src to $extras_dest, the static mirror (for distribution) ... "
 
   # Create necessary directories
   if [ ! -d "$extras_src" ]; then
