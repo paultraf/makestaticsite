@@ -446,9 +446,16 @@ initialise_variables() {
 
   protocol=$(printf "%s" "$url" | awk -F/ '{print $1}' | awk -F: '{print $1}')
   url_base="$protocol://$hostport"
-  login_address="$url_base$login_path"
+  
   require_login=$(yesno "$(config_get require_login "$myconfig")")
-  [ "$require_login" = "yes" ] && { site_user="$(config_get site_user "$myconfig")"; site_password="$(config_get site_password "$myconfig")"; }
+  [ "$require_login" = "yes" ] && { site_user="$(config_get site_user "$myconfig")";
+    site_password="$(config_get site_password "$myconfig")";
+    login_path="$(config_get login_path "$myconfig")"; 
+    login_address="$url_base$login_path"; 
+    login_user_field="$(config_get login_user_field "$myconfig")"; 
+    login_pwd_field="$(config_get login_pwd_field "$myconfig")"; 
+    cookie_session_string="$(config_get cookie_session_string "$myconfig")";   
+  }
 
   # Local snapshot label
   local_sitename="$(config_get local_sitename "$myconfig")"
@@ -758,8 +765,6 @@ wget_mirror() {
 
   # Input file for Wget (generated)
   input_file="$script_dir/$tmp_dir/$wget_inputs_main"
-  input_urls_file_path="$script_dir/$tmp_dir/$input_urls_file"
-  
   touchmod "$input_file"
   printf "%s\n" "$url" > "$input_file"
 
@@ -769,6 +774,7 @@ wget_mirror() {
   done
 
   # Append user URLs inputs
+  input_urls_file_path="$script_dir/$tmp_dir/$input_urls_file"
   if [ "$input_urls_file" != "" ] && [ -f "$input_urls_file_path" ]; then
     cat "$input_urls_file_path" >> "$input_file"
     echo "Reading list of additional URLs to crawl from $input_urls_file."
@@ -804,7 +810,7 @@ wget_mirror() {
   wget_cookies+="-${myconfig}_${timestamp_start}.txt"
   cookies_path="$tmp_dir_path/$wget_cookies"; touchmod "$cookies_path"
   cookies_tmppath="$tmp_dir_path/tmp$wget_cookies"; touchmod "$cookies_tmppath"
-  wget_login_options=("$wget_ssl" --directory-prefix "$tmp_mirror_path" --save-cookies "$cookies_path" --keep-session-cookies "$login_address" --delete-after)
+  wget_login_options=("$wget_ssl" --directory-prefix "$tmp_mirror_path" --save-cookies "$cookies_path" --keep-session-cookies)
 
   url_robots="$url/robots.txt"
   wget_robot_options=("$wget_ssl" --directory-prefix "$mirror_archive_dir$hostport_dir" "$url_robots")
@@ -832,6 +838,7 @@ wget_mirror() {
 
   # If access to site restricted then log in and fetch cookie as required
   if [ "$require_login" = "yes" ]; then
+    wget_login_options+=("$login_address" --delete-after)
     site_user="$(config_get site_user "$myconfig" "$script_dir")"
     credentials_insert_path="${credentials_path_prefix}$domain/site_user/$site_user"
     credentials_path="$credentials_home/$credentials_insert_path"
@@ -869,7 +876,7 @@ wget_mirror() {
 
     # Now log in with supplied credentials
     wget_credentials=(--post-file="$post_tmppath")
-    printf "Logging in to the site at %s using credentials: %s=%s&%s=******* %s ... " "$login_address" "${login_user_field}" "${site_user}" "${login_pwd_field}" "${wget_login_options[*]}"
+    echo "Logging in to the site at $login_address using credentials: ${login_user_field}=${site_user}&${login_pwd_field}=******* ${wget_login_options[*]} ... "
     $wget_cmd "${wget_credentials[@]}" "${wget_extra_options[@]}" "${wget_login_options[@]}"
 
     # Determine whether login has succeeded by checking cookies file for addition
@@ -1869,7 +1876,7 @@ conclude() {
   printf "\nThank you for using MakeStaticSite, free software released under the %s. The latest version is available from %s.\n" "$mss_license" "$mss_download"
   echo " "
   timestamp_end=$(timestamp "$timezone")
-  printf "$msg_signoff\n" >> "$log_file"
+  printf "%s\n" "$msg_signoff" >> "$log_file"
   printf "Timestamp: %s\n\n" "$timestamp_end" >> "$log_file"
 }
 
