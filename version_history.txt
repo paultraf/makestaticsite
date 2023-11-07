@@ -19,6 +19,17 @@
 ##########################################################################
 
 
+0.28.3 (released on 2023-11-07)
+      * Maintenance: bux fixes for web form authentication and input URLs *
+      [makestaticsite.sh]
+       initialise_variables(): added assignment of web form login options
+       using config_get(), namely for: login_path, login_address,
+       login_user_field, login_pwd_field and cookie_session_string.
+       wget_mirror(): following changes to setup, login_address
+       now only assigned when a login is required;
+       bug fix: read input_urls_file config option for input URLS file.
+       Some minor changes to terminal output.
+
 0.28.2 (released on 2023-10-31)
       * Netlify deployment error traps and maintenance *
       [lib/constants.sh]

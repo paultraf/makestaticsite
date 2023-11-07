@@ -22,8 +22,8 @@
 ################################################
 # MakeStaticSite info
 ################################################
-version=0.28.2
-version_date='31 October 2023'
+version=0.28.3
+version_date='7 November 2023'
 version_header="MakeStaticSite version $version, released on $version_date."
 mss_license="GNU Affero General Public License version 3"
 mss_download="https://makestaticsite.sh/download/makestaticsite_latest.tar.gz"
