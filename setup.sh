@@ -285,7 +285,7 @@ read_option() {
         elif [ -n "${url+x}" ] && [ "$optvar" = "url" ]; then
           echo "You have entered as URL: $url"
           input_value="$url"
-          if ! validate_http "$input_value"; then
+          if ! validate_http "$input_value" "input_value"; then
             if [ "$run_unattended" = "yes" ]; then
               echo "Unable to connect to URL.  Aborting."; exit
             else

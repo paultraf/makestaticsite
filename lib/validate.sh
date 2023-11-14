@@ -148,24 +148,43 @@ validate_internet() {
 }
 
 
+# Receives one required parameter (URL)
+# and one optional parameter (variable name)
 validate_http() {
   echo "Checking connection to $1 ..."
-  status="$(curl -s -k -L --max-redirs 5 --head -w "%{http_code}" "$1" -o /dev/null)"
+  status="$(curl -s -k --head -w "%{http_code}" "$1" -o /dev/null)"
   # -s (--silent): no download progress bar
   # -k (--insecure): don't verify security of connection
-  # -L: follow redirects up to the value of max-redirs = 5
   # -w (--write-out): on completion, display HTTP code (variable) on stdout
   # -o: send output to null device
   if [ "$status" = "200" ]; then
     echo "Connection established OK."
-  elif [ "$status" = "301" ] || [ "$status" = "302" ]; then
-    echo "WARNING: redirect detected (HTTP code $status), proceed with caution."
+    return
+  elif [ "$status" = "301" ] || [ "$status" = "302" ] || [ "$status" = "307" ] || [ "$status" = "308" ]; then
+    echo -n "$msg_warning: redirect detected (HTTP code $status). "
+    # Following should require user to confirm (y/n):
+    url_effective=$(curl -s -L --max-redirs "$max_redirects" -o /dev/null -w "%{url_effective}" "$1") || { echo "$msg_error: Unable to follow the redirection"; return 1; } # -L: follow redirects up to the value of max_redirects
+    echo "URL effectively redirected to: $url_effective."
+    status_redirect="$(curl -s -k  --max-redirs "$max_redirects" --head -w "%{http_code}" "$url_effective" -o /dev/null)"
+    if [ -n "${2+x}" ]; then
+      printf -v "$2" '%s' "$url_effective"
+      echo "Following redirection, value of $2 changed to $url_effective."
+    fi
+    if [ "$status_redirect" = "200" ]; then
+      echo "Connection established OK."
+      return 
+    elif [ "$status_redirect" = "401" ]; then
+      echo "$msg_warning: unauthorised (HTTP code $status). This means that you will need to enter a username and password as wget parameters for wget_extra_options (which you can set a bit later)."
+    else
+      echo "$msg_error: failed to connect; the response code was $status (exit code: $?). Please try again."
+      return 1
+    fi
   elif [ "$status" = "401" ]; then
-    echo "WARNING: unauthorised (HTTP code $status).  This means that you will need to enter a username and password as wget parameters for wget_extra_options (which you can set a bit later)."
+    echo "$msg_warning: unauthorised (HTTP code $status).  This means that you will need to enter a username and password as wget parameters for wget_extra_options (which you can set a bit later)."
   elif [ "$run_unattended" = "yes" ]; then
-    echo "ERROR – failed to connect; the response code was $status (exit code: $?). Aborting.  Please check the URL and your network connectivity."; exit
+    echo "$msg_error: failed to connect; the response code was $status (exit code: $?). Aborting.  Please check the URL and your network connectivity."; exit
   else
-    echo "ERROR – failed to connect; the response code was $status (exit code: $?). Please try again."
+    echo "$msg_error: failed to connect; the response code was $status (exit code: $?). Please try again."
     return 1
   fi
 }
@@ -210,7 +229,7 @@ validate_input() {
       fi
     fi
     if [[ ' '${options_check_url[*]}' ' =~ ' '$3' ' ]]; then
-      validate_http "$input_value" || { echo; continue; }
+      validate_http "$input_value" "input_value" || { echo; continue; }
     fi
     if [[ ' '${options_check_yesno[*]}' ' =~ ' '$3' ' ]]; then
       validate_yesno "$input_value" || { echo; continue; }

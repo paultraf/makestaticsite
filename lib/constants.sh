@@ -22,8 +22,8 @@
 ################################################
 # MakeStaticSite info
 ################################################
-version=0.28.3
-version_date='7 November 2023'
+version=0.28.4
+version_date='14 November 2023'
 version_header="MakeStaticSite version $version, released on $version_date."
 mss_license="GNU Affero General Public License version 3"
 mss_download="https://makestaticsite.sh/download/makestaticsite_latest.tar.gz"
@@ -32,7 +32,8 @@ mss_download="https://makestaticsite.sh/download/makestaticsite_latest.tar.gz"
 ################################################
 # Setup-specific settings
 ################################################
-max_setup_level=2               # maximum runtime level for setup (starts at 0)
+max_setup_level=2               # Maximum runtime level for setup (starts at 0)
+max_redirects=5                 # Maximum number of redirects allowed for determining effective URL being mirrored
 
 
 ################################################
