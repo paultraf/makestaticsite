@@ -19,6 +19,22 @@
 ##########################################################################
 
 
+0.28.4 (released on 2023-11-14)
+      * Refinement: improved support for URLs with redirects *
+      [lib/constants.sh]
+       New constant max_redirects to specify maximum number of redirects
+       allowed for determining the effective URL being mirrored.
+      [lib/validate.sh]
+       validate_http(): extended checks for redirects and added new routine
+       to follow them to determine the effective URL, which is then assigned
+       to $url option; added standard styling of output warning and error
+       statuses.
+       validate_input(): added "input_value" as parameter in call to
+       validate_http()
+      [setup.sh]
+       read_option(): added "input_value" as parameter in call to
+       validate_http()
+
 0.28.3 (released on 2023-11-07)
       * Maintenance: bux fixes for web form authentication and input URLs *
       [makestaticsite.sh]
