@@ -150,20 +150,28 @@ validate_internet() {
 
 # Receives one required parameter (URL)
 # and one optional parameter (variable name)
+# Uses cURL with following options:
+#  -A (--user-agent): specify user agent
+#  -s (--silent): no download progress bar
+#  -k (--insecure): don't verify security of connection
+#  -w (--write-out): on completion, display HTTP code (variable) on stdout
+#  -o: send output to null device
+
 validate_http() {
   echo "Checking connection to $1 ..."
-  status="$(curl -s -k --head -w "%{http_code}" "$1" -o /dev/null)"
-  # -s (--silent): no download progress bar
-  # -k (--insecure): don't verify security of connection
-  # -w (--write-out): on completion, display HTTP code (variable) on stdout
-  # -o: send output to null device
+  curl_options=(-s -k)
+  if [ "$wget_user_agent" != "" ];then
+    curl_options+=(-A "$wget_user_agent") # note that we don't need to insert extra quotes
+  fi
+  curl_options+=(--head -w "%{http_code}" "$1" -o /dev/null)
+  status="$(curl "${curl_options[@]}")"
   if [ "$status" = "200" ]; then
     echo "Connection established OK."
     return
   elif [ "$status" = "301" ] || [ "$status" = "302" ] || [ "$status" = "307" ] || [ "$status" = "308" ]; then
     echo -n "$msg_warning: redirect detected (HTTP code $status). "
     # Following should require user to confirm (y/n):
-    url_effective=$(curl -s -L --max-redirs "$max_redirects" -o /dev/null -w "%{url_effective}" "$1") || { echo "$msg_error: Unable to follow the redirection"; return 1; } # -L: follow redirects up to the value of max_redirects
+    url_effective=$(curl -s -k -L --max-redirs "$max_redirects" -o /dev/null -w "%{url_effective}" "$1") || { echo "$msg_error: Unable to follow the redirection"; return 1; } # -L: follow redirects up to the value of max_redirects
     echo "URL effectively redirected to: $url_effective."
     status_redirect="$(curl -s -k  --max-redirs "$max_redirects" --head -w "%{http_code}" "$url_effective" -o /dev/null)"
     if [ -n "${2+x}" ]; then

@@ -755,11 +755,16 @@ wget_mirror() {
   echo "Will capture snapshot from $url using $wget_cmd."
 
   # Test whether source host is available
-  local wget_test_options=(-q "$wget_ssl" --spider --tries 3 "$url_base")
+  wget_test_options=(-q "$wget_ssl")
+  if [ "$wget_user_agent" != "" ]; then
+    wget_test_options+=(-U "$wget_user_agent")
+  fi
+  wget_test_options+=(--spider --tries 3 "$url_base")
   if ! $wget_cmd "${wget_extra_options[@]}" "${wget_test_options[@]}"; then
-    echo "Unable to connect to $url_base.  Please check the spelling of the domain, that the web server is running, that the website exists and any http authentication credentials are correct. "
-    printf "GET http://google.com HTTP/1.0\n\n" | nc google.com 80 > /dev/null 2>&1 ||  echo "Actually, there appears to be no Internet connectivity (tested with http://google.com)."
-    echo "Aborting."
+    msg_error="Unable to connect to $url_base.  Please check: the spelling of the domain, the web server status (is it running?) and access restrictions, particularly if any http authentication credentials are required. "
+    printf "GET http://google.com HTTP/1.0\n\n" | nc google.com 80 > /dev/null 2>&1 || msg_error+="Actually, there appears to be no Internet connectivity (tested with http://google.com). "
+    msg_error+="Aborting."
+    echo "$msg_error"
     exit
   fi
 
@@ -833,7 +838,8 @@ wget_mirror() {
   fi
 
   if [ "$wget_user_agent" != "" ];then
-    wget_core_options+=(-U "\"$wget_user_agent\"")
+    wget_extra_options+=(-U "$wget_user_agent")
+    wget_extra_options_print+=(-U \""$wget_user_agent"\")
   fi
 
   # If access to site restricted then log in and fetch cookie as required
@@ -1735,8 +1741,8 @@ create_zip() {
   [ "$zip_omit_download" = "yes" ] && zip_options+=" -x $mirror_archive_dir$hostport_dir/$zip_download_folder/*" 
   IFS=" " read -r -a zip_options_all <<< "$zip_options"
   zip "${zip_options_all[@]}"
-  echo "ZIP archive created at $zip_archive."
   cd "$script_dir"
+  echo "ZIP archive created at $mirror_dir/$zip_archive."
 }
 
 deploy_on_netlify() {
