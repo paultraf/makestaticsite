@@ -19,6 +19,17 @@
 ##########################################################################
 
 
+0.28.5 (released on 2023-11-27)
+      * Maintenance: custom user agent strings (bug fix and extended use) *
+      [lib/validate.sh]
+       validate_http(): added --user-agent option to cURL when determining
+       connectivity; and added --insecure option for url_effective
+      [makestaticsite.sh]
+       wget_mirror(): deleted superfluous double quotes around constant,
+       wget_user_agent; concatenated error message for improved reporting;
+       added wget_user_agent to wget_extra_options rather than
+       wget_core_options to ensure its use whenever Wget is run.
+
 0.28.4 (released on 2023-11-14)
       * Refinement: improved support for URLs with redirects *
       [lib/constants.sh]
