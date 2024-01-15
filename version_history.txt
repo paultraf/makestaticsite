@@ -1,7 +1,7 @@
 ##########################################################################
 #
 # MakeStaticSite --- a shell script to create and deploy static websites 
-# Copyright 2022-2023 Paul Trafford <pt@ptworld.net>
+# Copyright 2022-2024 Paul Trafford <pt@ptworld.net>
 #
 # version_history.txt - version history (or changelog) for MakeStaticSite
 # This file is part of MakeStaticSite.
@@ -18,6 +18,22 @@
 #
 ##########################################################################
 
+
+0.28.6 (released on 2024-01-15)
+      * Maintenance: mainly improved cookie handling, specifically in regard
+        to user agents.; upped software copyright year to 2024 *
+      [lib/validate.sh]
+       validate_http(): constrained assignment of redirect effective URL to
+       omit Wayback Machine URLs.
+      [lib/constants.sh]
+       New constant wget_cookies_min_filelength to support checks for valid
+       cookies file; new constant wget_cookies_nullify_user_agent to specify
+       whether or not to omit user agent string when a login is required
+       (to ensure cookies file written correctly)
+      [makestaticsite.sh]
+       wget_mirror(): added checks for wget_cookies_nullify_user_agent when
+       appending a user agent option to Wget requests.
+       Added error handling when an empty cookies file is generated.
 
 0.28.5 (released on 2023-11-27)
       * Maintenance: custom user agent strings (bug fix and extended use) *
