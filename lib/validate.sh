@@ -1,7 +1,7 @@
 ##########################################################################
 #
 # MakeStaticSite --- a shell script to create and deploy static websites 
-# Copyright 2022 Paul Trafford <pt@ptworld.net>
+# Copyright 2022-2024 Paul Trafford <pt@ptworld.net>
 #
 # validate.sh - validation functions for MakeStaticSite
 # This file is part of MakeStaticSite.

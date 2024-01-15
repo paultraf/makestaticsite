@@ -1,7 +1,7 @@
 ##########################################################################
 # 
 # MakeStaticSite --- a shell script to create and deploy static websites 
-# Copyright 2022-2023 Paul Trafford <pt@ptworld.net>
+# Copyright 2022-2024 Paul Trafford <pt@ptworld.net>
 # 
 # mod_wayback.sh - Wayback Machine module for MakeStaticSite
 # This file is part of MakeStaticSite.
