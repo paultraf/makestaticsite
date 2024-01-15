@@ -3,7 +3,7 @@
 ##########################################################################
 #
 # MakeStaticSite --- a shell script to create and deploy static websites
-# Copyright 2022-2023 Paul Trafford <pt@ptworld.net>
+# Copyright 2022-2024 Paul Trafford <pt@ptworld.net>
 #
 # makestaticsite.sh - main script for MakeStaticSite
 # This file is part of MakeStaticSite.
@@ -757,7 +757,9 @@ wget_mirror() {
   # Test whether source host is available
   wget_test_options=(-q "$wget_ssl")
   if [ "$wget_user_agent" != "" ]; then
-    wget_test_options+=(-U "$wget_user_agent")
+    if [ "$require_login" != "yes" ] || [ "$wget_cookies_nullify_user_agent" = "no" ]; then
+      wget_test_options+=(-U "$wget_user_agent")
+    fi
   fi
   wget_test_options+=(--spider --tries 3 "$url_base")
   if ! $wget_cmd "${wget_extra_options[@]}" "${wget_test_options[@]}"; then
@@ -837,9 +839,11 @@ wget_mirror() {
     wget_sitemap_options+=("$wvol")
   fi
 
-  if [ "$wget_user_agent" != "" ];then
-    wget_extra_options+=(-U "$wget_user_agent")
-    wget_extra_options_print+=(-U \""$wget_user_agent"\")
+  if [ "$wget_user_agent" != "" ]; then
+    if [ "$require_login" != "yes" ] || [ "$wget_cookies_nullify_user_agent" = "no" ]; then
+      wget_extra_options+=(-U "$wget_user_agent")
+      wget_extra_options_print+=(-U \""$wget_user_agent"\")
+    fi
   fi
 
   # If access to site restricted then log in and fetch cookie as required
@@ -890,9 +894,24 @@ wget_mirror() {
     cookie_match=$(awk '$6 ~ /'"$valid_cookie_session"'/' "$cookies_path")
     if [ "$cookie_match" == "" ]; then
       printf "\n"
-      printf "%s: Unable to identify a login/session cookie in the generated cookie file, %s. Please " "$msg_error" "$cookies_path"
-      if [ "$cookie_session_string" = "" ]; then
-        echo "define the cookie_session_string in constants.sh."
+      printf "%s: Unable to identify a login/session cookie in the generated cookie file, %s. " "$msg_error" "$cookies_path"
+      cookies_file_length=$(wc -l < "$cookies_path")
+      if (( cookies_file_length < wget_cookies_min_filelength )); then
+        empty_cookies_msg="DIAGNOSIS: Wget generated an empty cookies file. This may be due to problems with the value of wget_user_agent, defined in constants.sh. ";
+        if [ "$wget_user_agent" != "" ]; then
+          empty_cookies_msg+="You may try changing it to a more typical user agent string, as used by a desktop browser"
+          if [ "$wget_cookies_nullify_user_agent" != "yes" ]; then
+            empty_cookies_msg+=" OR to the empty string OR set wget_cookies_nullify_user_agent=yes."
+          else
+            empty_cookies_msg+="."
+          fi
+        else
+          empty_cookies_msg+="You may try setting wget_user_agent to a typical user agent string, as used by a desktop browser."
+        fi
+        empty_cookies_msg+=$'\n'
+        echo "$empty_cookies_msg"
+      elif [ "$cookie_session_string" = "" ]; then
+        echo "Please define the cookie_session_string in constants.sh."
       else
         echo "note that it should be the same as the value of cookie_session_string (currently $cookie_session_string), as set in constants.sh."
       fi

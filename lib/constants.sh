@@ -1,7 +1,7 @@
 ##########################################################################
 #
 # MakeStaticSite --- a shell script to create and deploy static websites
-# Copyright 2022-2023 Paul Trafford <pt@ptworld.net>
+# Copyright 2022-2024 Paul Trafford <pt@ptworld.net>
 #
 # constants.sh - constants for MakeStaticSite
 # This file is part of MakeStaticSite.
@@ -22,8 +22,8 @@
 ################################################
 # MakeStaticSite info
 ################################################
-version=0.28.5
-version_date='27 November 2023'
+version=0.28.5+2
+version_date='15 January 2024'
 version_header="MakeStaticSite version $version, released on $version_date."
 mss_license="GNU Affero General Public License version 3"
 mss_download="https://makestaticsite.sh/download/makestaticsite_latest.tar.gz"
@@ -88,6 +88,8 @@ wget_user_agent=                # set browser user agent (empty for default), wr
 wget_http_login_field=user      # Wget's user login field for HTTP authentication
 wget_http_password_field=password # Wget's password field for HTTP authentication
 wget_cookies=cookies            # cookies file name stem, no extension - added later
+wget_cookies_min_filelength=5   # minimum number of lines for a valid cookies file
+wget_cookies_nullify_user_agent=no # When wget_user_agent is defined above as a non-empty string, should it be reset to null for handling cookies (yes/no)
 wget_post=wget_post             # Wget POST data file name stem
 wget_inputs_main=wget_inputs_main # input file name stem for web content to be retrieved in main run of Wget in phase 2
 wget_inputs_extra=wget_inputs_extra # input file name stem for additional assets to be retrieved by Wget in phase 3
