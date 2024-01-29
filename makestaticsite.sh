@@ -1338,8 +1338,11 @@ process_assets() {
             extra_dir_stem=$(dirname "$extra_dir");
             mkdir -p "$mirror_assets_directory/$extra_dir_stem"
           fi
-          mv "$mv_dir" "$mirror_assets_directory/$extra_dir_stem" || { echo "$msg_error: Unable to move $asset_move."; exit; }
-          echo "Moved directory: $asset_move." "1"
+          # Move only if mirror_assets_directory/$extra_dir_stem is not a subdirectory of mv_dir
+          if [[ ! $mirror_assets_directory/$extra_dir_stem = $mv_dir/* ]]; then
+            mv "$mv_dir" "$mirror_assets_directory/$extra_dir_stem" || { echo "$msg_error: Unable to move $asset_move."; exit; }
+            echo "Moved directory: $asset_move." "1"
+          fi
         fi
       done
     fi
