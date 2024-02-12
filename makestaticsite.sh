@@ -1232,7 +1232,7 @@ process_assets() {
       if [ ${#urls_array[@]} -ne 0 ] && { [ "$extra_domains" != "" ] || [ "$url" != "$url_base/" ]; }; then
         for url_extra in "${urls_array[@]}"; do
           asset_rel_path=$(env echo "$url_extra" | cut -d/ -f3-)
-          asset_rel_path="$assets_directory$assets_dir_suffix$imports_directory$imports_dir_suffix$asset_rel_path"
+          asset_rel_path="$pathpref$imports_directory$imports_dir_suffix$asset_rel_path"
           sed_subs=('s~'"$url_extra"'~'"$asset_rel_path"'~g' "$opt")
           sed "${sed_options[@]}" "${sed_subs[@]}"
         done
