@@ -19,6 +19,15 @@
 ##########################################################################
 
 
+0.28.7 (released on 2024-02-12)
+      * Maintenance: improved handling of asset processing, with bug fix *
+      [makestaticsite.sh]
+       process_assets(): inserted conditional to ensure script does not
+       attempt to move assets inside themselves;
+       bug fix: in the clause to update hyperlinks to assets downloaded
+       from other domains, modified definition of asset_rel_path,
+       inserting relative path prefix and removing assets directory.
+
 0.28.6 (released on 2024-01-15)
       * Maintenance: mainly improved cookie handling, specifically in regard
         to user agents.; upped software copyright year to 2024 *
