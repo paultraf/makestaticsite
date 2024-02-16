@@ -22,8 +22,8 @@
 ################################################
 # MakeStaticSite info
 ################################################
-version=0.28.7
-version_date='12 February 2024'
+version=0.28.7+1
+version_date='16 February 2024'
 version_header="MakeStaticSite version $version, released on $version_date."
 mss_license="GNU Affero General Public License version 3"
 mss_download="https://makestaticsite.sh/download/makestaticsite_latest.tar.gz"
@@ -83,7 +83,7 @@ credentials_path_prefix="$credentials_storage_namespace$credentials_namespace_su
 # input file names for Wget (phase 2 and 3 respectively)
 wget_cmd=wget                   # [Path to] wget binary
 wget_version_atleast=1.21
-wget_error_level=6              # The lowest Wget error code tolerated or else aborts (>8 for no tolerance)
+wget_error_level=4              # The lowest Wget error code tolerated or else aborts (>8 for no tolerance)
 wget_user_agent=                # set browser user agent (empty for default), wrapped in quotes, e.g. "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15)"
 wget_http_login_field=user      # Wget's user login field for HTTP authentication
 wget_http_password_field=password # Wget's password field for HTTP authentication
@@ -123,6 +123,11 @@ feed_xml=feed/index.xml         # tail of valid feed URLs as replacement
 asset_extensions="js,css,jpeg,jpg,gif,png,pdf,doc,docx,odt,ppt,xls,xlsx,svg,heic,webp,mp3,m4a,ogg,wav,avi,mpg,mp4,mov,ogv,wmv,3gp,3gp2,cff,ttf,eot,woff,woff2"  # list of file extensions for assets that may be retrieved by Wget in phase 3.  If no extensions are defined, then cURL will be used to remove non-HTML assets, but all other assets will be accepted
 asset_extensions_external="js,css,jpeg,jpg,gif,png,svg,cff,ttf,eot,woff,woff2" # a more limited set for assets gleaned from external domains
 query_accept_list="js,css,svg"  # list of file extensions in requests that may have query string (version numbers) appended
+
+
+################################################
+# Processing of downloaded assets and resources
+################################################
 extra_assets_mode=contain       # how assets from extra domains should be incorporated
                                 # - empty or 'off' to keep in separate directories under mirror ID
                                 # - 'contain' will move the directories inside the assets directory (see below)
@@ -141,6 +146,9 @@ mss_cut_dirs=yes                # Option to cut directories.  When this is enabl
                                 # - 'yes' or 'on' for a MakeStaticSite-specific cut that moves content of URL path to root
                                 # - empty, 'no' or 'off' to support Wget --cut-dirs and not carry out further MakeStaticSite-specific processing
                                 # - 'auto' to support Wget --cut-dirs and carry out further processing (not yet implemented)
+
+# Other assets and resources
+cors_enable=yes                 # Enable cross-origin resources once downloaded (y/n)?
 
 
 ################################################

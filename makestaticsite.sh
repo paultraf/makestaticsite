@@ -417,6 +417,9 @@ initialise_variables() {
   asset_domains="$(config_get asset_domains "$myconfig")"
   page_element_domains="$(config_get page_element_domains "$myconfig")"
 
+  # Support for CORS
+  cors_enable=$(yesno "$cors_enable")
+   
   # For backwards-compatibility check whether URL defined instead in url_base
   if [ "$url_domain" = "example.com" ]; then
     url="$(config_get url_base "$myconfig")"
@@ -1398,14 +1401,22 @@ site_postprocessing() {
     fi
   fi
 
-  # Provisionally append index.html to internal anchors ending with trailing slash
-  # The canonical form will be set later
+  # Global search and replace across web pages
   webpages=()
   while IFS='' read -r line; do webpages+=("$line"); done < <(find . -type f -name "*.html")
   for opt in "${webpages[@]}"; do
+    # Provisionally append index.html to internal anchors ending with trailing slash
+    # The canonical form will be set later
     sed_subs=('s/\(=["'\''][^:\\[:space:]"'\'']*\/\)\([\"'\'']\)/\1index.html\2/g' "$opt")
     sed "${sed_options[@]}" "${sed_subs[@]}"
+
+    # If CORS is enabled then remove (any restrictions stipulated in) HTML crossorigin tag
+    if [ "$cors_enable" = "yes" ]; then
+      sed_subs=('s/[[:space:]][[:space:]]*crossorigin[^[:space:]]*[[:space:]]/ /gi' "$opt")
+      sed "${sed_options[@]}" "${sed_subs[@]}"
+    fi
   done
+  
   printf "Converting feed files and references from index.html to index.xml ... "
   find ./ -depth -type f -path "*feed/index.html" -exec sh -c 'mv "$1" "${1%.html}.xml"' _ '{}' \;
   IFS=" " read -r -a webpages <<< "$(find_web_pages "." "$feed_html")"
