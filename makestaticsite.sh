@@ -1211,6 +1211,11 @@ process_assets() {
       if read -d '' -r -a urls_array; then :; fi < <(grep -v "//$domain" "$input_file_extra")
     fi
 
+    # Derive another URLs array with schema relative URLs
+    urls_array_2=()
+    for i in "${urls_array[@]}"; do urls_array_2+=("${i/http*:/}"); done
+    urls_array_2=("$(for i in "${urls_array_2[@]}"; do echo "$i"; done | sort -u)")
+
     # Convert absolute links to relative links
     for opt in "${webpages[@]}"; do
       # but don't process XML files in guise of HTML files
@@ -1234,6 +1239,13 @@ process_assets() {
       # if working with extra domains or a directory URL,
       if [ ${#urls_array[@]} -ne 0 ] && { [ "$extra_domains" != "" ] || [ "$url" != "$url_base/" ]; }; then
         for url_extra in "${urls_array[@]}"; do
+          asset_rel_path=$(env echo "$url_extra" | cut -d/ -f3-)
+          asset_rel_path="$pathpref$imports_directory$imports_dir_suffix$asset_rel_path"
+          sed_subs=('s~'"$url_extra"'~'"$asset_rel_path"'~g' "$opt")
+          sed "${sed_options[@]}" "${sed_subs[@]}"
+        done
+        # schema relative URLs
+        for url_extra in "${urls_array_2[@]}"; do
           asset_rel_path=$(env echo "$url_extra" | cut -d/ -f3-)
           asset_rel_path="$pathpref$imports_directory$imports_dir_suffix$asset_rel_path"
           sed_subs=('s~'"$url_extra"'~'"$asset_rel_path"'~g' "$opt")
