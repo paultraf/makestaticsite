@@ -1214,7 +1214,6 @@ process_assets() {
     # Derive another URLs array with schema relative URLs
     urls_array_2=()
     for i in "${urls_array[@]}"; do urls_array_2+=("${i/http*:/}"); done
-    urls_array_2=("$(for i in "${urls_array_2[@]}"; do echo "$i"; done | sort -u)")
 
     # Convert absolute links to relative links
     for opt in "${webpages[@]}"; do
@@ -1227,6 +1226,7 @@ process_assets() {
       for ((i=1;i<${#depth};i++)); do
         pathpref+="../";
       done
+
       # Carry out universal search and replace on primary domain;
       # in the case of directory URL with --no-parent, we need to limit matches
       # to full URL and tweak the replacements
