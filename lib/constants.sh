@@ -22,7 +22,7 @@
 ################################################
 # MakeStaticSite info
 ################################################
-version=0.28.7+4
+version=0.28.7+5
 version_date='21 February 2024'
 version_header="MakeStaticSite version $version, released on $version_date."
 mss_license="GNU Affero General Public License version 3"
@@ -125,8 +125,11 @@ feed_xml=feed/index.xml         # tail of valid feed URLs as replacement
 # Assets collated from parent directories and extra domains
 asset_extensions="js,css,jpeg,jpg,gif,png,pdf,doc,docx,odt,ppt,xls,xlsx,svg,heic,webp,mp3,m4a,ogg,wav,avi,mpg,mp4,mov,ogv,wmv,3gp,3gp2,cff,ttf,eot,woff,woff2"  # list of file extensions for assets that may be retrieved by Wget in phase 3.  If no extensions are defined, then cURL will be used to remove non-HTML assets, but all other assets will be accepted
 asset_extensions_external="js,css,jpeg,jpg,gif,png,svg,cff,ttf,eot,woff,woff2" # a more limited set for assets gleaned from external domains
-query_accept_list="js,css,svg"  # list of file extensions in requests that may have query string (version numbers) appended
 
+# Query strings
+query_prune_list="js,css,svg,png" # list of file extensions in requests that may have query string appended for versioning or other non-essential purposes that can be pruned without loss of functionality
+extra_assets_allow_query_strings=yes # Allow Wget to fetch additional URLs with query strings in phase 3 (y/n)? 
+extra_assets_query_strings_limit=100000 # Only fetch URLs with query strings when the total number of assets is less than this number 
 
 ################################################
 # Processing of downloaded assets and resources

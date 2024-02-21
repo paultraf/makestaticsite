@@ -1042,8 +1042,8 @@ wget_extra_urls() {
   cd "$mirror_dir" || { echo "Unable to enter $mirror_dir."; echo "Aborting."; exit; }
   
   echo "Pruning links to assets that have query strings appended" "1"
-  IFS="," read -r -a accept_list <<< "$query_accept_list"
-  for opt in "${accept_list[@]}"; do
+  IFS="," read -r -a prune_list <<< "$query_prune_list"
+  for opt in "${prune_list[@]}"; do
     sed_subs=('s~\([\"'\''][^>]*\.'"$opt"'\)?[^'\''\"]*~\1~g')
     find "$working_mirror_dir" -type f \( -name '*.html' -o -name '*.xml' -o -name '*.txt' \) -print0 | xargs -0 sed "${sed_options[@]}" "${sed_subs[@]}"
   done
@@ -1067,7 +1067,11 @@ wget_extra_urls() {
   generate_extra_domains
 
   echo -n "Generating list of extra asset URLs ... "
-  url_grep="$(assets_search_string "$all_domains" "[^\"'<) ]+")"
+  if [ "$(yesno "$extra_assets_allow_query_strings")" = "no" ]; then
+    url_grep="$(assets_search_string "$all_domains" "[^\?\"'<) ]+")"
+  else
+    url_grep="$(assets_search_string "$all_domains" "[^\"'<) ]+")"
+  fi
 
   webassets_all=()
   while IFS='' read -r line; do webassets_all+=("$line"); done < <(grep -Eroh "$url_grep" "$working_mirror_dir" --include "*\.html")
@@ -1131,16 +1135,21 @@ wget_extra_urls() {
   else
     webassets_omissions=("${webassets_nohtml[@]}")
   fi
-  echo "webassets_omissions array has ${#webassets_omissions[@]} elements" "2"
+  num_webassets_omissions="${#webassets_omissions[@]}"
+  echo "webassets_omissions array has $num_webassets_omissions elements" "2"
 
   # Return if empty (nothing further found)
-  [ ${#webassets_omissions[@]} -eq 0 ] && { echo "None found. " "1"; echo "Done."; return 0; }
+  [ "$num_webassets_omissions" -eq 0 ] && { echo "None found. " "1"; echo "Done."; return 0; }
 
-  # Filter out URLs with query strings
-  echo "Filter out URLs with query strings" "1"
-  webassets=()
-  while IFS='' read -r line; do webassets+=("$line"); done < <(for opt in "${webassets_omissions[@]}"; do if [[ "$opt" != *"?"* ]]; then printf "%s\n" "$opt"; else continue; fi; done)
-
+  if (( extra_assets_query_strings_limit < num_webassets_omissions )); then
+    # Filter out URLs with query strings
+    echo "$msg_warning: too many asset URLs found, so filtering out those with query strings. If you need them, consider increasing the value of extra_assets_query_strings_limit from its current value, $extra_assets_query_strings_limit."
+    webassets=()
+    while IFS='' read -r line; do webassets+=("$line"); done < <(for opt in "${webassets_omissions[@]}"; do if [[ "$opt" != *"?"* ]]; then printf "%s\n" "$opt"; else continue; fi; done)
+  else
+    webassets=("${webassets_omissions[@]}")
+  fi
+  
   echo "webassets array has ${#webassets[@]} elements" "2"
   # Return if empty (all those found were filtered out)
   [ ${#webassets[@]} -eq 0 ] && { echo "None suitable found. " "1"; echo "Done."; return 0; }
