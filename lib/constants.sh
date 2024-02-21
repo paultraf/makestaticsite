@@ -22,7 +22,7 @@
 ################################################
 # MakeStaticSite info
 ################################################
-version=0.28.7+3
+version=0.28.7+4
 version_date='21 February 2024'
 version_header="MakeStaticSite version $version, released on $version_date."
 mss_license="GNU Affero General Public License version 3"
@@ -84,6 +84,8 @@ credentials_path_prefix="$credentials_storage_namespace$credentials_namespace_su
 wget_cmd=wget                   # [Path to] wget binary
 wget_version_atleast=1.21
 wget_error_level=4              # The lowest Wget error code tolerated or else aborts (>8 for no tolerance)
+wget_protocol_relative_urls=yes # Allow protocol-relative URLs to be fetched by Wget by prefixing a protocol (y/n)
+wget_protocol_prefix=https      # Protocol to prefix protocol-relative URLs
 wget_user_agent=                # set browser user agent (empty for default), wrapped in quotes, e.g. "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15)"
 wget_http_login_field=user      # Wget's user login field for HTTP authentication
 wget_http_password_field=password # Wget's password field for HTTP authentication

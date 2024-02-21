@@ -1040,6 +1040,7 @@ generate_extra_domains() {
 # target files are not expected to change during this site generation
 wget_extra_urls() {
   cd "$mirror_dir" || { echo "Unable to enter $mirror_dir."; echo "Aborting."; exit; }
+  
   echo "Pruning links to assets that have query strings appended" "1"
   IFS="," read -r -a accept_list <<< "$query_accept_list"
   for opt in "${accept_list[@]}"; do
@@ -1047,6 +1048,14 @@ wget_extra_urls() {
     find "$working_mirror_dir" -type f \( -name '*.html' -o -name '*.xml' -o -name '*.txt' \) -print0 | xargs -0 sed "${sed_options[@]}" "${sed_subs[@]}"
   done
   echo " " "1"
+  
+  wget_protocol_relative_urls=$(yesno "$wget_protocol_relative_urls")
+  if [ "$wget_protocol_relative_urls" = "yes" ]; then
+    echo "Prefixing protocol-relative URLs with $protocol_prefix" "1"
+    sed_subs=('s~\([\"'\'']\)//~\1'"$protocol_prefix"'://~g')
+    find "$working_mirror_dir" -type f \( -name '*.html' -o -name '*.xml' -o -name '*.txt' \) -print0 | xargs -0 sed "${sed_options[@]}" "${sed_subs[@]}"
+    echo " " "1"
+  fi
 
   echo "Searching for additional URLs to retrieve with Wget (working in $working_mirror_dir) ... " "1"
 
@@ -1235,7 +1244,7 @@ process_assets() {
       if read -d '' -r -a urls_array; then :; fi < <(grep -v "//$domain" "$input_file_extra")
     fi
 
-    # Derive another URLs array with schema relative URLs
+    # Derive another URLs array with scheme relative URLs
     urls_array_2=()
     for i in "${urls_array[@]}"; do urls_array_2+=("${i/http*:/}"); done
 
@@ -1268,7 +1277,7 @@ process_assets() {
           sed_subs=('s~'"$url_extra"'~'"$asset_rel_path"'~g' "$opt")
           sed "${sed_options[@]}" "${sed_subs[@]}"
         done
-        # schema relative URLs
+        # scheme relative URLs
         for url_extra in "${urls_array_2[@]}"; do
           asset_rel_path=$(env echo "$url_extra" | cut -d/ -f3-)
           asset_rel_path="$pathpref$imports_directory$imports_dir_suffix$asset_rel_path"
