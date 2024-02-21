@@ -1051,8 +1051,8 @@ wget_extra_urls() {
   
   wget_protocol_relative_urls=$(yesno "$wget_protocol_relative_urls")
   if [ "$wget_protocol_relative_urls" = "yes" ]; then
-    echo "Prefixing protocol-relative URLs with $protocol_prefix" "1"
-    sed_subs=('s~\([\"'\'']\)//~\1'"$protocol_prefix"'://~g')
+    echo "Prefixing protocol-relative URLs with $wget_protocol_prefix" "1"
+    sed_subs=('s~\([\"'\'']\)//~\1'"$wget_protocol_prefix"'://~g')
     find "$working_mirror_dir" -type f \( -name '*.html' -o -name '*.xml' -o -name '*.txt' \) -print0 | xargs -0 sed "${sed_options[@]}" "${sed_subs[@]}"
     echo " " "1"
   fi
