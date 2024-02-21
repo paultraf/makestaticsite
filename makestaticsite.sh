@@ -353,6 +353,7 @@ initialise_variables() {
   # now augment Wget input files with .cfg label
   wget_inputs_main="$wget_inputs_main-$myconfig.txt"
   wget_inputs_extra="$wget_inputs_extra-$myconfig.txt"
+  wget_long_filenames="$wget_long_filenames-$myconfig.txt"
 
   # Translate to output levels for rsync and Wget respectively
   if [ "$output_level" = 'silent' ] || [ "$output_level" = 'quiet' ]; then
@@ -470,6 +471,7 @@ initialise_variables() {
   site_post_processing=$(yesno "$(config_get site_post_processing "$myconfig")")
   archive=$(yesno "$(config_get archive "$myconfig")")
   wget_input_files=()  # Initialise array of additional Wget input URLs
+  input_long_filenames="$script_dir/$tmp_dir/$wget_long_filenames"  # List of URLs with very long filenames (to be generated)
   input_file_extra="$script_dir/$tmp_dir/$wget_inputs_extra"  # Input file for Wget extra assets (to be generated)
   wget_extra_options_tmp=$(wget_canonical_options "$(config_get wget_extra_options "$myconfig")")
 
@@ -1005,6 +1007,7 @@ post_get_site_checks() {
 generate_extra_domains() {
 # Generate search URL prefixes combining primary domain and extra domains
   if [ "$page_element_domains" = "auto" ]; then
+    echo
     echo -n "Searching for extra asset domains (working in $working_mirror_dir) ... "
     domain_grep="https?:\\\?/\\\?/[^\"'/< ]+\.[^\"'/< ]+\\\?/[^\"'< ]+[^\"'/< ]+\.[^\"'/< ]+"
     domain_grep2="https?:\\\?/\\\?/[^\"'/< ]+\.[^\"'/< ]+\\\?/"
@@ -1047,8 +1050,9 @@ wget_extra_urls() {
 
   echo "Searching for additional URLs to retrieve with Wget (working in $working_mirror_dir) ... " "1"
 
-  # Refresh file for Wget (generated)
+  # Refresh files for Wget (generated)
   touchmod "$input_file_extra"; echo > "$input_file_extra"
+  touchmod "$input_long_filenames"; echo > "$input_long_filenames"
 
   # Generate search URL prefixes combining primary domain and extra domains
   generate_extra_domains
@@ -1146,6 +1150,26 @@ wget_extra_urls() {
   else
     wget_extra_core_options+=("$wvol")
   fi
+
+  echo -n "Checking URLs for very long filenames ... "
+  # Read the file line by line and store it in the array
+  while IFS= read -r line; do
+    # check Wget report for occurrence of string: The destination name is too long (M), reducing to N
+    output_file=$(basename "$line")
+    if [ ${#output_file} -gt "$long_filename_threshold" ]; then
+      wget_longfilename_options=("$wget_ssl" --spider "$line")
+      report_dest_name_length=$($wget_cmd "${wget_extra_options[@]}" "${wget_longfilename_options[@]}" 2>&1 | grep -m 1 "destination name is too long")
+      if [ "$report_dest_name_length" != "" ]; then
+        shortername_length=$(echo "$report_dest_name_length" | grep -o "reducing to [0-9]*" | grep -o "[0-9]*")
+        full_filename=$(basename "$line")
+        # truncate string accordingly
+        shorter_name=${full_filename:0:shortername_length}
+        shorter_name2=${full_filename: -shortername_length}  # this alternative includes the correct extension 
+        printf '%s\t%s\t%s\n' "$line" "$shorter_name" "$shorter_name2" >> "$input_long_filenames"
+      fi
+    fi
+  done < "$input_file_extra"
+  echo "Done."
 
   echo "Running Wget on these additional URLs with options: " "${wget_extra_core_options[@]}" "${wget_extra_options[@]}" "${wget_asset_options[@]}"
   error_set +e
@@ -1276,6 +1300,23 @@ process_assets() {
       done
     fi
   fi
+
+  # Special case: convert long file names to shorter forms determined previously
+  if [ ${#webpages[@]} -ne 0 ] && [ -s "$input_long_filenames" ]; then
+    while IFS= read -r line; do
+      if [ "$line" != "" ]; then
+        full_URL="$(echo "$line" | awk -F'\t' '{print $1}')"
+        full_filename=$(basename "$full_URL")
+        shorter_name=$(printf "%s\n" "$line" | awk -F'\t' '{print $2}')
+        # search and replace
+        for opt in "${webpages[@]}"; do
+          sed_subs=('s~'"$full_filename"'~'"$shorter_name"'~g' "$opt")
+          sed "${sed_options[@]}" "${sed_subs[@]}"
+        done
+      fi
+    done < "$input_long_filenames"
+  fi
+
 
   # Special case: mirroring a directory not a whole domain: readjust internal links
   if [ "$url" != "$url_base/" ] && [ "$cut_dirs" = "0" ]; then

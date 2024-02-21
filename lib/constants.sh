@@ -22,8 +22,8 @@
 ################################################
 # MakeStaticSite info
 ################################################
-version=0.28.7+2
-version_date='16 February 2024'
+version=0.28.7+3
+version_date='21 February 2024'
 version_header="MakeStaticSite version $version, released on $version_date."
 mss_license="GNU Affero General Public License version 3"
 mss_download="https://makestaticsite.sh/download/makestaticsite_latest.tar.gz"
@@ -53,7 +53,7 @@ mss_dir_permissions=700         # Default Unix file permissions for directory cr
 tmp_dir=tmp                     # Directory where temporary files are to be stored
 tab="  "                        # tab spacing for file outputs
 host_dir=auto                   # Host directory mode; for Wget, empty or no corresponds to -nh, else host directory included 
-
+long_filename_threshold=200     # Number of characters in filename to trigger (Wget) length checks - should be signficantly less than 255
 
 ################################################
 # Credentials processing and storage
@@ -93,6 +93,7 @@ wget_cookies_nullify_user_agent=no # When wget_user_agent is defined above as a 
 wget_post=wget_post             # Wget POST data file name stem
 wget_inputs_main=wget_inputs_main # input file name stem for web content to be retrieved in main run of Wget in phase 2
 wget_inputs_extra=wget_inputs_extra # input file name stem for additional assets to be retrieved by Wget in phase 3
+wget_long_filenames=wget_long_filenames # input file name stem for URLs with very long filenames for assets already retrieved by Wget
 rename_wget_tmps=yes            # Remove .tmp.html suffixes from (Wget temp) file names
 
 # Core options for Wget (array)
