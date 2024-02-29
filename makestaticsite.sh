@@ -417,6 +417,13 @@ initialise_variables() {
   # Additional, supported extensions and domains for stored assets
   asset_domains="$(config_get asset_domains "$myconfig")"
   page_element_domains="$(config_get page_element_domains "$myconfig")"
+  asset_grep_includes=()
+  asset_find_names=()
+  IFS=',' read -ra list <<< "$web_source_extensions"
+  for item in "${list[@]}"; do
+    asset_grep_includes+=( --include \*."$item" )
+    asset_find_names+=( \*."$item" )
+  done
 
   # Support for CORS
   cors_enable=$(yesno "$cors_enable")
@@ -1009,11 +1016,13 @@ generate_extra_domains() {
   if [ "$page_element_domains" = "auto" ]; then
     echo
     echo -n "Searching for extra asset domains (working in $working_mirror_dir) ... "
-    domain_grep="https?:\\\?/\\\?/[^\"'/< ]+\.[^\"'/< ]+\\\?/[^\"'< ]+[^\"'/< ]+\.[^\"'/< ]+"
+    domain_grep="[\"'=]https?:\\\?/\\\?/[^\"'/< ]+\.[^\"'/< ]+\\\?/[^\"'< ]+[^\"'/< ]+\.[^\"'/< ]+"
+    domain_grepv="[\"'=]https?:\\\?/\\\?/[^\"'/< ]+\.[^\"'/< ]+\\\?/[^\"'< ]+[^\"'/< ]+\.html?[^\"'/< ]*"
     domain_grep2="https?:\\\?/\\\?/[^\"'/< ]+\.[^\"'/< ]+\\\?/"
     domain_grep3="[^\"'/< ]+\.[^\"'/< ]+\\\?/"
     add_domains=()
-    while IFS='' read -r line; do add_domains+=("$line"); done < <(grep -Eroh "$domain_grep" "$working_mirror_dir" --include "*\.html" | grep -Eo "$domain_grep2" | grep -Eo "$domain_grep3" )
+    while IFS='' read -r line; do add_domains+=("$line"); done < <(grep -Eroh "$domain_grep" "$working_mirror_dir" "${asset_grep_includes[@]}" | grep -Ev "$domain_grepv" | grep -Eo "$domain_grep2" | grep -Eo "$domain_grep3" )
+
     echo "add_domains array has ${#add_domains[@]} elements" "2"
     # Store unique elements only
     add_domains_unique=()
@@ -1040,20 +1049,24 @@ generate_extra_domains() {
 # target files are not expected to change during this site generation
 wget_extra_urls() {
   cd "$mirror_dir" || { echo "Unable to enter $mirror_dir."; echo "Aborting."; exit; }
-  
+
   echo "Pruning links to assets that have query strings appended" "1"
   IFS="," read -r -a prune_list <<< "$query_prune_list"
   for opt in "${prune_list[@]}"; do
-    sed_subs=('s~\([\"'\''][^>]*\.'"$opt"'\)?[^'\''\"]*~\1~g')
-    find "$working_mirror_dir" -type f \( -name '*.html' -o -name '*.xml' -o -name '*.txt' \) -print0 | xargs -0 sed "${sed_options[@]}" "${sed_subs[@]}"
+    sed_subs=('s~([\"'\''][^>]*\.'"$opt"')\?[^'\''\"]*~\1~g')
+    for file_ext in "${asset_find_names[@]}"; do
+      find "$working_mirror_dir" -type f -name "$file_ext" -print0 | xargs "${xargs_options[@]}" sed "${sed_ere_options[@]}" "${sed_subs[@]}"
+    done
   done
   echo " " "1"
-  
+
   wget_protocol_relative_urls=$(yesno "$wget_protocol_relative_urls")
   if [ "$wget_protocol_relative_urls" = "yes" ]; then
     echo "Prefixing protocol-relative URLs with $wget_protocol_prefix" "1"
-    sed_subs=('s~\([\"'\'']\)//~\1'"$wget_protocol_prefix"'://~g')
-    find "$working_mirror_dir" -type f \( -name '*.html' -o -name '*.xml' -o -name '*.txt' \) -print0 | xargs -0 sed "${sed_options[@]}" "${sed_subs[@]}"
+    sed_subs=('s~([\"'\''])//('"$domain_re"')~\1'"$wget_protocol_prefix"'://\2~g')
+    for file_ext in "${asset_find_names[@]}"; do 
+      find "$working_mirror_dir" -type f -name "$file_ext" -print0 | xargs "${xargs_options[@]}" sed "${sed_ere_options[@]}" "${sed_subs[@]}"
+    done
     echo " " "1"
   fi
 
@@ -1074,7 +1087,7 @@ wget_extra_urls() {
   fi
 
   webassets_all=()
-  while IFS='' read -r line; do webassets_all+=("$line"); done < <(grep -Eroh "$url_grep" "$working_mirror_dir" --include "*\.html")
+  while IFS='' read -r line; do webassets_all+=("$line"); done < <(grep -Eroh "$url_grep" "$working_mirror_dir" "${asset_grep_includes[@]}")
   echo "webassets_all array has ${#webassets_all[@]} elements" "1"
 
   # Return if empty (nothing further found)
@@ -1216,7 +1229,7 @@ process_assets() {
 
   [ -z ${url_grep+x} ] && url_grep="$(assets_search_string "$all_domains" "[^\"'<) ]+")" # define $url_grep as necessary
   for opt in "${url_grep[@]}"; do
-    while IFS='' read -r line; do webpages+=("$line"); done < <(grep -Erl "$opt" . --include "*\.html")
+    while IFS='' read -r line; do webpages+=("$line"); done < <(grep -Erl "$opt" . "${asset_grep_includes[@]}")
   done
 
   # Prepare adjustment for relative paths with assets directory
@@ -1273,8 +1286,10 @@ process_assets() {
       # in the case of directory URL with --no-parent, we need to limit matches
       # to full URL and tweak the replacements
       if [ "$url" = "$url_base/" ] || { [ "$external_dir_links" != "" ] && [ "$external_dir_links" != "off" ]; }; then
-        sed_subs=('s~https\?://'"$hostport/"'~'"$pathpref"'~g' "$opt")
-        sed "${sed_options[@]}" "${sed_subs[@]}"
+        sed_subs1=('s~([a-zA-Z0_9][[:space:]]*=[[:space:]]*["'"']"'?)https?://'"$hostport/"'~'"\1$pathpref"'~g' "$opt") # trims strictly
+        sed_subs2=('s~([[:space:]]*,[[:space:]]*["'"']"'?)https?://'"$hostport/"'~'"\1$pathpref"'~g' "$opt") # trims loosely 
+        sed "${sed_ere_options[@]}" "${sed_subs1[@]}"
+        sed "${sed_ere_options[@]}" "${sed_subs2[@]}"
       fi
 
       # Loop over all non-primary-domain assets
@@ -1283,15 +1298,19 @@ process_assets() {
         for url_extra in "${urls_array[@]}"; do
           asset_rel_path=$(env echo "$url_extra" | cut -d/ -f3-)
           asset_rel_path="$pathpref$imports_directory$imports_dir_suffix$asset_rel_path"
-          sed_subs=('s~'"$url_extra"'~'"$asset_rel_path"'~g' "$opt")
-          sed "${sed_options[@]}" "${sed_subs[@]}"
+          sed_subs1=('s~([a-zA-Z0_9][[:space:]]*=[[:space:]]*["'"']"'?)'"$url_extra"'~\1'"$asset_rel_path"'~g' "$opt") # trims strictly 
+          sed_subs2=('s~([[:space:]]*,[[:space:]]["'"']"'?*)'"$url_extra"'~'"\1$asset_rel_path"'~g' "$opt") # trims loosely
+          sed "${sed_ere_options[@]}" "${sed_subs1[@]}"
+          sed "${sed_ere_options[@]}" "${sed_subs2[@]}"
         done
         # scheme relative URLs
         for url_extra in "${urls_array_2[@]}"; do
           asset_rel_path=$(env echo "$url_extra" | cut -d/ -f3-)
           asset_rel_path="$pathpref$imports_directory$imports_dir_suffix$asset_rel_path"
-          sed_subs=('s~'"$url_extra"'~'"$asset_rel_path"'~g' "$opt")
-          sed "${sed_options[@]}" "${sed_subs[@]}"
+          sed_subs1=('s~([a-zA-Z0_9][[:space:]]*=[[:space:]]*["'"']"'?)'"$url_extra"'~'"\1$asset_rel_path"'~g' "$opt") # trims strictly 
+          sed_subs2=('s~([[:space:]]*,[[:space:]]*["'"']"'?)'"$url_extra"'~'"\1$asset_rel_path"'~g' "$opt") # trims loosely
+          sed "${sed_ere_options[@]}" "${sed_subs1[@]}"
+          sed "${sed_ere_options[@]}" "${sed_subs2[@]}"
         done
       fi
     done
@@ -1335,15 +1354,14 @@ process_assets() {
     done < "$input_long_filenames"
   fi
 
-
   # Special case: mirroring a directory not a whole domain: readjust internal links
   if [ "$url" != "$url_base/" ] && [ "$cut_dirs" = "0" ]; then
     extra_dirs_list=()
     while IFS= read -r line; do extra_dirs_list+=("$line"); done <<<"$(find "." -name "*" -type d -print | grep -v "$url_path" | grep -vx "." | sed s'/^..//')"
     # Determine which web pages to search and replace (may as well fetch all)
     webpages=()
-    while IFS= read -r line; do webpages+=("$line"); done <<<"$(find . -name "*.html" -print)"
-
+    while IFS= read -r line; do webpages+=("$line"); done <<<"$(for file_ext in "${asset_find_names[@]}"; do find . -type f -name "$file_ext" -print; done)"
+    
     for opt in "${webpages[@]}"; do
       # but don't process XML files in guise of HTML files
       if grep -q "<?xml version" "$opt"; then
@@ -1466,7 +1484,9 @@ site_postprocessing() {
       if [ "$confirm" == "y" ] || [ "$confirm" == "Y" ]; then
         echo -n "Replacing remaining occurrences of $domain with $deploy_domain ... "
         sed_subs=('s~'"$domain_match_prefix$domain"'~'"$domain_subs_prefix$deploy_domain"'~g')
-        find . -type f \( -name '*.html' -o -name '*.xml' -o -name '*.txt' \) -print0 | xargs -0 sed "${sed_options[@]}" "${sed_subs[@]}"
+        for file_ext in "${asset_find_names[@]}"; do 
+          find . -type f -name "$file_ext" -print0 | xargs "${xargs_options[@]}" sed "${sed_options[@]}" "${sed_subs[@]}"
+        done
         echo "Done."
       fi
     fi
@@ -1478,8 +1498,8 @@ site_postprocessing() {
   for opt in "${webpages[@]}"; do
     # Provisionally append index.html to internal anchors ending with trailing slash
     # The canonical form will be set later
-    sed_subs=('s/\(=["'\''][^:\\[:space:]"'\'']*\/\)\([\"'\'']\)/\1index.html\2/g' "$opt")
-    sed "${sed_options[@]}" "${sed_subs[@]}"
+    sed_subs=('s/(=["'\''][^:\\[:space:]"'\'']*\/)([\"'\''])/\1index.html\2/g' "$opt")
+    sed "${sed_ere_options[@]}" "${sed_subs[@]}"
 
     # If CORS is enabled then remove (any restrictions stipulated in) HTML crossorigin tag
     if [ "$cors_enable" = "yes" ]; then
@@ -1503,8 +1523,12 @@ site_postprocessing() {
   sed_subs2=("s/href='http:\/\/${deploy_domain}/href='https:\/\/${deploy_domain}/g")
   if [ "$protocol" = "https" ] && [ "$force_ssl" = "yes" ]; then
     printf "Updating anchors for %s from http: to https: ... " "$deploy_domain"
-    find . -type f \( -name '*.html' -o -name '*.htm' \) -print0 | xargs -0 sed "${sed_options[@]}" "${sed_subs1[@]}"
-    find . -type f \( -name '*.html' -o -name '*.htm' \) -print0 | xargs -0 sed "${sed_options[@]}" "${sed_subs2[@]}"
+    for file_ext in "${asset_find_names[@]}"; do 
+      find . -type f -name "$file_ext" -print0 | xargs "${xargs_options[@]}" sed "${sed_options[@]}" "${sed_subs1[@]}"
+    done
+    for file_ext in "${asset_find_names[@]}"; do 
+      find . -type f -name "$file_ext" -print0 | xargs "${xargs_options[@]}" sed "${sed_options[@]}" "${sed_subs2[@]}"
+    done
     echo "Done."
   fi
 
@@ -1566,7 +1590,7 @@ clean_mirror() {
     sed_subs_canonical=('/<code>.*<\/code>/b
      s~="canonical" href="index.html"'~'="canonical" href="'"$url_canonical"'"~g' "$opt")
     sed "${sed_options[@]}" "${sed_subs_canonical[@]}"
-  done <   <(find . -type f -name "*.html" -print0)
+  done <   <(for file_ext in "${asset_find_names[@]}"; do find . -type f -name "$file_ext" -print0; done)
   echo "Done."
 
   error_set +e
@@ -1580,7 +1604,7 @@ clean_mirror() {
       while IFS= read -r -d '' fname
       do
         $htmltidy_cmd "${htmltidy_options[@]}" "$fname"
-      done <   <(find . -type f \( -name "*.html" -o -name "*.htm" \) -print0)
+      done <   <(for file_ext in "${asset_find_names[@]}"; do find . -type f -name "$file_ext" -print0; done)
       echo "Done."
     fi
   fi

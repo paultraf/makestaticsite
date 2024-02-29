@@ -140,9 +140,13 @@ whichos() {
     ostype="BSD"
     LC_CTYPE=C && LANG=C
     sed_options=(-i '')
+    sed_ere_options=(-i '' -E)
+    xargs_options=(-0)
   else
     ostype=""
     sed_options=(-i)
+    sed_ere_options=(-i -r)
+    xargs_options=(-r -0)
   fi
 }
 
