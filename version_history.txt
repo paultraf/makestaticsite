@@ -19,6 +19,51 @@
 ##########################################################################
 
 
+0.29 (released on 2024-02-29)
+     * Restructuring and refinement of postprocessing: with various extension
+       to support scheme relative URLs, CORS, and assets with long filenames *
+      [lib/constants.sh]
+       New constant domain_re as a loose regex approximation to a domain.
+       New constant asset_url_match_level as a measure of strictness of
+       matching asset URLs.
+       New constant web_source_exclude_dirs to list directories to exclude
+       relative to working mirror directory)
+       New constant cors_enable for allowing cross-origin resources once
+       downloaded. Cosmetic structuring with new section, 'Processing of
+       downloaded assets and resources'; new constants long_filename_threshold
+       and wget_long_filenames for processing of URLs with long filenames;
+       new constant extra_assets_allow_query_strings to support filtering of
+       assets with query strings; new constants wget_protocol_relative_urls
+       and wget_protocol_prefix to support Wget in fetching protocol-relative
+       URLs.
+      [lib/general.sh]
+       whichos(): introduced sed_ere_options and xargs_options to support
+       extended regular expressions
+      [makestaticsite.sh]
+       initialise_variables(): added asset_exclude_dirs array, initialised from
+       web_source_exclude_dirs. Applied selectively in wget_extra_urls() and
+       process_assets().
+       Added asset_grep_includes and asset_find_name arrays, initialised from
+       web_source_extensions list, for `find -names` and `grep --include`
+       respectively. Substituted ad hoc occurrences of these options in
+       generate_extra_domains(), wget_extra_urls, process_assets(),
+       site_postprocessing() and clean_mirror().
+       For sed invocations, replaced basic regular expressions with extended
+       regular expressions wherever back-references used.
+       wget_extra_urls(): Added routine to prefix protocol-relative URLs with
+       a protocol ahead of Wget phase 3 downloads.
+       URLs with query strings can filtered more flexibily and efficiently.   
+       Added routine to detect URLs with long filenames in input_file_extra,
+       and store shorter alternatives in input_long_filenames.
+       process_assets(): added routine to crawl downloaded pages and convert
+       long filenames to shorter versions determined previously.
+       Derived another URLs array for scheme relative URLs (extra asset
+       domains), processed in the same way as for urls_array.
+       Laxer search and replacements (absolute to relative URLs) now depend
+       on the value of url_asset_match_level being less than a constant.
+       site_postprocessing(): inserted global deletions of crossorigin tag
+       conditional on value of cors_enable.
+
 0.28.7 (released on 2024-02-12)
       * Maintenance: improved handling of asset processing, with bug fix *
       [makestaticsite.sh]
