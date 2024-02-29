@@ -425,6 +425,14 @@ initialise_variables() {
     asset_find_names+=( \*."$item" )
   done
 
+  # Directories to exclude from processing
+  # -not -path "./directory/*"
+  asset_exclude_dirs=()
+  IFS=',' read -ra list <<< "$web_source_exclude_dirs"
+  for item in "${list[@]}"; do
+    asset_exclude_dirs+=( -not -path "$item/"\* )
+  done
+
   # Support for CORS
   cors_enable=$(yesno "$cors_enable")
    
@@ -1055,7 +1063,7 @@ wget_extra_urls() {
   for opt in "${prune_list[@]}"; do
     sed_subs=('s~([\"'\''][^>]*\.'"$opt"')\?[^'\''\"]*~\1~g')
     for file_ext in "${asset_find_names[@]}"; do
-      find "$working_mirror_dir" -type f -name "$file_ext" -print0 | xargs "${xargs_options[@]}" sed "${sed_ere_options[@]}" "${sed_subs[@]}"
+      find "$working_mirror_dir" -type f "${asset_exclude_dirs[@]}" -name "$file_ext" -print0 | xargs "${xargs_options[@]}" sed "${sed_ere_options[@]}" "${sed_subs[@]}"
     done
   done
   echo " " "1"
@@ -1065,7 +1073,7 @@ wget_extra_urls() {
     echo "Prefixing protocol-relative URLs with $wget_protocol_prefix" "1"
     sed_subs=('s~([\"'\''])//('"$domain_re"')~\1'"$wget_protocol_prefix"'://\2~g')
     for file_ext in "${asset_find_names[@]}"; do 
-      find "$working_mirror_dir" -type f -name "$file_ext" -print0 | xargs "${xargs_options[@]}" sed "${sed_ere_options[@]}" "${sed_subs[@]}"
+      find "$working_mirror_dir" -type f "${asset_exclude_dirs[@]}" -name "$file_ext" -print0 | xargs "${xargs_options[@]}" sed "${sed_ere_options[@]}" "${sed_subs[@]}"
     done
     echo " " "1"
   fi
@@ -1287,9 +1295,11 @@ process_assets() {
       # to full URL and tweak the replacements
       if [ "$url" = "$url_base/" ] || { [ "$external_dir_links" != "" ] && [ "$external_dir_links" != "off" ]; }; then
         sed_subs1=('s~([a-zA-Z0_9][[:space:]]*=[[:space:]]*["'"']"'?)https?://'"$hostport/"'~'"\1$pathpref"'~g' "$opt") # trims strictly
-        sed_subs2=('s~([[:space:]]*,[[:space:]]*["'"']"'?)https?://'"$hostport/"'~'"\1$pathpref"'~g' "$opt") # trims loosely 
+        sed_subs2=('s~([[:space:]]*,[[:space:]]*["'"']"'?)https?://'"$hostport/"'~'"\1$pathpref"'~g' "$opt") # trims loosely
         sed "${sed_ere_options[@]}" "${sed_subs1[@]}"
-        sed "${sed_ere_options[@]}" "${sed_subs2[@]}"
+        if (( url_asset_match_level < 3 )); then
+          sed "${sed_ere_options[@]}" "${sed_subs2[@]}"
+        fi
       fi
 
       # Loop over all non-primary-domain assets
@@ -1298,19 +1308,23 @@ process_assets() {
         for url_extra in "${urls_array[@]}"; do
           asset_rel_path=$(env echo "$url_extra" | cut -d/ -f3-)
           asset_rel_path="$pathpref$imports_directory$imports_dir_suffix$asset_rel_path"
-          sed_subs1=('s~([a-zA-Z0_9][[:space:]]*=[[:space:]]*["'"']"'?)'"$url_extra"'~\1'"$asset_rel_path"'~g' "$opt") # trims strictly 
+          sed_subs1=('s~([a-zA-Z0_9][[:space:]]*=[[:space:]]*["'"']"'?)'"$url_extra"'~\1'"$asset_rel_path"'~g' "$opt") # trims strictly
           sed_subs2=('s~([[:space:]]*,[[:space:]]["'"']"'?*)'"$url_extra"'~'"\1$asset_rel_path"'~g' "$opt") # trims loosely
           sed "${sed_ere_options[@]}" "${sed_subs1[@]}"
-          sed "${sed_ere_options[@]}" "${sed_subs2[@]}"
+          if (( url_asset_match_level < 3 )); then
+            sed "${sed_ere_options[@]}" "${sed_subs2[@]}"
+          fi
         done
         # scheme relative URLs
         for url_extra in "${urls_array_2[@]}"; do
           asset_rel_path=$(env echo "$url_extra" | cut -d/ -f3-)
           asset_rel_path="$pathpref$imports_directory$imports_dir_suffix$asset_rel_path"
-          sed_subs1=('s~([a-zA-Z0_9][[:space:]]*=[[:space:]]*["'"']"'?)'"$url_extra"'~'"\1$asset_rel_path"'~g' "$opt") # trims strictly 
+          sed_subs1=('s~([a-zA-Z0_9][[:space:]]*=[[:space:]]*["'"']"'?)'"$url_extra"'~'"\1$asset_rel_path"'~g' "$opt") # trims strictly
           sed_subs2=('s~([[:space:]]*,[[:space:]]*["'"']"'?)'"$url_extra"'~'"\1$asset_rel_path"'~g' "$opt") # trims loosely
           sed "${sed_ere_options[@]}" "${sed_subs1[@]}"
-          sed "${sed_ere_options[@]}" "${sed_subs2[@]}"
+          if (( url_asset_match_level < 3 )); then
+            sed "${sed_ere_options[@]}" "${sed_subs2[@]}"
+          fi
         done
       fi
     done
@@ -1358,9 +1372,9 @@ process_assets() {
   if [ "$url" != "$url_base/" ] && [ "$cut_dirs" = "0" ]; then
     extra_dirs_list=()
     while IFS= read -r line; do extra_dirs_list+=("$line"); done <<<"$(find "." -name "*" -type d -print | grep -v "$url_path" | grep -vx "." | sed s'/^..//')"
-    # Determine which web pages to search and replace (may as well fetch all)
+    # Determine which web pages to search and replace
     webpages=()
-    while IFS= read -r line; do webpages+=("$line"); done <<<"$(for file_ext in "${asset_find_names[@]}"; do find . -type f -name "$file_ext" -print; done)"
+    while IFS= read -r line; do webpages+=("$line"); done <<<"$(for file_ext in "${asset_find_names[@]}"; do find . -type f "${asset_exclude_dirs[@]}" -name "$file_ext" -print; done)"
     
     for opt in "${webpages[@]}"; do
       # but don't process XML files in guise of HTML files
@@ -1485,7 +1499,7 @@ site_postprocessing() {
         echo -n "Replacing remaining occurrences of $domain with $deploy_domain ... "
         sed_subs=('s~'"$domain_match_prefix$domain"'~'"$domain_subs_prefix$deploy_domain"'~g')
         for file_ext in "${asset_find_names[@]}"; do 
-          find . -type f -name "$file_ext" -print0 | xargs "${xargs_options[@]}" sed "${sed_options[@]}" "${sed_subs[@]}"
+          find . -type f "${asset_exclude_dirs[@]}" -name "$file_ext" -print0 | xargs "${xargs_options[@]}" sed "${sed_options[@]}" "${sed_subs[@]}"
         done
         echo "Done."
       fi
