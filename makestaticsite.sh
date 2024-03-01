@@ -425,6 +425,13 @@ initialise_variables() {
     asset_find_names+=( \*."$item" )
   done
 
+  # Extensions supported by HTML Tidy
+  IFS=',' read -ra list <<< "$htmltidy_source_extensions"
+  htmltidy_file_exts=()
+  for item in "${list[@]}"; do
+    htmltidy_file_exts+=(  \*."$item" )
+  done
+  
   # Directories to exclude from processing
   # -not -path "./directory/*"
   asset_exclude_dirs=()
@@ -1614,11 +1621,10 @@ clean_mirror() {
       printf "Unable to run HTML Tidy (htmltidy_cmd is set to %s) - please check that it is installed according to instructions at %s. Skipping.\n" "$htmltidy_cmd" "$htmltidy_url";
     else
       printf "Running HTML Tidy on html files with options %s ... " "${htmltidy_options[*]}"
-      htmltidy_options+=(-f "$html_errors_file")
       while IFS= read -r -d '' fname
       do
-        $htmltidy_cmd "${htmltidy_options[@]}" "$fname"
-      done <   <(for file_ext in "${asset_find_names[@]}"; do find . -type f -name "$file_ext" -print0; done)
+        $htmltidy_cmd "${htmltidy_options[@]}" "$fname" 2>>"$html_errors_file"
+      done <   <(for file_ext in "${htmltidy_file_exts[@]}"; do find . -type f -name "$file_ext" -print0; done)
       echo "Done."
     fi
   fi
