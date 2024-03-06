@@ -206,11 +206,11 @@ wget_canonical_options() {
 
 # exclude directories 
 # (note that wget, as of 1.21.3, will not parse --exclude_directories=/some_dir)
-  wget_options=${wget_options/--exclude/-X}
+  wget_options=${wget_options/--exclude[[:space:]]/-X}
   wget_options=${wget_options/exclude_directories=/-X}
 
 # include directories
-  wget_options=${wget_options/--include/-I}
+  wget_options=${wget_options/--include[[:space:]]/-I}
   wget_options=${wget_options/include_directories=/-I}
 
 # reject files
@@ -256,7 +256,9 @@ assets_search_string() {
   if [ "$1" != "" ]; then
     IFS="," read -r -a other_domains <<< "$1" 
     for opt in "${other_domains[@]}"; do
-      url_path+="|https?://$opt/$path" # the '?' is ERE 0 or 1
+#      url_path+="|https?://$opt/$path" # the '?' is ERE 0 or 1
+## prepend with [\"'=]
+      url_path+="|[\"'=]https?://$opt/$path" # the '?' is ERE 0 or 1
     done
   fi
   [ "$url_path" != "" ] && url_path="${url_path:1}"
