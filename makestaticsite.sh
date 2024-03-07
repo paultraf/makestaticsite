@@ -1636,7 +1636,11 @@ clean_mirror() {
   fi
 
   # Remove unwanted system files
-  find . -type f -name ".DS_Store" -delete
+  files_to_delete=()
+  IFS=',' read -ra files_to_delete <<< "$system_files_cleanup"
+  for item in "${files_to_delete[@]}"; do
+    find . -type f -name "$item" -delete
+  done
 #rm "$input_file_extra"
 
   # Conclude login session (expire and delete cookie)

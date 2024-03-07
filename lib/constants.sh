@@ -22,8 +22,8 @@
 ################################################
 # MakeStaticSite info
 ################################################
-version=0.29+1
-version_date='1 March 2024'
+version=0.29+3
+version_date='7 March 2024'
 version_header="MakeStaticSite version $version, released on $version_date."
 mss_license="GNU Affero General Public License version 3"
 mss_download="https://makestaticsite.sh/download/makestaticsite_latest.tar.gz"
@@ -264,6 +264,7 @@ ink_info=lime
 # Cleanup settings
 ################################################
 clean_query_extensions=no       # Remove query strings from filenames (yes/no)
+system_files_cleanup=Thumbs.db,.DS_Store # List of unwanted system files, to be removed from mirror output
 
 
 ################################################
