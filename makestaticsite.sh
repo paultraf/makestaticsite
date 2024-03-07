@@ -432,14 +432,6 @@ initialise_variables() {
     htmltidy_file_exts+=(  \*."$item" )
   done
   
-  # Directories to exclude from processing
-  # -not -path "./directory/*"
-  asset_exclude_dirs=()
-  IFS=',' read -ra list <<< "$web_source_exclude_dirs"
-  for item in "${list[@]}"; do
-    asset_exclude_dirs+=( -not -path "$item/"\* )
-  done
-
   # Support for CORS
   cors_enable=$(yesno "$cors_enable")
    
@@ -558,6 +550,7 @@ initialise_variables() {
   if [ "$mirror_archive_dir" != "" ]; then
     working_mirror_dir="$mirror_dir/$mirror_archive_dir$hostport_dir"
     zip_archive="$mirror_archive_dir.zip"
+    initialise_include-excludes
   fi
 
   mss_cut_dirs=$(yesno "$mss_cut_dirs" "1")
@@ -597,6 +590,16 @@ initialise_variables() {
 
   # Script sign-off message
   msg_signoff="Ending run of MakeStaticSite."
+}
+
+initialise_include-excludes() {
+  # Directories to exclude from processing
+  # -not -path "/full/path/to/directory/*"
+  asset_exclude_dirs=()
+  IFS=',' read -ra list <<< "$web_source_exclude_dirs"
+  for item in "${list[@]}"; do
+    asset_exclude_dirs+=( -not -path "${working_mirror_dir}/$item/"\* ) # this needs to be a full path
+  done
 }
 
 prepare_static_generation() {
@@ -822,6 +825,7 @@ wget_mirror() {
     [ "$archive" = "yes" ] && mirror_archive_dir+="$timestamp"
     working_mirror_dir="$mirror_dir/$mirror_archive_dir$hostport_dir"
     zip_archive="$mirror_archive_dir.zip"
+    initialise_include-excludes
   fi
 
   # Overwrite an existing mirror only if the -m and wget_refresh_mirror flags are unset
@@ -1070,7 +1074,7 @@ wget_extra_urls() {
   for opt in "${prune_list[@]}"; do
     sed_subs=('s~([\"'\''][^>]*\.'"$opt"')\?[^'\''\"]*~\1~g')
     for file_ext in "${asset_find_names[@]}"; do
-      find "$working_mirror_dir" -type f "${asset_exclude_dirs[@]}" -name "$file_ext" -print0 | xargs "${xargs_options[@]}" sed "${sed_ere_options[@]}" "${sed_subs[@]}"
+      find "$working_mirror_dir" -type f -name "$file_ext" "${asset_exclude_dirs[@]}" -print0 | xargs "${xargs_options[@]}" sed "${sed_ere_options[@]}" "${sed_subs[@]}"
     done
   done
   echo " " "1"
@@ -1080,7 +1084,7 @@ wget_extra_urls() {
     echo "Prefixing protocol-relative URLs with $wget_protocol_prefix" "1"
     sed_subs=('s~([\"'\''])//('"$domain_re"')~\1'"$wget_protocol_prefix"'://\2~g')
     for file_ext in "${asset_find_names[@]}"; do 
-      find "$working_mirror_dir" -type f "${asset_exclude_dirs[@]}" -name "$file_ext" -print0 | xargs "${xargs_options[@]}" sed "${sed_ere_options[@]}" "${sed_subs[@]}"
+      find "$working_mirror_dir" -type f -name "$file_ext" "${asset_exclude_dirs[@]}" -print0 | xargs "${xargs_options[@]}" sed "${sed_ere_options[@]}" "${sed_subs[@]}"
     done
     echo " " "1"
   fi
@@ -1102,7 +1106,7 @@ wget_extra_urls() {
   fi
 
   webassets_all=()
-  while IFS='' read -r line; do webassets_all+=("$line"); done < <(grep -Eroh "$url_grep" "$working_mirror_dir" "${asset_grep_includes[@]}")
+  while IFS='' read -r line; do webassets_all+=("$line"); done < <(grep -Eroh "$url_grep" "$working_mirror_dir" "${asset_grep_includes[@]}" | cut -c2- )  # Strip out initial character (inserted as per url_grep match condition)
   echo "webassets_all array has ${#webassets_all[@]} elements" "1"
 
   # Return if empty (nothing further found)
@@ -1177,7 +1181,7 @@ wget_extra_urls() {
   else
     webassets=("${webassets_omissions[@]}")
   fi
-  
+
   echo "webassets array has ${#webassets[@]} elements" "2"
   # Return if empty (all those found were filtered out)
   [ ${#webassets[@]} -eq 0 ] && { echo "None suitable found. " "1"; echo "Done."; return 0; }
@@ -1381,7 +1385,7 @@ process_assets() {
     while IFS= read -r line; do extra_dirs_list+=("$line"); done <<<"$(find "." -name "*" -type d -print | grep -v "$url_path" | grep -vx "." | sed s'/^..//')"
     # Determine which web pages to search and replace
     webpages=()
-    while IFS= read -r line; do webpages+=("$line"); done <<<"$(for file_ext in "${asset_find_names[@]}"; do find . -type f "${asset_exclude_dirs[@]}" -name "$file_ext" -print; done)"
+    while IFS= read -r line; do webpages+=("$line"); done <<<"$(for file_ext in "${asset_find_names[@]}"; do find . -type f -name "$file_ext" "${asset_exclude_dirs[@]}" -print; done)"
     
     for opt in "${webpages[@]}"; do
       # but don't process XML files in guise of HTML files
@@ -1506,7 +1510,7 @@ site_postprocessing() {
         echo -n "Replacing remaining occurrences of $domain with $deploy_domain ... "
         sed_subs=('s~'"$domain_match_prefix$domain"'~'"$domain_subs_prefix$deploy_domain"'~g')
         for file_ext in "${asset_find_names[@]}"; do 
-          find . -type f "${asset_exclude_dirs[@]}" -name "$file_ext" -print0 | xargs "${xargs_options[@]}" sed "${sed_options[@]}" "${sed_subs[@]}"
+          find . -type f -name "$file_ext" "${asset_exclude_dirs[@]}" -print0 | xargs "${xargs_options[@]}" sed "${sed_options[@]}" "${sed_subs[@]}"
         done
         echo "Done."
       fi
