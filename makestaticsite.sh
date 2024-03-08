@@ -1072,7 +1072,7 @@ wget_extra_urls() {
   echo "Pruning links to assets that have query strings appended" "1"
   IFS="," read -r -a prune_list <<< "$query_prune_list"
   for opt in "${prune_list[@]}"; do
-    sed_subs=('s~([\"'\''][^>]*\.'"$opt"')\?[^'\''\"]*~\1~g')
+    sed_subs=('s~([\"'\''][^>\"'\'']*\.'"$opt"')\?[^'\''\"]*~\1~g')
     for file_ext in "${asset_find_names[@]}"; do
       find "$working_mirror_dir" -type f -name "$file_ext" "${asset_exclude_dirs[@]}" -print0 | xargs "${xargs_options[@]}" sed "${sed_ere_options[@]}" "${sed_subs[@]}"
     done
@@ -1106,7 +1106,7 @@ wget_extra_urls() {
   fi
 
   webassets_all=()
-  while IFS='' read -r line; do webassets_all+=("$line"); done < <(grep -Eroh "$url_grep" "$working_mirror_dir" "${asset_grep_includes[@]}" | cut -c2- )  # Strip out initial character (inserted as per url_grep match condition)
+  while IFS='' read -r line; do webassets_all+=("$line"); done < <(grep -Eroh "$url_grep" "$working_mirror_dir" "${asset_grep_includes[@]}" | cut -c2- )  # Strip out initial character (as each result will start with a quote or '=' as per url_grep match condition)
   echo "webassets_all array has ${#webassets_all[@]} elements" "1"
 
   # Return if empty (nothing further found)
