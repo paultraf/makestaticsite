@@ -19,6 +19,34 @@
 ##########################################################################
 
 
+0.29.1 (released on 2024-03-08)
+       * Maintenance: Bug fixes to ensure fine-tuning of output works as
+         intended. *
+        [lib/constants.sh]
+         New constants: web_source_exclude_dirs to list directories under
+         which files are to be excluded from search and replace; 
+         htmltidy_source_extensions for web document file 
+         extensions intended for HTML Tidy; system_files_cleanup, list of
+         unwanted system files, to be removed from mirror output.
+        [lib/general.sh]
+         wget_canonical_options(): bug fix: inserted a missing space in
+         search pattern for --exclude and --include replacements.
+        [makestaticsite.sh]
+         Added function initialise_include-excludes() to initialise
+         asset_exclude_dirs, the list of directories to exclude from Wget
+         postprocessing (phase 3), now called immediately after assignment
+         of working_mirror_dir.  Bug fix: rearranged order of options where
+         asset_exclude_dirs used in find commands - in wget_extra_urls(),
+         process_assets() and site_postprocessing().
+         initialise_variables(): added htmltidy_file_exts array, initialised
+         from htmltidy_source_extensions.
+         wget_extra_urls(): bug fix: inserted missing context for regex search
+         to prune links with query strings appended.  
+         clean_mirror(): modified HTML Tidy loop to loop over extensions in
+         htmltidy_file_exts with change to STDERR redirection to append
+         errors to HTML Tidy errors file; replaced ad hoc removal of .DS_Store
+         file with a loop over system_files_cleanup.
+         
 0.29 (released on 2024-02-29)
      * Restructuring and refinement of postprocessing: with various extension
        to support scheme relative URLs, CORS, and assets with long filenames *
