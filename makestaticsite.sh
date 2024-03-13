@@ -1098,7 +1098,7 @@ wget_extra_urls() {
   # Generate search URL prefixes combining primary domain and extra domains
   generate_extra_domains
 
-  echo -n "Generating list of extra asset URLs ... "
+  echo -n "Generating a list of extra asset URLs for Wget ... "
   if [ "$(yesno "$extra_assets_allow_query_strings")" = "no" ]; then
     url_grep="$(assets_search_string "$all_domains" "[^\?\"'<) ]+")"
   else
@@ -1106,7 +1106,7 @@ wget_extra_urls() {
   fi
 
   webassets_all=()
-  while IFS='' read -r line; do webassets_all+=("$line"); done < <(grep -Eroh "$url_grep" "$working_mirror_dir" "${asset_grep_includes[@]}" | cut -c2- )  # Strip out initial character (as each result will start with a quote or '=' as per url_grep match condition)
+  while IFS='' read -r line; do webassets_all+=("$line"); done < <(grep -Eroha "$url_grep" "$working_mirror_dir" "${asset_grep_includes[@]}" | cut -c2- )  # Strip out initial character (as each result will start with a quote or '=' as per url_grep match condition)
   echo "webassets_all array has ${#webassets_all[@]} elements" "1"
 
   # Return if empty (nothing further found)
@@ -1246,7 +1246,10 @@ process_assets() {
     generate_extra_domains
   fi
 
+  echo -n "Converting paths to become relative to imports and assets directories ... " 
   [ -z ${url_grep+x} ] && url_grep="$(assets_search_string "$all_domains" "[^\"'<) ]+")" # define $url_grep as necessary
+
+  # Find pages where there are relevant assets
   for opt in "${url_grep[@]}"; do
     while IFS='' read -r line; do webpages+=("$line"); done < <(grep -Erl "$opt" . "${asset_grep_includes[@]}")
   done
