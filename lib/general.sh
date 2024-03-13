@@ -256,9 +256,8 @@ assets_search_string() {
   if [ "$1" != "" ]; then
     IFS="," read -r -a other_domains <<< "$1" 
     for opt in "${other_domains[@]}"; do
-#      url_path+="|https?://$opt/$path" # the '?' is ERE 0 or 1
-## prepend with [\"'=]
-      url_path+="|[\"'=]https?://$opt/$path" # the '?' is ERE 0 or 1
+      # Constrain matches by prepending with [\"'=]
+      url_path+="|[\"'=]https?://$opt/$path" # the '?' is intended for ERE 0 or 1
     done
   fi
   [ "$url_path" != "" ] && url_path="${url_path:1}"
@@ -441,4 +440,23 @@ touchmod() {
   else
     chmod "$2" "$1"
   fi
+}
+
+# Escape metacharacters according to whether
+# basic or extended regular expressions are used
+# Expects one parameter: string to be escaped
+# One optional parameter: regex type ('ERE' or 'BRE')
+# (BRE is the default)
+regex_escape() {
+  string="$1"
+  if [ -z ${2+x} ]; then
+    charlist=('\' "^"  "." "$"  "*" "[")
+  elif [ "$2" != "BRE" ]; then
+    charlist=('\' "^" "|" "." "$" "?" "*" "+" "(" ")" "[" "{")
+  fi
+  for char in "${charlist[@]}"; do
+    search="$char"; replace='\'"$char"
+    string=${string//"$search"/"$replace"}
+  done
+  printf "%s" "$string"
 }

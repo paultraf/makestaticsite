@@ -242,7 +242,6 @@ initialise_layout() {
   touchmod "$log_file"
 
   printf "Welcome to MakeStaticSite version %s\n" "$version"
-
   # Set up 'Run commands' file
   touchmod "$HOME/$credentials_rc_file"
 
@@ -529,6 +528,7 @@ initialise_variables() {
     fi
   fi
 
+  web_source_exclude_dirs="$(config_get web_source_exclude_dirs "$myconfig")"  
   htmltidy=$(yesno "$(config_get htmltidy "$myconfig")")
   add_extras=$(yesno "$(config_get add_extras "$myconfig")")
 
@@ -1281,8 +1281,15 @@ process_assets() {
   elif [ "$cut_dirs" = "0" ]; then
     # Populate URLs array from Wget's additional input file
     urls_array=()
+
+    # Produce a copy of input_file_extra_all ready for sed to process with extended regular expressions
+    input_string_extra=$(<"$input_file_extra")
+    input_string_extra=$(regex_escape "$input_string_extra" "ERE")
+    input_file_extra_ERE="${input_file_extra}.ERE"
+    printf "%s\n" "$input_string_extra" > "$input_file_extra_ERE"
+
     if [ -f "$input_file_extra" ]; then
-      if read -d '' -r -a urls_array; then :; fi < <(grep -v "//$domain" "$input_file_extra")
+      if read -d '' -r -a urls_array; then :; fi < <(grep -v "//$domain" "$input_file_extra_ERE")
     fi
 
     # Derive another URLs array with scheme relative URLs
