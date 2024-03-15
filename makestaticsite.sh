@@ -50,8 +50,9 @@ main() {
   (( phase < 3 )) && (( end_phase >= 2 )) && mirror_site
 
   # Phase 3: Augment the static site
-  (( phase < 4 )) && (( end_phase >= 3 )) && [ "$wget_extra_urls" = "yes" ] && wget_extra_urls
-
+  (( phase < 4 )) && (( end_phase >= 3 )) && [ "$wget_extra_urls" = "yes" ] && { while (( wget_extra_urls_count <= wget_extra_urls_depth )); do wget_extra_urls; done
+  }
+  
   # Phase 4: Refine the static site
   (( phase < 5 )) && (( end_phase >= 4 )) && [ "$site_post_processing" = "yes" ] && site_postprocessing
 
@@ -351,8 +352,10 @@ initialise_variables() {
 
   # now augment Wget input files with .cfg label
   wget_inputs_main="$wget_inputs_main-$myconfig.txt"
-  wget_inputs_extra="$wget_inputs_extra-$myconfig.txt"
+  wget_inputs_extra_all="$wget_inputs_extra-${myconfig}-all.txt" # cumulative input file
+  wget_inputs_extra="$wget_inputs_extra-$myconfig.txt" # single run input file
   wget_long_filenames="$wget_long_filenames-$myconfig.txt"
+  wget_extra_urls_count=1 # Initialise recursive calls to wget_extra_urls()
 
   # Translate to output levels for rsync and Wget respectively
   if [ "$output_level" = 'silent' ] || [ "$output_level" = 'quiet' ]; then
@@ -398,6 +401,8 @@ initialise_variables() {
     if check_wayback_url "$url" "$wayback_hosts"; then
       use_wayback=yes
       wget_extra_urls=no
+      wget_extra_urls_depth=0
+      wget_extra_urls_count=1
       domain_wayback_machine=$(printf "%s" "$url" | awk -F/ '{print $3}' | awk -F: '{print $1}')
       printf "\nWayback Machine detected at %s, hosted on %s.\n" "$url" "$domain_wayback_machine."
       process_wayback_url "$url" # will change the value of $url to be that of the archived site
@@ -485,7 +490,12 @@ initialise_variables() {
   archive=$(yesno "$(config_get archive "$myconfig")")
   wget_input_files=()  # Initialise array of additional Wget input URLs
   input_long_filenames="$script_dir/$tmp_dir/$wget_long_filenames"  # List of URLs with very long filenames (to be generated)
-  input_file_extra="$script_dir/$tmp_dir/$wget_inputs_extra"  # Input file for Wget extra assets (to be generated)
+  input_file_extra="$script_dir/$tmp_dir/$wget_inputs_extra"  # Input file for a single run of Wget extra assets (to be generated)
+  input_file_extra_all="$script_dir/$tmp_dir/$wget_inputs_extra_all"  # Input file for Wget extra assets accumulated over multiple runs (to be generated)
+  touchmod "$input_file_extra_all"
+  if (( phase < 3 )); then
+    echo > "$input_file_extra_all" # Initialise as an empty file
+  fi
   wget_extra_options_tmp=$(wget_canonical_options "$(config_get wget_extra_options "$myconfig")")
 
   # If URL contains one or more directories, then ensure --no-parent option, subject to option settings
@@ -1069,36 +1079,40 @@ generate_extra_domains() {
 wget_extra_urls() {
   cd "$mirror_dir" || { echo "Unable to enter $mirror_dir."; echo "Aborting."; exit; }
 
-  echo "Pruning links to assets that have query strings appended" "1"
-  IFS="," read -r -a prune_list <<< "$query_prune_list"
-  for opt in "${prune_list[@]}"; do
-    sed_subs=('s~\([\"'\''][^>\"'\'']*\.'"$opt"'\)?[^'\''\"]*~\1~g')
-    for file_ext in "${asset_find_names[@]}"; do
-      find "$working_mirror_dir" -type f -name "$file_ext" "${asset_exclude_dirs[@]}" -print0 | xargs "${xargs_options[@]}" sed "${sed_options[@]}" "${sed_subs[@]}"
-    done
-  done
-  echo " " "1"
+  if (( wget_extra_urls_count == 1 )); then
 
-  wget_protocol_relative_urls=$(yesno "$wget_protocol_relative_urls")
-  if [ "$wget_protocol_relative_urls" = "yes" ]; then
-    echo "Prefixing protocol-relative URLs with $wget_protocol_prefix" "1"
-    sed_subs=('s~\([\"'\'']\)//\('"$domain_re"'\)~\1'"$wget_protocol_prefix"'://\2~g')
-    for file_ext in "${asset_find_names[@]}"; do 
-      find "$working_mirror_dir" -type f -name "$file_ext" "${asset_exclude_dirs[@]}" -print0 | xargs "${xargs_options[@]}" sed "${sed_options[@]}" "${sed_subs[@]}"
+    echo "Pruning links to assets that have query strings appended" "1"
+    IFS="," read -r -a prune_list <<< "$query_prune_list"
+    for opt in "${prune_list[@]}"; do
+      sed_subs=('s~\([\"'\''][^>\"'\'']*\.'"$opt"'\)?[^'\''\"]*~\1~g')
+      for file_ext in "${asset_find_names[@]}"; do
+        find "$working_mirror_dir" -type f -name "$file_ext" "${asset_exclude_dirs[@]}" -print0 | xargs "${xargs_options[@]}" sed "${sed_options[@]}" "${sed_subs[@]}"
+      done
     done
     echo " " "1"
-  fi
 
-  echo "Searching for additional URLs to retrieve with Wget (working in $working_mirror_dir) ... " "1"
+    wget_protocol_relative_urls=$(yesno "$wget_protocol_relative_urls")
+    if [ "$wget_protocol_relative_urls" = "yes" ]; then
+      echo "Prefixing protocol-relative URLs with $wget_protocol_prefix" "1"
+      sed_subs=('s~\([\"'\'']\)//\('"$domain_re"'\)~\1'"$wget_protocol_prefix"'://\2~g')
+      for file_ext in "${asset_find_names[@]}"; do 
+        find "$working_mirror_dir" -type f -name "$file_ext" "${asset_exclude_dirs[@]}" -print0 | xargs "${xargs_options[@]}" sed "${sed_options[@]}" "${sed_subs[@]}"
+      done
+      echo " " "1"
+    fi
+
+    touchmod "$input_long_filenames"; echo > "$input_long_filenames"
+    echo "Searching for additional URLs to retrieve with Wget (working in $working_mirror_dir) ... " "1"
+  
+  fi
 
   # Refresh files for Wget (generated)
   touchmod "$input_file_extra"; echo > "$input_file_extra"
-  touchmod "$input_long_filenames"; echo > "$input_long_filenames"
 
   # Generate search URL prefixes combining primary domain and extra domains
   generate_extra_domains
 
-  echo -n "Generating a list of extra asset URLs for Wget ... "
+  echo -n "Generating a list of extra asset URLs for Wget (run number $wget_extra_urls_count) ... "
   if [ "$(yesno "$extra_assets_allow_query_strings")" = "no" ]; then
     url_grep="$(assets_search_string "$all_domains" "[^\?\"'<) ]+")"
   else
@@ -1110,7 +1124,7 @@ wget_extra_urls() {
   echo "webassets_all array has ${#webassets_all[@]} elements" "1"
 
   # Return if empty (nothing further found)
-  [ ${#webassets_all[@]} -eq 0 ] && { echo "None found. " "1"; echo "Done."; return 0; }
+  [ ${#webassets_all[@]} -eq 0 ] && { echo "None found. " "1"; (( wget_extra_urls_count=wget_extra_urls_depth+1 )); echo "Done."; return 0; }
   [ "$output_level" != "quiet" ] && echo " "
 
   # Pick out unique items
@@ -1123,7 +1137,7 @@ wget_extra_urls() {
   echo "Filter out all items not starting http" "1"
   webassets_http=()
   while IFS='' read -r line; do webassets_http+=("$line"); done < <(for item in "${webassets_unique[@]}"; do if [ "${item:0:4}" = "http" ]; then printf "%s\n" "${item}"; else continue; fi; done)
-  [ ${#webassets_http[@]} -eq 0 ] && { echo "None found. " "1"; echo "Done."; return 0; }
+  [ ${#webassets_http[@]} -eq 0 ] && { echo "None found. " "1"; (( wget_extra_urls_count=wget_extra_urls_depth+1 )); echo "Done."; return 0; }
   echo "webassets_http array has ${#webassets_http[@]} elements" "2"
 
   # Filter out web pages and newsfeeds (limit to non-HTML assets, such as images and JS files)
@@ -1148,7 +1162,7 @@ wget_extra_urls() {
       fi
     fi
   done)
-  [ ${#webassets_nohtml[@]} -eq 0 ] && { echo "None found. " "1"; echo "Done."; return 0; }
+  [ ${#webassets_nohtml[@]} -eq 0 ] && { echo "None found. " "1"; (( wget_extra_urls_count=wget_extra_urls_depth+1 )); echo "Done."; return 0; }
   echo "webassets_nohtml array has ${#webassets_nohtml[@]} elements" "2"
 
   if [ ${#wget_extra_options[@]} -ne 0 ]; then
@@ -1171,7 +1185,7 @@ wget_extra_urls() {
   echo "webassets_omissions array has $num_webassets_omissions elements" "2"
 
   # Return if empty (nothing further found)
-  [ "$num_webassets_omissions" -eq 0 ] && { echo "None found. " "1"; echo "Done."; return 0; }
+  [ "$num_webassets_omissions" -eq 0 ] && { echo "None found. " "1"; (( wget_extra_urls_count=wget_extra_urls_depth+1 )); echo "Done."; return 0; }
 
   if (( extra_assets_query_strings_limit < num_webassets_omissions )); then
     # Filter out URLs with query strings
@@ -1184,9 +1198,24 @@ wget_extra_urls() {
 
   echo "webassets array has ${#webassets[@]} elements" "2"
   # Return if empty (all those found were filtered out)
-  [ ${#webassets[@]} -eq 0 ] && { echo "None suitable found. " "1"; echo "Done."; return 0; }
+  [ ${#webassets[@]} -eq 0 ] && { echo "None suitable found. " "1"; (( wget_extra_urls_count=wget_extra_urls_depth+1 )); echo "Done."; return 0; }
 
   printf "%s\n" "${webassets[@]}" > "$input_file_extra"
+  if (( wget_extra_urls_count == 1 )); then
+    cp "$input_file_extra" "$input_file_extra_all" 
+  else
+  # generate a diff and store result as $input_file_extra
+    diff "$input_file_extra_all" "$input_file_extra" | grep "> " | grep -o "http[^[:space:]]*" > "${input_file_extra}.tmp"
+    if [ -s "${input_file_extra}.tmp" ]; then
+      # update input file
+      mv "${input_file_extra}.tmp" "$input_file_extra"
+      # augment the running list of extra URLs
+      cat "$input_file_extra" >> "$input_file_extra_all"
+    else
+      # file empty - nothing further to process
+      (( wget_extra_urls_count = wget_extra_urls_depth+1 )); echo "No further URLs found.  Done."; return 0; 
+    fi
+  fi
   echo "Done."
 
   wget_asset_options=("$wget_ssl" --directory-prefix "$mirror_archive_dir")
@@ -1231,6 +1260,7 @@ wget_extra_urls() {
   fi
   wget_error_codes "$?"
   error_set -e
+  ((wget_extra_urls_count++))
 }
 
 
@@ -1286,13 +1316,13 @@ process_assets() {
     urls_array=()
 
     # Produce a copy of input_file_extra_all ready for sed to process with extended regular expressions
-    input_string_extra=$(<"$input_file_extra")
-    input_string_extra=$(regex_escape "$input_string_extra" "BRE")
-    input_file_extra_BRE="${input_file_extra}.BRE"
-    printf "%s\n" "$input_string_extra" > "$input_file_extra_BRE"
+    input_string_extra=$(<"$input_file_extra_all")
+    input_string_extra_all=$(regex_escape "$input_string_extra" "BRE")
+    input_file_extra_all_BRE="${input_file_extra_all}.BRE"
+    printf "%s\n" "$input_string_extra_all" > "$input_file_extra_all_BRE"
 
-    if [ -f "$input_file_extra" ]; then
-      if read -d '' -r -a urls_array; then :; fi < <(grep -v "//$domain" "$input_file_extra_BRE")
+    if [ -f "$input_file_extra_all" ]; then
+      if read -d '' -r -a urls_array; then :; fi < <(grep -v "//$domain" "$input_file_extra_all_BRE")
     fi
 
     # Derive another URLs array with scheme relative URLs
@@ -1489,7 +1519,7 @@ site_postprocessing() {
   echo "Carrying out site postprocessing in $working_mirror_dir ... "
 
   # Adjust storage locations of assets, where applicable
-  if [ -s "$input_file_extra" ] || [ "$url" != "$url_base/" ]; then
+  if [ -s "$input_file_extra_all" ] || [ "$url" != "$url_base/" ]; then
     process_assets
   fi
 
@@ -1655,7 +1685,8 @@ clean_mirror() {
   for item in "${files_to_delete[@]}"; do
     find . -type f -name "$item" -delete
   done
-#rm "$input_file_extra"
+## optionally,
+# rm "$input_file_extra" "$input_file_extra_all"
 
   # Conclude login session (expire and delete cookie)
   if [ "$require_login" = "yes" ]; then
