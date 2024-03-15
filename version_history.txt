@@ -19,6 +19,32 @@
 ##########################################################################
 
 
+0.29.2 (released on 2024-03-15)
+       * Maintenance and refinement: more thorough conversion of links from
+         absolute to relative URLs. *
+        [lib/constants.sh]
+         New constants: wget_extra_urls_depth to support multiple re-runs of
+         Wget.
+        [lib/general.sh]
+         New function regex_escape(): escape regular expression metacharacters
+         according to whether basic or extended regular expressions are used
+        [makestaticsite.sh]
+         Switched from extended to basic regular expressions when using sed
+         with back-references, switching escaping of metacharacters as
+         appropriate - this is to support BSD versions, including macOS.
+         main(): wget_extra_urls is invoked within a loop, depending on the
+         values of wget_extra_urls_count and wget_extra_urls_depth.
+         initialise_variables(): new variable, wget_inputs_extra_all, stores
+         accumulated inputs for wget_extra_urls(), initialised according to
+         phase; wget_extra_urls_depth and wget_extra_urls_count initialised
+         according to context.
+         wget_extra_urls(): routines updated to take account of multiple runs,
+         with an additional routine to update wget_inputs_extra_all.
+         process_assets(): introduced metacharacter escape on contents of
+         input_file_extra, used for converting assets with absolute URLs to
+         relative URLs. Also, as for site_postprocessing(), replaced reference
+         to wget_inputs_extra by wget_inputs_extra_all.
+
 0.29.1 (released on 2024-03-08)
        * Maintenance: Bug fixes to ensure fine-tuning of output works as
          intended. *
