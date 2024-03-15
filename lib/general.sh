@@ -139,13 +139,13 @@ whichos() {
   if [[ "$OSTYPE" == "darwin"* ]] || [[ "$OSTYPE" == "freebsd"* ]]; then
     ostype="BSD"
     LC_CTYPE=C && LANG=C
-    sed_options=(-i '')
-    sed_ere_options=(-i '' -E)
+    sed_options=(-i '')         # with basis regular expressions (BRE)
+    sed_ere_options=(-i '' -E)  # with extended regular expressions (ERE)
     xargs_options=(-0)
   else
     ostype=""
-    sed_options=(-i)
-    sed_ere_options=(-i -r)
+    sed_options=(-i)            # with basis regular expressions (BRE)
+    sed_ere_options=(-i -r)     # with extended regular expressions (ERE)
     xargs_options=(-r -0)
   fi
 }
@@ -449,7 +449,7 @@ touchmod() {
 # (BRE is the default)
 regex_escape() {
   string="$1"
-  if [ -z ${2+x} ]; then
+  if [ -z ${2+x} ] || [ "$2" = "BRE" ]; then
     charlist=('\' "^"  "." "$"  "*" "[")
   elif [ "$2" != "BRE" ]; then
     charlist=('\' "^" "|" "." "$" "?" "*" "+" "(" ")" "[" "{")
