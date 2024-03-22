@@ -131,7 +131,7 @@ validate_timestamp() {
 }
 
 validate_url() {
-  url_regex='(https?|ftp|file)://[-[:alnum:]\+&@#/%?=~_|!:,.;]+'
+  url_regex='^(https?|ftp|file)://[-[:alnum:]\+&@#/%?=~_|!:,.;]+$'
   if [[ ! $1 =~ $url_regex ]]; then
     return 1
   fi
@@ -241,6 +241,7 @@ validate_input() {
       fi
     fi
     if [[ ' '${options_check_url[*]}' ' =~ ' '$3' ' ]]; then
+      validate_url "$input_value" || { echo "The URL is invalid.  Please try again."; continue; }
       validate_http "$input_value" "input_value" || { echo; continue; }
     fi
     if [[ ' '${options_check_yesno[*]}' ' =~ ' '$3' ' ]]; then
