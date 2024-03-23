@@ -130,6 +130,19 @@ validate_timestamp() {
   fi
 }
 
+# Host name references:
+#  A "name" (Net, Host, Gateway, or Domain name) is a text string...
+#  drawn from the alphabet (A-Z), digits (0-9), minus sign (-), and period (.).  
+# https://datatracker.ietf.org/doc/html/rfc952
+# May start with a digit:
+# https://datatracker.ietf.org/doc/html/rfc1123#page-13
+validate_domain() {
+  domain_regex='^[[:alnum:]][-[:alnum:]\+.]+[[:alnum:]]$'
+  if [[ ! $1 =~ $domain_regex ]]; then
+    return 1
+  fi
+}
+
 validate_url() {
   url_regex='^(https?|ftp|file)://[-[:alnum:]\+&@#/%?=~_|!:,.;]+$'
   if [[ ! $1 =~ $url_regex ]]; then

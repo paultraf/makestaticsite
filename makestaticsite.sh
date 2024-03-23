@@ -418,9 +418,26 @@ initialise_variables() {
     url_path_depth=$(( ${#url_slashes}+1 ))
   fi
 
-  # Additional, supported extensions and domains for stored assets
+  # Validate additional, supported extensions and domains for stored assets
   asset_domains="$(config_get asset_domains "$myconfig")"
+  IFS=',' read -ra list <<< "$asset_domains"
+  c=0; for asset_domain in "${list[@]}"; do
+    validate_domain "$asset_domain" || {
+      c=1; echo -n $'\n'"$msg_warning: removing invalid asset domain $asset_domain from list."
+      asset_domains=$(echo "$asset_domains" | sed 's~'"$asset_domain"',~~' | sed 's~',"$asset_domain"'~~' )
+    }
+  done
+  [ "$c" == "1" ] && echo -n $'\n'
   page_element_domains="$(config_get page_element_domains "$myconfig")"
+  IFS=',' read -ra list <<< "$page_element_domains"
+  c=0; for page_element_domain in "${list[@]}"; do
+    validate_domain "$page_element_domain" || {
+      c=1; echo -n $'\n'"$msg_warning: removing invalid page element domain $page_element_domain from list."
+      page_element_domains=$(echo "$page_element_domains" | sed 's~'"$page_element_domain"',~~' | sed 's~',"$page_element_domain"'~~' )
+    }
+  done
+  [ "$c" = "1" ] && echo -n $'\n'
+
   asset_grep_includes=()
   asset_find_names=()
   IFS=',' read -ra list <<< "$web_source_extensions"
@@ -435,7 +452,7 @@ initialise_variables() {
   for item in "${list[@]}"; do
     htmltidy_file_exts+=(  \*."$item" )
   done
-  
+
   # Support for CORS
   cors_enable=$(yesno "$cors_enable")
    
@@ -465,7 +482,10 @@ initialise_variables() {
       extra_domains="$page_element_domains"
     fi
   fi
-
+  # strip out any whitespace
+  page_element_domains=$(echo "$page_element_domains" | tr -d '[:space:]')
+  extra_domains=$(echo "$extra_domains" | tr -d '[:space:]')
+  all_domains=$(echo "$all_domains" | tr -d '[:space:]')
   protocol=$(printf "%s" "$url" | awk -F/ '{print $1}' | awk -F: '{print $1}')
   url_base="$protocol://$hostport"
   
