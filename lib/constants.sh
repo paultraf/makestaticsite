@@ -22,8 +22,8 @@
 ################################################
 # MakeStaticSite info
 ################################################
-version=0.29.2
-version_date='15 March 2024'
+version=0.29.2+1
+version_date='24 March 2024'
 version_header="MakeStaticSite version $version, released on $version_date."
 mss_license="GNU Affero General Public License version 3"
 mss_download="https://makestaticsite.sh/download/makestaticsite_latest.tar.gz"
@@ -39,10 +39,16 @@ max_redirects=5                 # Maximum number of redirects allowed for determ
 ################################################
 # Network settings
 ################################################
-# Regular expressions approximating roughly to IPv4 and IPv6 addresses
+# Regular expressions approximating roughly to IPv4 and IPv6 addresses, Internet domain names and URLs:
+# a "name" (Net, Host, Gateway, or Domain name) is a text string...
+# drawn from the alphabet (A-Z), digits (0-9), minus sign (-), and period (.).  
+# https://datatracker.ietf.org/doc/html/rfc952
+# May start with a digit:
+# https://datatracker.ietf.org/doc/html/rfc1123#page-13
 ip4re="^[[:space:]]*#*[[:space:]]*\([0-9]\{0,1\}[0-9]\{0,1\}[0-9]\.\)\{3\}[0-9]\{0,1\}[0-9]\{0,1\}[0-9][[:space:]]*"
 ip6re="^[[:space:]]*#*[[:space:]]*\([0-9a-fA-F]\{1,4\}::\{0,1\}\)\{1,7\}[0-9a-fA-F]\{1,4\}[[:space:]]*"
-domain_re="[a-zA-Z0-9][a-zA-Z0-9]*\.[a-zA-Z0-9][a-zA-Z0-9]*" # and very approximately to domain names
+domain_re="^[[:alnum:]][-[:alnum:]\+\.]*\.[-[:alnum:]\+]*[[:alnum:]]$" # Unlike hostnames, Internet domains contain at least one dot
+url_re='^(https?|ftp|file)://[-[:alnum:]\+&@#/%?=~_|!:,.;]+$'
 etc_hosts=/etc/hosts            # Location of hosts file
 
 
