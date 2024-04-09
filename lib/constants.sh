@@ -22,8 +22,8 @@
 ################################################
 # MakeStaticSite info
 ################################################
-version=0.29.2+1
-version_date='24 March 2024'
+version=0.29.2+2
+version_date='9 April 2024'
 version_header="MakeStaticSite version $version, released on $version_date."
 mss_license="GNU Affero General Public License version 3"
 mss_download="https://makestaticsite.sh/download/makestaticsite_latest.tar.gz"
@@ -86,9 +86,9 @@ credentials_path_prefix="$credentials_storage_namespace$credentials_namespace_su
 
 
 ################################################
-# Wget settings - main run and Wget extra URLs
+# Wget settings -
+# main run (phase 2) and extra URLs (phase 3)
 ################################################
-# input file names for Wget (phase 2 and 3 respectively)
 wget_cmd=wget                   # [Path to] wget binary
 wget_version_atleast=1.21
 wget_error_level=4              # The lowest Wget error code tolerated or else aborts (>8 for no tolerance)
@@ -101,15 +101,18 @@ wget_cookies=cookies            # cookies file name stem, no extension - added l
 wget_cookies_min_filelength=5   # minimum number of lines for a valid cookies file
 wget_cookies_nullify_user_agent=no # When wget_user_agent is defined above as a non-empty string, should it be reset to null for handling cookies (yes/no)
 wget_post=wget_post             # Wget POST data file name stem
+
+# Input file names for Wget
 wget_inputs_main=wget_inputs_main # input file name stem for web content to be retrieved in main run of Wget in phase 2
 wget_inputs_extra=wget_inputs_extra # input file name stem for additional assets to be retrieved by Wget in phase 3
 wget_long_filenames=wget_long_filenames # input file name stem for URLs with very long filenames for assets already retrieved by Wget
 rename_wget_tmps=yes            # Remove .tmp.html suffixes from (Wget temp) file names
 
 # Core options for Wget (array)
-#  --mirror is equivalent to ‘-r -N -l inf --no-remove-listing’
-# where -r: recursive; -N: timestamping; -l inf: infinite depth
-wget_core_options=(--mirror --convert-links --adjust-extension --page-requisites --tries=3)
+#  In Wget, --mirror is equivalent to '--recursive --timestamping --level=inf --no-remove-listing'
+#  or, in short form, ‘-r -N -l inf --no-remove-listing’, where -r: recursive; -N: timestamping; -l inf: infinite depth
+wget_mirror_options=(--recursive --timestamping --level=inf --no-remove-listing)
+wget_core_options=("${wget_mirror_options[@]}" --convert-links --adjust-extension --page-requisites --tries=3)
 wget_no_parent=auto             # Should capturing URLs with directories include the --no-parent option?
                                 # auto or yes - check and add automatically
                                 # otherwise no intervention
