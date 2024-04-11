@@ -507,6 +507,7 @@ initialise_variables() {
 
   [ "$use_wayback" != "yes" ] && wget_extra_urls=$(yesno "$(config_get wget_extra_urls "$myconfig")")
   site_post_processing=$(yesno "$(config_get site_post_processing "$myconfig")")
+  prune_query_strings=$(yesno "$(config_get prune_query_strings "$myconfig")")
   archive=$(yesno "$(config_get archive "$myconfig")")
   wget_input_files=()  # Initialise array of additional Wget input URLs
   input_long_filenames="$script_dir/$tmp_dir/$wget_long_filenames"  # List of URLs with very long filenames (to be generated)
@@ -1101,16 +1102,20 @@ wget_extra_urls() {
 
   if (( wget_extra_urls_count == 1 )); then
 
-    echo "Pruning links to assets that have query strings appended" "1"
-    IFS="," read -r -a prune_list <<< "$query_prune_list"
-    for opt in "${prune_list[@]}"; do
-      sed_subs=('s~\([\"'\''][^>\"'\'']*\.'"$opt"'\)?[^'\''\"]*~\1~g')
-      for file_ext in "${asset_find_names[@]}"; do
-        find "$working_mirror_dir" -type f -name "$file_ext" "${asset_exclude_dirs[@]}" -print0 | xargs "${xargs_options[@]}" sed "${sed_options[@]}" "${sed_subs[@]}"
+    if [ "$prune_query_strings" != "no" ]; then
+      echo "Pruning links to assets that have query strings appended" "1"
+      IFS="," read -r -a prune_list <<< "$query_prune_list"
+      for opt in "${prune_list[@]}"; do
+        sed_subs0=('s~\([\"'\''][^>\"'\'']*\.'"$opt"'\)%3F[^'\''\"]*~\1~g')
+        sed_subs=('s~\([\"'\''][^>\"'\'']*\.'"$opt"'\)?[^'\''\"]*~\1~g')
+        for file_ext in "${asset_find_names[@]}"; do
+          find "$working_mirror_dir" -type f -name "$file_ext" "${asset_exclude_dirs[@]}" -print0 | xargs "${xargs_options[@]}" sed "${sed_options[@]}" "${sed_subs0[@]}"
+          find "$working_mirror_dir" -type f -name "$file_ext" "${asset_exclude_dirs[@]}" -print0 | xargs "${xargs_options[@]}" sed "${sed_options[@]}" "${sed_subs[@]}"
+        done
       done
-    done
-    echo " " "1"
-
+      echo " " "1"
+    fi
+    
     wget_protocol_relative_urls=$(yesno "$wget_protocol_relative_urls")
     if [ "$wget_protocol_relative_urls" = "yes" ]; then
       echo "Prefixing protocol-relative URLs with $wget_protocol_prefix" "1"

@@ -22,8 +22,8 @@
 ################################################
 # MakeStaticSite info
 ################################################
-version=0.29.2+2
-version_date='9 April 2024'
+version=0.29.2+3
+version_date='11 April 2024'
 version_header="MakeStaticSite version $version, released on $version_date."
 mss_license="GNU Affero General Public License version 3"
 mss_download="https://makestaticsite.sh/download/makestaticsite_latest.tar.gz"
@@ -142,6 +142,7 @@ asset_extensions="js,css,jpeg,jpg,gif,png,pdf,doc,docx,odt,ppt,xls,xlsx,svg,heic
 asset_extensions_external="js,css,jpeg,jpg,gif,png,svg,cff,ttf,eot,woff,woff2,map,ico" # a more limited set for assets gleaned from external domains
 
 # Query strings
+prune_query_strings=yes         # Remove query strings appended to paths and URLs in anchors limited to files of type given in query_prune_list (y/n)?
 query_prune_list="js,css,svg,png" # List of file extensions in requests that may have query string appended for versioning or other non-essential purposes. For static sites these can be pruned without loss of functionality.
 extra_assets_allow_query_strings=yes # Allow Wget to fetch additional URLs with query strings in phase 3 (y/n)? 
 extra_assets_query_strings_limit=100000 # Only fetch URLs with query strings when the total number of assets is less than this number 
