@@ -1106,6 +1106,10 @@ wget_extra_urls() {
       echo "Pruning links to assets that have query strings appended" "1"
       IFS="," read -r -a prune_list <<< "$query_prune_list"
       for opt in "${prune_list[@]}"; do
+        # Prune file names on disk
+        find "$working_mirror_dir" -type f -name "*\.$opt\?*" -exec sh -c 'mv "$0" "${0%%\?*}"' {} \;   
+
+        # Prune the corresponding links
         sed_subs0=('s~\([\"'\''][^>\"'\'']*\.'"$opt"'\)%3F[^'\''\"]*~\1~g')
         sed_subs=('s~\([\"'\''][^>\"'\'']*\.'"$opt"'\)?[^'\''\"]*~\1~g')
         for file_ext in "${asset_find_names[@]}"; do
@@ -1785,7 +1789,7 @@ clean_mirror() {
   find . -type f -name "*.html" -exec sed "${sed_options[@]}" "${sed_subs[@]}" {} +
   echo "Done."
 
-  # Remove files ending with query strings, as required
+  # Rename files ending with query strings, as required
   if [ "$deploy_netlify" = "yes" ]; then
     clean_query_extensions="yes"
     echo "Cleaning file names with question marks for Netlify." "1"
