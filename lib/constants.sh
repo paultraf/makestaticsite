@@ -22,8 +22,8 @@
 ################################################
 # MakeStaticSite info
 ################################################
-version=0.29.2+3
-version_date='11 April 2024'
+version=0.29.2+4
+version_date='12 April 2024'
 version_header="MakeStaticSite version $version, released on $version_date."
 mss_license="GNU Affero General Public License version 3"
 mss_download="https://makestaticsite.sh/download/makestaticsite_latest.tar.gz"
@@ -48,6 +48,7 @@ max_redirects=5                 # Maximum number of redirects allowed for determ
 ip4re="^[[:space:]]*#*[[:space:]]*\([0-9]\{0,1\}[0-9]\{0,1\}[0-9]\.\)\{3\}[0-9]\{0,1\}[0-9]\{0,1\}[0-9][[:space:]]*"
 ip6re="^[[:space:]]*#*[[:space:]]*\([0-9a-fA-F]\{1,4\}::\{0,1\}\)\{1,7\}[0-9a-fA-F]\{1,4\}[[:space:]]*"
 domain_re="^[[:alnum:]][-[:alnum:]\+\.]*\.[-[:alnum:]\+]*[[:alnum:]]$" # Unlike hostnames, Internet domains contain at least one dot
+domain_re0=${domain_re:1:-1}    # Anchorless domain match
 url_re='^(https?|ftp|file)://[-[:alnum:]\+&@#/%?=~_|!:,.;]+$'
 etc_hosts=/etc/hosts            # Location of hosts file
 
@@ -138,12 +139,17 @@ feed_xml=feed/index.xml         # tail of valid feed URLs as replacement
 url_asset_match_level=2         # level of strictness (0 lowest, 5 highest) for URL matching in determining assets to download and localise 
 web_source_extensions="htm,html,xml,txt" # list of web document file extensions intended for assets search
 web_source_exclude_dirs=        # list of directories to exclude from search and replace (relative to working mirror directory - prefix will be determined automatically). Dev note: this ought to be refined to be extension dependent
-asset_extensions="js,css,jpeg,jpg,gif,png,pdf,doc,docx,odt,ppt,xls,xlsx,svg,heic,webp,mp3,m4a,ogg,wav,avi,mpg,mp4,mov,ogv,wmv,3gp,3gp2,cff,ttf,eot,woff,woff2,map,ico"  # list of file extensions for assets that may be retrieved by Wget in phase 3.  If no extensions are defined, then cURL will be used to remove non-HTML assets, but all other assets will be accepted
-asset_extensions_external="js,css,jpeg,jpg,gif,png,svg,cff,ttf,eot,woff,woff2,map,ico" # a more limited set for assets gleaned from external domains
+web_element_extensions="js,css,svg,map,ico" # list of file extensions for standard Web page components 
+font_extensions="cff,ttf,eot,woff,woff2" # list of file extensions for Web fonts 
+image_extensions="jpeg,jpg,gif,png" # list of file extensions for Web images 
+audiovideo_extensions="heic,webp,mp3,m4a,ogg,wav,avi,mpg,mp4,mov,ogv,wmv,3gp,3gp2" # list of file extensions for audio and video assets 
+doc_extensions="pdf,doc,docx,odt,ppt,xls,xlsx" # list of file extensions for office documents
+asset_extensions="$web_element_extensions,$image_extensions,$audiovideo_extensions,$doc_extensions,$font_extensions"  # list of file extensions for assets that may be retrieved by Wget in phase 3. If no extensions are defined, then cURL will be used to remove non-HTML assets, but all other assets will be accepted
+asset_extensions_external="$web_element_extensions,$image_extensions,$font_extensions" # a more limited set for assets gleaned from external domains
 
 # Query strings
 prune_query_strings=yes         # Remove query strings appended to paths and URLs in anchors limited to files of type given in query_prune_list (y/n)?
-query_prune_list="js,css,svg,png" # List of file extensions in requests that may have query string appended for versioning or other non-essential purposes. For static sites these can be pruned without loss of functionality.
+query_prune_list="js,css,png,svg,$font_extensions" # List of file extensions in requests that may have query string appended for versioning or other non-essential purposes. For static sites these can be pruned without loss of functionality.
 extra_assets_allow_query_strings=yes # Allow Wget to fetch additional URLs with query strings in phase 3 (y/n)? 
 extra_assets_query_strings_limit=100000 # Only fetch URLs with query strings when the total number of assets is less than this number 
 
