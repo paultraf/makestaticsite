@@ -1079,7 +1079,7 @@ generate_extra_domains() {
     while IFS='' read -r line; do add_domains_unique+=("$line"); done < <(for item in "${add_domains[@]}"; do printf "%s\n" "${item%/}"; done | sort -u)
     echo "add_domains_unique array has ${#add_domains_unique[@]} elements" "2"
     # Convert array to domain list (string), removing any trailing slashes
-    page_element_domains=$(printf "%s" "${add_domains_unique[*]}" | sed 's/ /,/g' | sed 's/\\\?\/,/,/g' | sed "s/$domain,//g" | sed "s/,$domain//g" | sed 's/\/$//')
+    page_element_domains=$(printf "%s" "${add_domains_unique[*]}" | sed 's/ /,/g' | sed 's/\\\?\/,/,/g' | sed "s/$domain,//g" | sed "s/,$domain//g" | sed 's/\///g' | sed 's/\\//g')
     echo "Done."
   fi
   if [ "$page_element_domains" != "" ]; then
@@ -1419,7 +1419,7 @@ process_assets() {
         mirror_imports_directory="$working_mirror_dir"
       fi
       for extra_dir in "${extra_domains_array[@]}"; do
-        if [ -d "$mirror_dir/$mirror_archive_dir/$extra_dir" ]; then
+        if [ -d "$mirror_dir/$mirror_archive_dir/$extra_dir" ] && [ "$extra_dir" != "" ]; then
           mirror_extra_dir="$mirror_dir/$mirror_archive_dir/$extra_dir"
           asset_move="$mirror_extra_dir to $mirror_imports_directory/"
           # Move only if mirror_imports_directory is not a subdirectory of mirror_extra_dir
@@ -1575,7 +1575,7 @@ site_postprocessing() {
         read -r -e -p "For the static mirror, would you still like to replace any occurrence of $domain with $deploy_domain (y/n)? " confirm
         confirm=${confirm:0:1}
       fi
-      if [ "$confirm" == "y" ] || [ "$confirm" == "Y" ]; then
+      if [ "$confirm" = "y" ] || [ "$confirm" = "Y" ]; then
         echo -n "Replacing remaining occurrences of $domain with $deploy_domain ... "
         sed_subs=('s~'"$domain_match_prefix$domain"'~'"$domain_subs_prefix$deploy_domain"'~g')
         for file_ext in "${asset_find_names[@]}"; do 
