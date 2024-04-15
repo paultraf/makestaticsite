@@ -19,6 +19,40 @@
 ##########################################################################
 
 
+0.29.3 (released on 2024-04-15)
+       * Maintenance and refinement: bug fixes and enhancements to mirror
+         output *
+        [lib/constants.sh]
+         New constants: wget_mirror_options to specify mirror options for Wget
+         (default is equivalent to --mirror); prune_query_strings (y/n) to
+         specify whether or not to remove query strings appended to paths and
+         URLs in anchors, limited to files of type given in query_prune_list.
+         New constants: web_element_extensions, font_extensions,
+         image_extensions, audiovideo_extensions, and doc_extensions for file
+         extension lists according to document type; updated asset_extensions,
+         asset_extensions_external and query_prune_list accordingly.
+         Extended comments on Wget settings.
+        [lib/validate.sh]
+         New function validate_domain() to check domain syntax
+         validate_url(): introduced start and end anchors 
+        [lib/general.sh]
+         New function print_progress() to print a progress bar (a bar and
+         percentage)
+        [makestaticsite.sh]
+         initialise_variables(): added domain checks on asset_domains and
+         page_element_domains, removing any invalid elements; strip out
+         excess whitespace.
+         wget_extra_urls(): made the pruning of links to assets that have query
+         strings appended dependent on value of prune_query_strings, extending
+         pruning to links with url encoding of '?'; pruned corresponding
+         linked filenames.
+         generate_extra_domains(): modified sed replacements in
+         page_element_domains to ensure removal of slashes.
+         process_assets(): bug fix: trap case when extra_domains_array contains
+         an empty member ahead of moving directories.
+         Added progress bar while converting absolute links to relative links.
+         Cosmetic changes: a few additional comments and minor code ordering
+
 0.29.2 (released on 2024-03-15)
        * Maintenance and refinement: more thorough conversion of links from
          absolute to relative URLs. *
