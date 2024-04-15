@@ -1362,7 +1362,7 @@ process_assets() {
     count=1
     # Convert absolute links to relative links
     for opt in "${webpages[@]}"; do
-      print_progress "$count" "$num_webpages"
+      print_progress "$count" "$num_webpages"; (( count++ ))
 
       # but don't process XML files in guise of HTML files
       if grep -q "<?xml version" "$opt"; then
@@ -1411,7 +1411,6 @@ process_assets() {
           fi
         done
       fi
-      (( count++ ))
     done
     printf "\n"
 
