@@ -1358,8 +1358,12 @@ process_assets() {
     urls_array_2=()
     for i in "${urls_array[@]}"; do urls_array_2+=("${i/http*:/}"); done
 
+    num_webpages=${#webpages[@]}
+    count=1
     # Convert absolute links to relative links
     for opt in "${webpages[@]}"; do
+      print_progress "$count" "$num_webpages"
+
       # but don't process XML files in guise of HTML files
       if grep -q "<?xml version" "$opt"; then
         continue
@@ -1407,7 +1411,9 @@ process_assets() {
           fi
         done
       fi
+      (( count++ ))
     done
+    printf "\n"
 
     if [ "$all_domains" != "$domain" ] && [ "$extra_assets_mode" = "contain" ]; then
       # Move folders

@@ -389,6 +389,29 @@ EOT
   printf "%s\n" "$sitemap_contents"
 }
 
+# Print a progress bar where iteration details known
+# Receives two numerical parameters, count and maximum count, 
+# and outputs a progress bar.
+print_progress() {
+  col_width=$(tput cols)
+  (( col_width = col_width - 10 )) # keep some space for printing a number
+  hash_string=$(printf '#%.0s' $(seq 1 $col_width))
+  hash_string_length=${#hash_string}
+  nohash_string=$(printf ' %.0s' $(seq 1 $col_width))
+  counter="$1"; max_count="$2"
+  (( hash_substring_length = hash_string_length * counter / max_count ))
+  (( nohash_substring_length = hash_string_length - hash_substring_length ))
+  hash_substring=${hash_string:0:hash_substring_length}
+  if (( counter >= max_count )); then
+    nohash_substring=
+  else
+    nohash_substring=${nohash_string: -nohash_substring_length}
+  fi
+  (( progress = 100 * counter / max_count ))
+  printf "$hash_substring$nohash_substring  ($progress%%)\r"
+}
+
+
 # stopclock receives one parameter (number of seconds)
 # and outputs time in hours, minutes and seconds
 stopclock() {
