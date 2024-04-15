@@ -352,8 +352,8 @@ initialise_variables() {
 
   # now augment Wget input files with .cfg label
   wget_inputs_main="$wget_inputs_main-$myconfig.txt"
-  wget_inputs_extra_all="$wget_inputs_extra-${myconfig}-all.txt" # cumulative input file
   wget_inputs_extra="$wget_inputs_extra-$myconfig.txt" # single run input file
+  wget_inputs_extra_all="$wget_inputs_extra-${myconfig}-all.txt" # cumulative input file
   wget_long_filenames="$wget_long_filenames-$myconfig.txt"
   wget_extra_urls_count=1 # Initialise recursive calls to wget_extra_urls()
 
@@ -423,8 +423,8 @@ initialise_variables() {
   IFS=',' read -ra list <<< "$asset_domains"
   c=0; for asset_domain in "${list[@]}"; do
     validate_domain "$asset_domain" || {
-      c=1; echo -n $'\n'"$msg_warning: removing invalid asset domain $asset_domain from list."
       asset_domains=$(echo "$asset_domains" | sed 's~'"$asset_domain"',~~' | sed 's~',"$asset_domain"'~~' )
+      c=1; echo -n $'\n'"$msg_warning: removed invalid asset domain $asset_domain from list."
     }
   done
   [ "$c" == "1" ] && echo -n $'\n'
@@ -1143,9 +1143,9 @@ wget_extra_urls() {
 
   echo -n "Generating a list of extra asset URLs for Wget (run number $wget_extra_urls_count) ... "
   if [ "$(yesno "$extra_assets_allow_query_strings")" = "no" ]; then
-    url_grep="$(assets_search_string "$all_domains" "[^\?\"'<) ]+")"
+    url_grep="$(assets_search_string "$all_domains" "[^\?\"'<) ]+")" # ERE notation
   else
-    url_grep="$(assets_search_string "$all_domains" "[^\"'<) ]+")"
+    url_grep="$(assets_search_string "$all_domains" "[^\"'<) ]+")" # ERE notation
   fi
 
   webassets_all=()
