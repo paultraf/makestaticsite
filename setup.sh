@@ -90,7 +90,7 @@ read_config() {
 
   if [ "$*" != "" ]; then
     url="$*";
-    validate_url "$url" || { printf "Sorry, the syntax of the URL appears to be invalid.  Please try again.\n"; exit; }
+    validate_url "$url" || { printf "Sorry, the syntax of the URL appears to be invalid. Aborting - please try again. \n"; exit; }
     echo
   fi
 
@@ -99,11 +99,11 @@ read_config() {
   fi
 
   if [ "$run_unattended" = "yes" ] && [ -z ${url+x} ]; then
-    printf "You have run setup in unattended mode (-u flag), but not supplied a URL. Please try again. Aborting.\n"; exit;
+    printf "You have run setup in unattended mode (-u flag), but not supplied a URL. Aborting - please try again. \n"; exit;
   fi
 
   if [ "$run_unattended" = "yes" ] && (( level > 0 )); then
-    printf "You can only run setup in unattended mode (-u flag) at level 0. Please try again. Aborting.\n"; exit;
+    printf "You can only run setup in unattended mode (-u flag) at level 0. Aborting - please try again.\n"; exit;
   fi
   
 }
@@ -285,6 +285,14 @@ read_option() {
         elif [ -n "${url+x}" ] && [ "$optvar" = "url" ]; then
           echo "You have entered as URL: $url"
           input_value="$url"
+          if ! validate_url "$input_value"; then
+            if [ "$run_unattended" = "yes" ]; then
+              echo "The URL is invalid.  Aborting."; exit
+            else
+              input_line="Please enter the value for $optvar$input_hint: "
+              validate_input "$input_text" "$input_line" "$optvar"
+            fi
+          fi
           if ! validate_http "$input_value" "input_value"; then
             if [ "$run_unattended" = "yes" ]; then
               echo "Unable to connect to URL.  Aborting."; exit
