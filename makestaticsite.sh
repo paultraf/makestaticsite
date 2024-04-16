@@ -1351,7 +1351,9 @@ process_assets() {
     printf "%s\n" "$input_string_extra_all" > "$input_file_extra_all_BRE"
 
     if [ -f "$input_file_extra_all" ]; then
-      if read -d '' -r -a urls_array; then :; fi < <(grep -v "//$domain" "$input_file_extra_all_BRE")
+      domain_BRE=$(regex_escape "$domain" "BRE")
+      domain_BRE=${domain_BRE//\\/\\\\\\} # need to escape '\', so replace '\' with '\\\'.
+      if read -d '' -r -a urls_array; then :; fi < <(grep -v "//$domain_BRE" "$input_file_extra_all_BRE")
     fi
 
     # Derive another URLs array with scheme relative URLs
