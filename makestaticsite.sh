@@ -428,16 +428,17 @@ initialise_variables() {
     }
   done
   [ "$c" == "1" ] && echo -n $'\n'
-  page_element_domains="$(config_get page_element_domains "$myconfig")"
+  page_element_domains="$(config_get page_element_domains "$myconfig" | tr -d '[:space:]')"
   IFS=',' read -ra list <<< "$page_element_domains"
-  c=0; for page_element_domain in "${list[@]}"; do
-    validate_domain "$page_element_domain" || {
-      c=1; echo -n $'\n'"$msg_warning: removing invalid page element domain $page_element_domain from list."
-      page_element_domains=$(echo "$page_element_domains" | sed 's~'"$page_element_domain"',~~' | sed 's~',"$page_element_domain"'~~' )
-    }
-  done
-  [ "$c" = "1" ] && echo -n $'\n'
-
+  if [ "$page_element_domains" != "auto" ]; then
+    c=0; for page_element_domain in "${list[@]}"; do
+      validate_domain "$page_element_domain" || {
+        c=1; echo -n $'\n'"$msg_warning: removing invalid page element domain $page_element_domain from list."
+        page_element_domains=$(echo "$page_element_domains" | sed 's~'"$page_element_domain"',~~' | sed 's~',"$page_element_domain"'~~' )
+      }
+    done
+    [ "$c" = "1" ] && echo -n $'\n'
+  fi
   asset_grep_includes=()
   asset_find_names=()
   IFS=',' read -ra list <<< "$web_source_extensions"
@@ -1078,7 +1079,7 @@ generate_extra_domains() {
     add_domains_unique=()
     while IFS='' read -r line; do add_domains_unique+=("$line"); done < <(for item in "${add_domains[@]}"; do printf "%s\n" "${item%/}"; done | sort -u)
     echo "add_domains_unique array has ${#add_domains_unique[@]} elements" "2"
-    # Convert array to domain list (string), removing any trailing slashes
+    # Convert array to domain list (string), removing any slashes
     page_element_domains=$(printf "%s" "${add_domains_unique[*]}" | sed 's/ /,/g' | sed 's/\\\?\/,/,/g' | sed "s/$domain,//g" | sed "s/,$domain//g" | sed 's/\///g' | sed 's/\\//g')
     echo "Done."
   fi
@@ -1123,7 +1124,7 @@ wget_extra_urls() {
     wget_protocol_relative_urls=$(yesno "$wget_protocol_relative_urls")
     if [ "$wget_protocol_relative_urls" = "yes" ]; then
       echo "Prefixing protocol-relative URLs with $wget_protocol_prefix" "1"
-      sed_subs=('s~\([\"'\'']\)//\('"$domain_re"'\)~\1'"$wget_protocol_prefix"'://\2~g')
+      sed_subs=('s~\([\"'\'']\)//\('"$domain_re0"'\)~\1'"$wget_protocol_prefix"'://\2~g')
       for file_ext in "${asset_find_names[@]}"; do 
         find "$working_mirror_dir" -type f -name "$file_ext" "${asset_exclude_dirs[@]}" -print0 | xargs "${xargs_options[@]}" sed "${sed_options[@]}" "${sed_subs[@]}"
       done
