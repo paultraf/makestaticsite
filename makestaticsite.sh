@@ -1383,7 +1383,7 @@ process_assets() {
         sed_subs1=('s~\([a-zA-Z0_9][[:space:]]*=[[:space:]]*["'"']"'\?\)https\?://'"$hostport/"'~'"\1$pathpref"'~g' "$opt") # trims strictly
         sed_subs2=('s~\([[:space:]]*,[[:space:]]*["'"']"'\?\)https\?://'"$hostport/"'~'"\1$pathpref"'~g' "$opt") # trims loosely
         sed "${sed_options[@]}" "${sed_subs1[@]}"
-        if (( url_asset_match_level < 3 )); then
+        if (( url_asset_capture_level > 2 )); then
           sed "${sed_options[@]}" "${sed_subs2[@]}"
         fi
       fi
@@ -1397,7 +1397,7 @@ process_assets() {
           sed_subs1=('s~\([a-zA-Z0_9][[:space:]]*=[[:space:]]*["'"']"'\?\)'"$url_extra"'~\1'"$asset_rel_path"'~g' "$opt") # trims strictly
           sed_subs2=('s~\([[:space:]]*,[[:space:]]["'"']"'\?.*\)'"$url_extra"'~'"\1$asset_rel_path"'~g' "$opt") # trims loosely
           sed "${sed_options[@]}" "${sed_subs1[@]}"
-          if (( url_asset_match_level < 3 )); then
+          if (( url_asset_capture_level > 2 )); then
             sed "${sed_options[@]}" "${sed_subs2[@]}"
           fi
         done
@@ -1408,7 +1408,7 @@ process_assets() {
           sed_subs1=('s~\([a-zA-Z0_9][[:space:]]*=[[:space:]]*["'"']"'\?\)'"$url_extra"'~'"\1$asset_rel_path"'~g' "$opt") # trims strictly
           sed_subs2=('s~\([[:space:]]*,[[:space:]]*["'"']"'\?\)'"$url_extra"'~'"\1$asset_rel_path"'~g' "$opt") # trims loosely
           sed "${sed_options[@]}" "${sed_subs1[@]}"
-          if (( url_asset_match_level < 3 )); then
+          if (( url_asset_capture_level > 2  )); then
             sed "${sed_options[@]}" "${sed_subs2[@]}"
           fi
         done
