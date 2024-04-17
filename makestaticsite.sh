@@ -1417,7 +1417,8 @@ process_assets() {
     done
     printf "\n"
 
-    if [ "$all_domains" != "$domain" ] && [ "$extra_assets_mode" = "contain" ]; then
+    num_domain_dirs=$(find "$mirror_dir/$mirror_archive_dir/" -maxdepth 1 -type d -name "*.*" | wc -l )
+    if [ "$num_domain_dirs" != "1" ] && [ "$extra_assets_mode" = "contain" ]; then
       # Move folders
       IFS="," read -r -a extra_domains_array <<< "$extra_domains"
       if [ "$imports_directory" != "" ]; then
