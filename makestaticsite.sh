@@ -419,7 +419,8 @@ initialise_variables() {
   fi
 
   # Validate additional, supported extensions and domains for stored assets
-  asset_domains="$(config_get asset_domains "$myconfig")"
+  url_wildcard_capture=$(yesno "$url_wildcard_capture")
+  asset_domains="$(config_get asset_domains "$myconfig" | tr -d '[:space:]')"
   IFS=',' read -ra list <<< "$asset_domains"
   c=0; for asset_domain in "${list[@]}"; do
     validate_domain "$asset_domain" || {
@@ -483,10 +484,12 @@ initialise_variables() {
       extra_domains="$page_element_domains"
     fi
   fi
-  # strip out any whitespace
+  # strip out any whitespace from domain lists
   page_element_domains=$(echo "$page_element_domains" | tr -d '[:space:]')
   extra_domains=$(echo "$extra_domains" | tr -d '[:space:]')
   all_domains=$(echo "$all_domains" | tr -d '[:space:]')
+  
+  # assign URL-related variables
   protocol=$(printf "%s" "$url" | awk -F/ '{print $1}' | awk -F: '{print $1}')
   url_base="$protocol://$hostport"
   
@@ -1124,7 +1127,9 @@ wget_extra_urls() {
     wget_protocol_relative_urls=$(yesno "$wget_protocol_relative_urls")
     if [ "$wget_protocol_relative_urls" = "yes" ]; then
       echo "Prefixing protocol-relative URLs with $wget_protocol_prefix" "1"
-      sed_subs=('s~\([\"'\'']\)//\('"$domain_re0"'\)~\1'"$wget_protocol_prefix"'://\2~g')
+      # Define BRE version of domain_bre0 
+      domain_bre0=$(regex_apply "$domain_re0")
+      sed_subs=('s~\([\"'\'']\)//\('"$domain_bre0"'\)~\1'"$wget_protocol_prefix"'://\2~g')
       for file_ext in "${asset_find_names[@]}"; do 
         find "$working_mirror_dir" -type f -name "$file_ext" "${asset_exclude_dirs[@]}" -print0 | xargs "${xargs_options[@]}" sed "${sed_options[@]}" "${sed_subs[@]}"
       done
@@ -1150,7 +1155,7 @@ wget_extra_urls() {
   fi
 
   webassets_all=()
-  while IFS='' read -r line; do webassets_all+=("$line"); done < <(grep -Eroha "$url_grep" "$working_mirror_dir" "${asset_grep_includes[@]}" | cut -c2- )  # Strip out initial character (as each result will start with a quote or '=' as per url_grep match condition)
+  while IFS='' read -r line; do trimmed_line="${line#"${line%%[![:space:],:\'\"]*}"}"; webassets_all+=("$trimmed_line"); done < <(grep -Eroha "$url_grep" "$working_mirror_dir" "${asset_grep_includes[@]}" | cut -c2- )  # Strip out initial character (as each result will start with a quote or '=' as per url_grep match condition)
   echo "webassets_all array has ${#webassets_all[@]} elements" "1"
 
   # Return if empty (nothing further found)
@@ -1301,18 +1306,47 @@ process_assets() {
   # (makes subsequent sed replacements more targeted than searching all web pages).
   webpages=()
 
-  # Ensure that $all_domains includes the extra domains
+  extra_domains_array=()
+  if [ "$url_wildcard_capture" = "yes" ]; then
+    while IFS= read -r line; do
+      extra_domains_array+=("$line");
+      if [ "$line" != "$domain" ]; then
+        extra_domains+="$line,"
+      fi
+    done <<<"$(find "$mirror_dir/$mirror_archive_dir/" -maxdepth 1 -type d -name "*.*" -exec basename {} \; )"
+# shellcheck disable=SC2001
+    extra_domains=$(echo "$extra_domains" | sed 's/.$//') # remove final character
+  else
+    IFS="," read -r -a extra_domains_array <<< "$extra_domains"
+  fi
   if (( phase > 3 )); then
-    generate_extra_domains
+    # Ensure variables are assigned when starting run at postprocessing phase
+    # - that $all_domains includes the extra domains
+    # - that $url_grep is built correspondingly
+    if [ "$url_wildcard_capture" != "yes" ]; then
+      generate_extra_domains
+      if [ "$(yesno "$extra_assets_allow_query_strings")" = "no" ]; then
+        url_grep="$(assets_search_string "$all_domains" "[^\?\"'<) ]+")"
+      else
+        url_grep="$(assets_search_string "$all_domains" "[^\"'<) ]+")"
+      fi
+    else
+      if [ "$(yesno "$extra_assets_allow_query_strings")" = "no" ]; then
+        url_grep="$(assets_search_string "$domain_re0" "[^\?\"'<) ]+")"
+      else
+        url_grep="$(assets_search_string "$domain_re0" "[^\"'<) ]+")"
+      fi
+    fi
   fi
 
-  echo -n "Converting paths to become relative to imports and assets directories ... " 
   [ -z ${url_grep+x} ] && url_grep="$(assets_search_string "$all_domains" "[^\"'<) ]+")" # define $url_grep as necessary
 
   # Find pages where there are relevant assets
   for opt in "${url_grep[@]}"; do
     while IFS='' read -r line; do webpages+=("$line"); done < <(grep -Erl "$opt" . "${asset_grep_includes[@]}")
   done
+  
+  echo -n "Converting paths to become relative to imports and assets directories ... " 
 
   # Prepare adjustment for relative paths with assets directory
   if [ "$assets_directory" != "" ] && [ "$cut_dirs" = "0" ]; then
@@ -1342,19 +1376,30 @@ process_assets() {
   if [ ${#webpages[@]} -eq 0 ]; then
     echo "No web pages to process.  Done." "1"
   elif [ "$cut_dirs" = "0" ]; then
-    # Populate URLs array from Wget's additional input file
+    # Initialise URLs array
     urls_array=()
+    # If asset_domains is empty and page_element_domains is set to 'auto', then devise a wildcard urls_array
+    if [ "$asset_domains" = "" ] && [ "$page_element_domains" = "auto" ]; then
+      # create URLs array via directory names (domain names) from file system
+      for item in "${extra_domains_array[@]}"; do
+        # Append a regex to match file paths
+        item=$(regex_escape "$item" "BRE")
+        urls_array+=("https\?://$item/\([^\\\"\'<) ]\+\)")
+        urls_array2+=("//$item/\([^\\\"\'<) ]\+\)")
+      done
+    else
+      # Produce a copy of input_file_extra_all ready for sed to process with extended regular expressions
+      input_string_extra=$(<"$input_file_extra_all")
+      input_string_extra_all=$(regex_escape "$input_string_extra" "BRE")
+      input_file_extra_all_BRE="${input_file_extra_all}.BRE"
+      printf "%s\n" "$input_string_extra_all" > "$input_file_extra_all_BRE"
 
-    # Produce a copy of input_file_extra_all ready for sed to process with extended regular expressions
-    input_string_extra=$(<"$input_file_extra_all")
-    input_string_extra_all=$(regex_escape "$input_string_extra" "BRE")
-    input_file_extra_all_BRE="${input_file_extra_all}.BRE"
-    printf "%s\n" "$input_string_extra_all" > "$input_file_extra_all_BRE"
-
-    if [ -f "$input_file_extra_all" ]; then
-      domain_BRE=$(regex_escape "$domain" "BRE")
-      domain_BRE=${domain_BRE//\\/\\\\\\} # need to escape '\', so replace '\' with '\\\'.
-      if read -d '' -r -a urls_array; then :; fi < <(grep -v "//$domain_BRE" "$input_file_extra_all_BRE")
+      # Populate URLs array from Wget's additional input file
+      if [ -f "$input_file_extra_all" ]; then
+        domain_BRE=$(regex_escape "$domain" "BRE")
+        domain_BRE=${domain_BRE//\\/\\\\\\} # need to escape \, so replace \ with \\\ .
+        if read -d '' -r -a urls_array; then :; fi < <(grep -v "//$domain_BRE" "$input_file_extra_all_BRE")
+      fi
     fi
 
     # Derive another URLs array with scheme relative URLs
@@ -1382,9 +1427,9 @@ process_assets() {
       # to full URL and tweak the replacements
       if [ "$url" = "$url_base/" ] || { [ "$external_dir_links" != "" ] && [ "$external_dir_links" != "off" ]; }; then
         sed_subs1=('s~\([a-zA-Z0_9][[:space:]]*=[[:space:]]*["'"']"'\?\)https\?://'"$hostport/"'~'"\1$pathpref"'~g' "$opt") # trims strictly
-        sed_subs2=('s~\([[:space:]]*,[[:space:]]*["'"']"'\?\)https\?://'"$hostport/"'~'"\1$pathpref"'~g' "$opt") # trims loosely
         sed "${sed_options[@]}" "${sed_subs1[@]}"
         if (( url_asset_capture_level > 2 )); then
+          sed_subs2=('s~\([[:space:]]*'"$url_separator_chars"'[[:space:]]*["'"']"'\?\)https\?://'"$hostport/"'~'"\1$pathpref"'~g' "$opt") # trims loosely
           sed "${sed_options[@]}" "${sed_subs2[@]}"
         fi
       fi
@@ -1393,10 +1438,18 @@ process_assets() {
       # if working with extra domains or a directory URL,
       if [ ${#urls_array[@]} -ne 0 ] && { [ "$extra_domains" != "" ] || [ "$url" != "$url_base/" ]; }; then
         for url_extra in "${urls_array[@]}"; do
-          asset_rel_path=$(env echo "$url_extra" | cut -d/ -f3-)
-          asset_rel_path="$pathpref$imports_directory$imports_dir_suffix$asset_rel_path"
-          sed_subs1=('s~\([a-zA-Z0_9][[:space:]]*=[[:space:]]*["'"']"'\?\)'"$url_extra"'~\1'"$asset_rel_path"'~g' "$opt") # trims strictly
-          sed_subs2=('s~\([[:space:]]*,[[:space:]]["'"']"'\?.*\)'"$url_extra"'~'"\1$asset_rel_path"'~g' "$opt") # trims loosely
+          if [ "$url_wildcard_capture" = "yes" ]; then
+            asset_rel_path=$(env echo "$url_extra" | cut -d/ -f3-)
+            asset_rel_path=$(regex_escape "$asset_rel_path/" "BRE")
+            asset_rel_path="$pathpref$imports_directory$imports_dir_suffix$asset_rel_path"
+            sed_subs1=('s~\([a-zA-Z0_9][[:space:]]*=[[:space:]]*["'"']"'\?\)'"$url_extra"'~'"\1$asset_rel_path"'~g' "$opt") # trims strictly
+            sed_subs2=('s~\([[:space:]]*'"$url_separator_chars"'[[:space:]]*["'"']"'\?\)'"$url_extra"'~'"\1$asset_rel_path"'~g' "$opt") # trims loosely
+          else
+            asset_rel_path=$(env echo "$url_extra" | cut -d/ -f3-)
+            asset_rel_path="$pathpref$imports_directory$imports_dir_suffix$asset_rel_path"
+            sed_subs1=('s~\([a-zA-Z0_9][[:space:]]*=[[:space:]]*["'"']"'\?\)'"$url_extra"'~'"\1$asset_rel_path"'~g' "$opt") # trims strictly
+            sed_subs2=('s~\([[:space:]]*'"$url_separator_chars"'[[:space:]]*["'"']"'\?.*\)'"$url_extra"'~'"\1$asset_rel_path"'~g' "$opt") # trims loosely
+          fi
           sed "${sed_options[@]}" "${sed_subs1[@]}"
           if (( url_asset_capture_level > 2 )); then
             sed "${sed_options[@]}" "${sed_subs2[@]}"
@@ -1404,10 +1457,18 @@ process_assets() {
         done
         # scheme relative URLs
         for url_extra in "${urls_array_2[@]}"; do
-          asset_rel_path=$(env echo "$url_extra" | cut -d/ -f3-)
-          asset_rel_path="$pathpref$imports_directory$imports_dir_suffix$asset_rel_path"
-          sed_subs1=('s~\([a-zA-Z0_9][[:space:]]*=[[:space:]]*["'"']"'\?\)'"$url_extra"'~'"\1$asset_rel_path"'~g' "$opt") # trims strictly
-          sed_subs2=('s~\([[:space:]]*,[[:space:]]*["'"']"'\?\)'"$url_extra"'~'"\1$asset_rel_path"'~g' "$opt") # trims loosely
+          if [ "$url_wildcard_capture" = "yes" ]; then
+            asset_rel_path=$(env echo "$url_extra" | cut -d/ -f3-)
+            asset_rel_path=$(regex_escape "$asset_rel_path/" "BRE")
+            asset_rel_path="$pathpref$imports_directory$imports_dir_suffix$asset_rel_path"
+            sed_subs1=('s~\([a-zA-Z0_9][[:space:]]*=[[:space:]]*["'"']"'\?\)'"$url_extra"'~'"\1$asset_rel_path"'~g' "$opt") # trims strictly
+            sed_subs2=('s~\([[:space:]]*'"$url_separator_chars"'[[:space:]]*["'"']"'\?\)'"$url_extra"'~'"\1$asset_rel_path"'~g' "$opt") # trims loosely
+          else
+            asset_rel_path=$(env echo "$url_extra" | cut -d/ -f3-)
+            asset_rel_path="$pathpref$imports_directory$imports_dir_suffix$asset_rel_path"
+            sed_subs1=('s~\([a-zA-Z0_9][[:space:]]*=[[:space:]]*["'"']"'\?\)'"$url_extra"'~'"\1$asset_rel_path"'~g' "$opt") # trims strictly
+            sed_subs2=('s~\([[:space:]]*'"$url_separator_chars"'[[:space:]]*["'"']"'\?\)'"$url_extra"'~'"\1$asset_rel_path"'~g' "$opt") # trims loosely
+          fi
           sed "${sed_options[@]}" "${sed_subs1[@]}"
           if (( url_asset_capture_level > 2  )); then
             sed "${sed_options[@]}" "${sed_subs2[@]}"
@@ -1420,7 +1481,6 @@ process_assets() {
     num_domain_dirs=$(find "$mirror_dir/$mirror_archive_dir/" -maxdepth 1 -type d -name "*.*" | wc -l )
     if [ "$num_domain_dirs" != "1" ] && [ "$extra_assets_mode" = "contain" ]; then
       # Move folders
-      IFS="," read -r -a extra_domains_array <<< "$extra_domains"
       if [ "$imports_directory" != "" ]; then
         mirror_imports_directory="$working_mirror_dir/$imports_directory"
         mkdir -p "$mirror_imports_directory"

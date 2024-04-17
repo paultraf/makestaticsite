@@ -22,7 +22,7 @@
 ################################################
 # MakeStaticSite info
 ################################################
-version=0.29.3+1
+version=0.29.4
 version_date='17 April 2024'
 version_header="MakeStaticSite version $version, released on $version_date."
 mss_license="GNU Affero General Public License version 3"
@@ -39,7 +39,7 @@ max_redirects=5                 # Maximum number of redirects allowed for determ
 ################################################
 # Network settings
 ################################################
-# Regular expressions approximating roughly to IPv4 and IPv6 addresses, Internet domain names and URLs:
+# Extended regular expressions approximating roughly to IPv4 and IPv6 addresses, Internet domain names and URLs:
 # a "name" (Net, Host, Gateway, or Domain name) is a text string...
 # drawn from the alphabet (A-Z), digits (0-9), minus sign (-), and period (.).  
 # https://datatracker.ietf.org/doc/html/rfc952
@@ -47,8 +47,9 @@ max_redirects=5                 # Maximum number of redirects allowed for determ
 # https://datatracker.ietf.org/doc/html/rfc1123#page-13
 ip4re="^[[:space:]]*#*[[:space:]]*\([0-9]\{0,1\}[0-9]\{0,1\}[0-9]\.\)\{3\}[0-9]\{0,1\}[0-9]\{0,1\}[0-9][[:space:]]*"
 ip6re="^[[:space:]]*#*[[:space:]]*\([0-9a-fA-F]\{1,4\}::\{0,1\}\)\{1,7\}[0-9a-fA-F]\{1,4\}[[:space:]]*"
-domain_re="^[[:alnum:]][-[:alnum:]\+\.]*\.[-[:alnum:]\+]*[[:alnum:]]$" # Unlike hostnames, Internet domains contain at least one dot
-domain_re0=${domain_re:1:-1}    # Anchorless domain match
+# Unlike hostnames, Internet domains contain at least one dot.
+domain_re0="[[:alnum:]][-[:alnum:]+\.]*\.[-[:alnum:]+]*[[:alnum:]]"
+domain_re="^$domain_re0"'$'     # Anchored domain match (add first and last characters)
 url_re='^(https?|ftp|file)://[-[:alnum:]\+&@#/%?=~_|!:,.;]+$'
 etc_hosts=/etc/hosts            # Location of hosts file
 
@@ -141,6 +142,8 @@ feed_xml=feed/index.xml         # tail of valid feed URLs as replacement
 ################################################
 # Scope of assets to be captured from parent directories and extra domains
 url_asset_capture_level=3       # (0 fewest, 5 most) for URL matching in determining assets to download and localise
+url_wildcard_capture=yes        # Use a wildcard for matching URLs in asset processing (y/n)?  If set to 'yes', when capturing asset URLs on pages, a simple regex capture group will be used instead of the input file of itemised URLs generated in phases 2 and 3
+url_separator_chars="[,:]"      # additional class of separator characters (regular expression capture class) of URLs to be captured: for example, data-src (comma) and JSON (colon).  Leave empty to omit.
 
 # Specification of assets eligible for downloading by Wget in phase 3.
 web_source_extensions="htm,html,xml,txt" # list of web document file extensions intended for assets search
