@@ -252,12 +252,16 @@ assets_search_string() {
   local path="$2"
   local url_path=
 
-  # build up a list of URLs from the domains list for the search
+  # Build up a list of URLs from the domains list for the search
+  # constraining matches by certain allowable prefixes
   if [ "$1" != "" ]; then
     IFS="," read -r -a other_domains <<< "$1" 
     for opt in "${other_domains[@]}"; do
-      # Constrain matches by prepending with [\"'=]
+      # Constrain by prefixing with [\"'=]
       url_path+="|[\"'=]https?://$opt/$path" # the '?' is intended for ERE 0 or 1
+
+      # Or by prefixing with specified separator characters and optionally [\"'=]
+      url_path+="|[[:space:]]*$url_separator_chars[[:space:]]*[\"=']?https?://$opt/$path" # the '?' is intended for ERE 0 or 1
     done
   fi
   [ "$url_path" != "" ] && url_path="${url_path:1}"
@@ -465,8 +469,21 @@ touchmod() {
   fi
 }
 
-# Escape metacharacters according to whether
-# basic or extended regular expressions are used
+# Apply backslash prefix to enable regex metacharacters (BRE only)
+regex_apply() {
+  string="$1"
+  charlist=("|" "?" "+" "(" ")" "{" "}")
+  for char in "${charlist[@]}"; do
+    search="$char"; replace='\'"$char"   # make regex
+    string=${string//"$search"/"$replace"}
+    search='\\'"$char"; replace="$char"    # revert if already prefixed
+    string=${string//"$search"/"$replace"}
+  done
+  printf "%s" "$string"
+}
+
+# Escape [meta]characters to preserve literal meaning in the
+# context of either basic or extended regular expressions.
 # Expects one parameter: string to be escaped
 # One optional parameter: regex type ('ERE' or 'BRE')
 # (BRE is the default)
@@ -479,6 +496,8 @@ regex_escape() {
   fi
   for char in "${charlist[@]}"; do
     search="$char"; replace='\'"$char"
+    string=${string//"$search"/"$replace"}
+    search='\\'"$char"; replace="$char"    # revert if already prefixed
     string=${string//"$search"/"$replace"}
   done
   printf "%s" "$string"
