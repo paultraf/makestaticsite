@@ -19,6 +19,49 @@
 ##########################################################################
 
 
+0.29.4 (released on 2024-04-17)
+       * Maintenance and refinement, including important bug fix to restore
+         performance for processing URLs for link converstion *
+        [lib/constants.sh]
+         Modifed comments to clearly distinguish the capture and processing
+         of assets from the directory layout management; renamed constant
+         from url_asset_match_level to url_asset_capture_level.
+         modified definition of domain_re and domain_re0 for wider shell
+         support.
+         New constants: url_wildcard_capture - use a wildcard for matching
+         URLs in asset processing (yes/no) instead of actual URLs? 
+         url_separator_chars - additional class of separator characters
+         (regular expression capture class) of URLs to be captured.
+        [setup.sh]
+         read_option(): Added a check in interactive mode on URL syntax.
+        [general.sh]
+         assets_search_string(): expanded scope of regex captures for URL
+         paths in assets search.        
+         Added function regex_apply() to apply backslash prefix to enable
+         regex (special) metacharacters for ‘?’, ‘+’, parentheses ‘()’,
+         braces ‘{}’, and ‘|’.
+         regex_escape(): additionally, revert an existing prefixed metachar.
+         assets_search_string(): added further optional prefix for URLs list.
+        [makestaticsite.sh]
+         initialise_variables(): filter out spaces from domain lists; omit
+         special case of 'auto' from validation of page_element_domains.
+         wget_extra_urls(): Expanded scope of search on domains by replacing
+         occurrence of domain_re with domain_re0, removing anchors.  Also
+         ensured BRE version for use in sed.
+         process_assets(): bug fix: escaped backslashes to ensure that
+         urls_array does not store URLs from the mirrored domain.
+         Fixed the counter to ensure progress bar reaches 100% when complete.
+         Replaced references to url_asset_match_level with
+         url_asset_capture_level.
+         Before attempting to move import directories generated from domain
+         names, check that candidate directories actually exist in archive
+         root.
+         Added routines: to generate the list extra_domains and corresponding
+         extra_domains_array when url_wildcard_capture=yes; and to ensure
+         variables all_domains and url_grep are correctly assigned when
+         starting run at postprocessing phase. Also added routine to generate
+         a wildcard URLs array when page_element_domains is set to 'auto'.    
+
 0.29.3 (released on 2024-04-15)
        * Maintenance and refinement: bug fixes and enhancements to mirror
          output *
