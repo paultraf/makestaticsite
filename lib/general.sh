@@ -155,11 +155,38 @@ which_version() {
   "$1" --version | grep "$2" | grep -o -m 1 -- "[0-9]\{1,2\}\.[0-9]\{1,2\}\(\.[0-9]\{1,2\}\)*[ \-]" | head -1 | tr -d '[:space:]-'
 }
 
+# Optional parameters:
+#  - default setting (y/n) for 'yes' or 'no'
+#  - message to display on not continuing
 confirm_continue() {
+  msg_abort="OK, aborting. Please review the settings."
+  if [ -n "${1+x}" ]; then
+    opt=$(echo "$1" | tr '[:lower:]' '[:upper:]')
+    if [ "$opt" != "Y" ] && [ "$opt" != "N" ]; then
+      opt="Y" # trap the case where first parameter is set incorrectly 
+    fi
+    if [ -n "${2+x}" ]; then
+      msg_abort="$2"
+    fi
+  else
+    opt="Y"
+  fi
+  opt_lc=$(echo "$opt" | tr '[:upper:]' '[:lower:]')
+  if [ "$opt" = "Y" ]; then
+    choose="Y/n"
+  else
+    choose="y/N"
+  fi
   if [ "$run_unattended" != "yes" ]; then
-    read -r -e -p "Do you wish to continue (y/n)? " confirm
+    read -r -e -p "Do you wish to continue? [$choose] " confirm
     confirm=${confirm:0:1}
-    [ "$confirm" != "y" ] && [ "$confirm" != "Y" ] && { printf "Please review the settings.\nAborting.\n"; exit; } || printf "OK. Continuing.\n"
+    if [ "$opt" = "Y" ] && { [ "$confirm" != "$opt_lc" ] && [ "$confirm" != "$opt" ] && [ "$confirm" != "" ]; }; then
+      printf "%s\nAborting.\n" "$msg_abort"; exit
+    elif [ "$opt" = "N" ] && { [ "$confirm" = "$opt_lc" ] || [ "$confirm" = "$opt" ] || [ "$confirm" = "" ]; }; then
+      printf "%s\n" "$msg_abort"; exit
+    else
+      printf "OK. Continuing.\n"
+    fi
   else
     echo "Continuing (to run unattended)."
   fi
