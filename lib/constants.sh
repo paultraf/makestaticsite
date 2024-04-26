@@ -22,8 +22,8 @@
 ################################################
 # MakeStaticSite info
 ################################################
-version=0.29.4
-version_date='17 April 2024'
+version=0.29.4+1
+version_date='26 April 2024'
 version_header="MakeStaticSite version $version, released on $version_date."
 mss_license="GNU Affero General Public License version 3"
 mss_download="https://makestaticsite.sh/download/makestaticsite_latest.tar.gz"
@@ -184,6 +184,7 @@ mss_cut_dirs=yes                # Option to cut directories.  When this is enabl
                                 # - 'yes' or 'on' for a MakeStaticSite-specific cut that moves content of URL path to root
                                 # - empty, 'no' or 'off' to support Wget --cut-dirs and not carry out further MakeStaticSite-specific processing
                                 # - 'auto' to support Wget --cut-dirs and carry out further processing (not yet implemented)
+path_doubleslash_workaround=yes # Make adjustments for the way Wget handles URL paths containing '//', as with Wayback Machine (y/n)?
 
 # Other assets and resources
 cors_enable=yes                 # Enable cross-origin resources once downloaded (y/n)?
@@ -207,7 +208,7 @@ sitemap_file_extensions=htm,html # List of file extensions allowed for inclusion
 # [module] Wayback Machine settings
 ################################################
 mod_wayback=mod_wayback.sh      # Wayback Machine module filename
-wayback_enable=yes              # Enable Wayback Machine module (y/n)?  If not enabled, then any Wayback sites will be retrieved using default (Wget).
+wayback_enable=no               # Enable Wayback Machine module (y/n)?  If not enabled, then any Wayback sites will be retrieved using default (Wget).
 wayback_hosts=web.archive.org,www.webarchive.org.uk  # Domains where Wayback Machine is hosted
 wayback_date_from=              # Earliest date timestamp for Wayback Machine snapshot files
 wayback_date_to=                # Latest date timestamp for Wayback Machine snapshot files

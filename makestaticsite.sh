@@ -418,6 +418,11 @@ initialise_variables() {
     url_path_depth=$(( ${#url_slashes}+1 ))
   fi
 
+  # Replace double slashes in URL paths with single slashes?
+  if [ "$path_doubleslash_workaround" = "yes" ]; then
+    url_path=${url_path//\/\//\/}
+  fi
+
   # Validate additional, supported extensions and domains for stored assets
   url_wildcard_capture=$(yesno "$url_wildcard_capture")
   asset_domains="$(config_get asset_domains "$myconfig" | tr -d '[:space:]')"
