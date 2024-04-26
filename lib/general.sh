@@ -398,7 +398,7 @@ EOT
 # and outputs a progress bar.
 print_progress() {
   col_width=$(tput cols)
-  (( col_width = col_width - 10 )) # keep some space for printing a number
+  (( col_width = col_width - 8 )) # keep some space for printing a number
   hash_string=$(printf '#%.0s' $(seq 1 $col_width))
   hash_string_length=${#hash_string}
   nohash_string=$(printf ' %.0s' $(seq 1 $col_width))
@@ -412,7 +412,7 @@ print_progress() {
     nohash_substring=${nohash_string: -nohash_substring_length}
   fi
   (( progress = 100 * counter / max_count ))
-  printf "$hash_substring$nohash_substring  ($progress%%)\r"
+  printf "$hash_substring$nohash_substring ($progress%%)\r"
 }
 
 

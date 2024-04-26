@@ -1300,7 +1300,7 @@ wget_extra_urls() {
 
 
 process_assets() {
-  echo -n "Processing asset storage locations ... "
+  echo "Processing asset storage locations ... "
 
   # First, generate a list of all the web pages that contain relevant URLs to process
   # (makes subsequent sed replacements more targeted than searching all web pages).
@@ -1346,7 +1346,7 @@ process_assets() {
     while IFS='' read -r line; do webpages+=("$line"); done < <(grep -Erl "$opt" . "${asset_grep_includes[@]}")
   done
   
-  echo -n "Converting paths to become relative to imports and assets directories ... " 
+  echo "Converting paths to become relative to imports and assets directories ... " 
 
   # Prepare adjustment for relative paths with assets directory
   if [ "$assets_directory" != "" ] && [ "$cut_dirs" = "0" ]; then
@@ -1524,8 +1524,11 @@ process_assets() {
     # Determine which web pages to search and replace
     webpages=()
     while IFS= read -r line; do webpages+=("$line"); done <<<"$(for file_ext in "${asset_find_names[@]}"; do find . -type f -name "$file_ext" "${asset_exclude_dirs[@]}" -print; done)"
-    
+    num_webpages=${#webpages[@]}
+    count=1
+    echo "Additional processing for mirroring a directory, not a domain ... "
     for opt in "${webpages[@]}"; do
+      print_progress "$count" "$num_webpages"; (( count++ ))
       # but don't process XML files in guise of HTML files
       if grep -q "<?xml version" "$opt"; then
         continue
@@ -1559,6 +1562,7 @@ process_assets() {
         done
       fi
     done
+    printf "\n"
 
     # Move directories and files
     if [ ${#extra_dirs_list[@]} -ne 0 ] && [ "$parent_dirs_mode" = "contain" ]; then
@@ -1571,7 +1575,7 @@ process_assets() {
       mkdir -p "$mirror_assets_directory/$url_path" # and avoid moving into itself later
       for extra_dir in "${extra_dirs_list[@]}"; do
         mv_dir="$working_mirror_dir/$extra_dir"
-        if [ "$url_path" != "" ] && [[ $url_path =~ $extra_dir ]]; then
+        if [ "$url_path" != "" ] && [[ $url_path =~ $extra_dir ]] && [ "$extra_dir" != "" ]; then
           # Move files
           cd "$extra_dir"
           for x in *; do
