@@ -1,7 +1,7 @@
 ##########################################################################
 # 
 # MakeStaticSite --- a shell script to create and deploy static websites 
-# Copyright 2022 Paul Trafford <pt@ptworld.net>
+# Copyright 2022-2024 Paul Trafford <pt@ptworld.net>
 # 
 # config.sh - configuration functions for MakeStaticSite
 # This file is part of MakeStaticSite.
@@ -93,4 +93,35 @@ check_config_file() {
   fi
 }
 
- 
+
+# Assign option variables.
+# Expects one parameter: variable label containing list of options
+assign_option_variables() {
+  local option_names="$1[@]"          # pass array by name reference
+  options_list=("${!option_names}")   # assign options_list via parameter expansion
+  for opt in "${options_list[@]}"; do
+    # standardise values for options of type yes/no 
+    if [[ ' '${options_check_yesno[*]}' ' =~ ' '$opt' ' ]]; then
+      printf -v "${opt}" '%s' "$(yesno "$(config_get "$opt" "$myconfig")")"  
+    else
+      printf -v "${opt}" '%s' "$(config_get "$opt" "$myconfig")"
+    fi
+  done
+}
+
+
+# Get a list of option variables from allOptions_deps array
+# Expects one parameter: option key
+get_options_list() {
+  [ -z "${1+x}" ] && return ""
+  local option="$1"
+  local list=
+  for opt_dep in "${allOptions_deps[@]}"; do
+    var_dep=$(expr "$opt_dep" : '\([^=]*\)'; return 0) # Array key is everything up to '='
+    if [ "$var_dep" = "$option" ]; then
+      list=$(expr "$opt_dep" : '[^=]*.(\(.*\))'; return 0) # Array value is everything inside the brackets, after '=' 
+      break
+    fi
+  done
+  echo "$list"
+}

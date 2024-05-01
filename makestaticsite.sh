@@ -23,6 +23,7 @@
 # Prerequisites
 # Bash 3 and write permissions in this directory and in the target deployment directories
 
+# shellcheck disable=SC2154
 
 SECONDS=0                  # start timer
 
@@ -274,6 +275,7 @@ initialise_layout() {
                                           # Script will generate this dynamically
                                           # using this data file where each row is
                                           # path_to_html_file:<list of snippet ids>
+  snippets_count=0                        # Initialise number of snippets found
 
   lib_files=lib/files                     # library files (defaults/templates) directory
 
@@ -366,12 +368,8 @@ initialise_variables() {
     rvol=; wvol=-nv; wpvol=
   fi
 
-  add_search=$(yesno "$(config_get add_search "$myconfig")")
-  deploy=$(yesno "$(config_get deploy "$myconfig")")
-  deploy_remote=$(yesno "$(config_get deploy_remote "$myconfig")")
-  use_snippets=$(yesno "$(config_get use_snippets "$myconfig")")
-  snippets_count=0
-  upload_zip=$(yesno "$(config_get upload_zip "$myconfig")")
+  # Assign option variables for those that have no dependencies
+  assign_option_variables "options_nodeps_load"
 
   # Check system requirements for cURL, Wget and SSL
   msg_checking="Checking your system for Wget and other essential components ... "
@@ -380,11 +378,9 @@ initialise_variables() {
   echo "OK" "1"
   wget_cmd_version="$(which_version "$wget_cmd" "GNU Wget")"
   version_check "$wget_cmd_version" "$wget_version_atleast" || { printf "%s%s. The version of %s is %s, which is old, so some functionality may be lost.  Version %s or later is recommended.\n" "$msg_checking" "$msg_warning" "$wget_cmd" "$wget_cmd_version" "$wget_version_atleast";}
-  ssl_checks=$(yesno "$(config_get ssl_checks "$myconfig")")
   [ "$ssl_checks" = "no" ] && wget_ssl="--no-check-certificate" || wget_ssl=''
 
   # Web server details (to be snapped by Wget, etc.)
-  url="$(config_get url "$myconfig")"
   [[ ${url:length-1:1} != "/" ]] && url="$url/"; # ensure URL ends in trailing slash
 
   # Wayback Machine support
@@ -425,7 +421,7 @@ initialise_variables() {
 
   # Validate additional, supported extensions and domains for stored assets
   url_wildcard_capture=$(yesno "$url_wildcard_capture")
-  asset_domains="$(config_get asset_domains "$myconfig" | tr -d '[:space:]')"
+  asset_domains="$(echo "$asset_domains" | tr -d '[:space:]')"
   IFS=',' read -ra list <<< "$asset_domains"
   c=0; for asset_domain in "${list[@]}"; do
     validate_domain "$asset_domain" || {
@@ -434,7 +430,7 @@ initialise_variables() {
     }
   done
   [ "$c" == "1" ] && echo -n $'\n'
-  page_element_domains="$(config_get page_element_domains "$myconfig" | tr -d '[:space:]')"
+  page_element_domains="$(echo "$page_element_domains" | tr -d '[:space:]')"
   IFS=',' read -ra list <<< "$page_element_domains"
   if [ "$page_element_domains" != "auto" ]; then
     c=0; for page_element_domain in "${list[@]}"; do
@@ -498,26 +494,16 @@ initialise_variables() {
   protocol=$(printf "%s" "$url" | awk -F/ '{print $1}' | awk -F: '{print $1}')
   url_base="$protocol://$hostport"
   
-  require_login=$(yesno "$(config_get require_login "$myconfig")")
-  [ "$require_login" = "yes" ] && { site_user="$(config_get site_user "$myconfig")";
-    site_password="$(config_get site_password "$myconfig")";
-    login_path="$(config_get login_path "$myconfig")"; 
-    login_address="$url_base$login_path"; 
-    login_user_field="$(config_get login_user_field "$myconfig")"; 
-    login_pwd_field="$(config_get login_pwd_field "$myconfig")"; 
-    cookie_session_string="$(config_get cookie_session_string "$myconfig")";   
+  [ "$require_login" = "yes" ] && {
+    # Assign additional option variables for login sessions
+    require_login_list=$(get_options_list "require_login")
+    require_login_array=(${require_login_list}) # convert string to array 
+    assign_option_variables "require_login_array"
+    login_address="$url_base$login_path";
   }
 
-  # Local snapshot label
-  local_sitename="$(config_get local_sitename "$myconfig")"
-
   # Options to support Wget
-  input_urls_file="$(config_get input_urls_file "$myconfig")"
-
   [ "$use_wayback" != "yes" ] && wget_extra_urls=$(yesno "$(config_get wget_extra_urls "$myconfig")")
-  site_post_processing=$(yesno "$(config_get site_post_processing "$myconfig")")
-  prune_query_strings=$(yesno "$(config_get prune_query_strings "$myconfig")")
-  archive=$(yesno "$(config_get archive "$myconfig")")
   wget_input_files=()  # Initialise array of additional Wget input URLs
   input_long_filenames="$script_dir/$tmp_dir/$wget_long_filenames"  # List of URLs with very long filenames (to be generated)
   input_file_extra="$script_dir/$tmp_dir/$wget_inputs_extra"  # Input file for a single run of Wget extra assets (to be generated)
@@ -568,14 +554,6 @@ initialise_variables() {
     fi
   fi
 
-  web_source_exclude_dirs="$(config_get web_source_exclude_dirs "$myconfig")"  
-  htmltidy=$(yesno "$(config_get htmltidy "$myconfig")")
-  add_extras=$(yesno "$(config_get add_extras "$myconfig")")
-
-  # WP-CLI (or other CMS client) options, including source (server), as appropriate
-  wp_cli=$(yesno "$(config_get wp_cli "$myconfig")")
-  site_path="$(config_get site_path "$myconfig")"
-
   # Path of the mirror archive, if archive directory is already defined
   # check for -nH option in wget_extra_options
   hostport_dir=
@@ -598,10 +576,6 @@ initialise_variables() {
   if [[ $wget_extra_options_tmp =~ "--cut-dirs" ]]; then
     cut_dirs=$(echo "$wget_extra_options_tmp" | grep -o "cut-dirs=[0-9]*" | cut -d '=' -f2)
   fi
-
-  # Zip file of the site snapshot
-  zip_filename="$(config_get zip_filename "$myconfig")"
-  zip_download_folder="$(config_get zip_download_folder "$myconfig")"
 
   # For deployment on a remote server
   if [ "$deploy_remote" != "yes" ]; then
@@ -815,7 +789,7 @@ wget_process_credentials() {
     # No run commands file defined
     echo "$msg_warning: no recognisable (.netrc or .wgetrc) run commands file specified, assuming none."
     echo "This means that credentials will be included directly in Wget."
-    confirm_continue
+    confirm_continue ""
   fi
 }
 
@@ -987,7 +961,7 @@ wget_mirror() {
         echo "note that it should be the same as the value of cookie_session_string (currently $cookie_session_string), as set in constants.sh."
       fi
       printf "Also check the username and password in %s.\n" "$myconfig.cfg"
-      confirm_continue
+      confirm_continue ""
     else
       echo "OK."
       # Add cookie as option for main Wget run
@@ -2133,7 +2107,7 @@ deploy() {
       echo "Source site path: $site_path"
       echo "Deployment path: $deploy_path"
       [ "$site_path" != "$deploy_path" ] && echo "The paths appear to be distinct, so deployment should not overwrite" || echo "$msg_warning: The paths appear to be the same - about to overwrite the source folder with the static mirror!"
-      confirm_continue
+      confirm_continue ""
     fi
   fi
 
