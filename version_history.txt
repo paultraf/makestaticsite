@@ -19,6 +19,32 @@
 ##########################################################################
 
 
+0.29.5 (released on 2024-05-01)
+       * Maintenance and refinement, with Wget workaround to better support
+        mirroring archive.org and refactoring of option variables assignment *
+        [lib/constants.sh]
+         New constant: path_doubleslash_workaround to specify whether or not
+         to make adjustments for URL paths containing double slash.
+         New array constant options_nodeps_load to specify list of options 
+         whose assignment is not dependent on others.
+        [lib/config.sh]
+         New function assign_option_variables(): assigns option variables
+         according to a supplied list (array name reference).
+         New function get_options_list(): extracts a list of option variables
+         from allOptions_deps array.
+        [general.sh]
+         confirm_continue(): modified to make confirmation follow standard
+         behaviour with capitalized yes/no default.
+         print_progress(): cosmetic change to output, to fill more of the
+         terminal screen.
+        [makestaticsite.sh]
+         initialise_variables(): refactored assignment of option variables to 
+         use assign_option_variables() for variables without dependencies.
+         Conditional on path_doubleslash_workaround, replace double slashes in
+         URL paths with single slashes.
+         process_assets(): added progress bar for processing assets (mirroring
+         a URL with path), plus cosmetic changes in output.
+
 0.29.4 (released on 2024-04-17)
        * Maintenance and refinement, including important bug fix to restore
          performance for processing URLs for link converstion *
