@@ -384,23 +384,24 @@ initialise_variables() {
   [[ ${url:length-1:1} != "/" ]] && url="$url/"; # ensure URL ends in trailing slash
 
   # Wayback Machine support
-  use_wayback= 
-  wayback_enable=$(yesno "$wayback_enable")
-  if [ "$wayback_enable" = "yes" ]; then
+  use_wayback_cli=
+  wayback_cli=$(yesno "$wayback_cli")
+  if check_wayback_url "$url" "$wayback_hosts"; then
+    # Wayback Machine URL established
+    domain_wayback_machine=$(printf "%s" "$url" | awk -F/ '{print $3}' | awk -F: '{print $1}')
+    printf "\nWayback Machine detected at %s, hosted on %s.\n" "$url" "$domain_wayback_machine."
+    if [ "$wayback_cli" = "yes" ]; then
 # shellcheck source=lib/mod_wayback.sh
-    source "lib/$mod_wayback";
-    if (( phase < 4 )) && ! validate_internet; then
-      echo " "; echo "$msg_error: Unable to establish Internet access. Please check your network connectivity."
-      echo "Aborting."
-      exit
-    fi
-    if check_wayback_url "$url" "$wayback_hosts"; then
-      use_wayback=yes
+      source "lib/$mod_wayback";
+      if (( phase < 4 )) && ! validate_internet; then
+        echo " "; echo "$msg_error: Unable to establish Internet access. Please check your network connectivity."
+        echo "Aborting."
+        exit
+      fi
+      use_wayback_cli=yes
       wget_extra_urls=no
       wget_extra_urls_depth=0
       wget_extra_urls_count=1
-      domain_wayback_machine=$(printf "%s" "$url" | awk -F/ '{print $3}' | awk -F: '{print $1}')
-      printf "\nWayback Machine detected at %s, hosted on %s.\n" "$url" "$domain_wayback_machine."
       process_wayback_url "$url" # will change the value of $url to be that of the archived site
     fi
   fi
@@ -497,13 +498,14 @@ initialise_variables() {
   [ "$require_login" = "yes" ] && {
     # Assign additional option variables for login sessions
     require_login_list=$(get_options_list "require_login")
-    require_login_array=(${require_login_list}) # convert string to array 
+# shellcheck disable=SC2034
+    require_login_array=("${require_login_list}") # convert string to array 
     assign_option_variables "require_login_array"
     login_address="$url_base$login_path";
   }
 
   # Options to support Wget
-  [ "$use_wayback" != "yes" ] && wget_extra_urls=$(yesno "$(config_get wget_extra_urls "$myconfig")")
+  [ "$use_wayback_cli" != "yes" ] && wget_extra_urls=$(yesno "$(config_get wget_extra_urls "$myconfig")")
   wget_input_files=()  # Initialise array of additional Wget input URLs
   input_long_filenames="$script_dir/$tmp_dir/$wget_long_filenames"  # List of URLs with very long filenames (to be generated)
   input_file_extra="$script_dir/$tmp_dir/$wget_inputs_extra"  # Input file for a single run of Wget extra assets (to be generated)
@@ -561,7 +563,7 @@ initialise_variables() {
     host_dir=
   fi
 
-  if [ "$host_dir" != "" ] && [ "$(yesno "$host_dir")" != "no" ] && [ "$use_wayback" != "yes" ]; then
+  if [ "$host_dir" != "" ] && [ "$(yesno "$host_dir")" != "no" ] && [ "$use_wayback_cli" != "yes" ]; then
     hostport_dir="/$hostport"
   fi
 
@@ -586,7 +588,8 @@ initialise_variables() {
     if [ "$deploy_remote_rsync" = "yes" ]; then
       # Assign additional option variables for deployment
       deploy_remote_rsync_list=$(get_options_list "deploy_remote_rsync")
-      deploy_remote_rsync_array=(${deploy_remote_rsync_list}) # convert string to array 
+# shellcheck disable=SC2034
+      deploy_remote_rsync_array=("${deploy_remote_rsync_list}") # convert string to array 
       assign_option_variables "deploy_remote_rsync_array"    
     fi
     if [ "$deploy_netlify" = "yes" ]; then
@@ -621,10 +624,11 @@ prepare_static_generation() {
   echo "Starting the static site generation ..."
 
   # Prepare WordPress site for static archive, if applicable
-  if [ "$wp_cli" = "yes" ] && [ "$use_wayback" != "yes" ]; then
+  if [ "$wp_cli" = "yes" ]  && [ "$use_wayback_cli" != "yes" ]; then
     wp_cli_remote=$(yesno "$(config_get wp_cli_remote "$myconfig")")
     wp_cli_remote_list=$(get_options_list "wp_cli_remote")
-    wp_cli_remote_array=(${wp_cli_remote_list}) # convert string to array 
+# shellcheck disable=SC2034
+    wp_cli_remote_array=("${wp_cli_remote_list}") # convert string to array 
     assign_option_variables "wp_cli_remote_array"
 # shellcheck source=lib/mod_wp.sh
     source "lib/$mod_wp";
@@ -1014,7 +1018,7 @@ wget_mirror() {
 mirror_site() {
   cd "$mirror_dir" || { echo; echo "$msg_error: can't access working directory for the mirror ($mirror_dir)" >&2; exit 1; }
 
-  if [ "$use_wayback" = "yes" ]; then
+  if [ "$use_wayback_cli" = "yes" ]; then
     echo "Retrieving archive for $domain... "
     mirror_archive_dir="$local_sitename"
     [ "$archive" = "yes" ] && mirror_archive_dir+="$timestamp"
@@ -1025,7 +1029,7 @@ mirror_site() {
     if cmd_check "$wayback_machine_downloader_cmd" "1"; then
       echo "Running Wayback Machine Downloader on $url ... "
       if [ "$domain_wayback_machine" != "web.archive.org" ]; then
-        echo "$msg_error: The Wayback Machine Downloader only supports web.archive.org and we don't have any custom alternative.  You might be able to retrieve some files by setting wayback_enable=no in constants.sh (to treat like any other site) and then re-running, though this is not recommended. Aborting."
+        echo "$msg_error: The Wayback Machine Downloader only supports web.archive.org.  You might be able to retrieve some files by setting wayback_cli=no in constants.sh (to treat like any other site) and then re-running, though file retrieval is currently limited to the specified Wayback Machine timestamp. Aborting."
         exit
       else
         wmd_get_wayback_site "$url"

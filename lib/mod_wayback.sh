@@ -92,33 +92,3 @@ process_wayback_url() {
   fi  
 }
 
-# check URL for Wayback Machine service
-# using two methods:
-# 1. check list membership
-# 2. check header response with cURL
-#
-# Expects two parameters:
-# - URL being tested
-# - Wayback list
-check_wayback_url(){
-  # Read parameters and assign to variables
-  local url="$1"
-  local wayback_list="$2"
-  local host
-  host=$(printf "%s" "$url" | awk -F/ '{print $3}' | awk -F: '{print $1}')
-
-  # Check list of known Wayback Machine hosts
-  if env echo ",$wayback_list," | grep -q ",$host,"; then
-    return 0
-  fi
-
-  # cURL check (-I : header, -s: silent, -k: don't check SSL certs)
-  wayback_header="Memento-Datetime:"
-  if curl -skI "$url" | grep -Fiq "$wayback_header"; then
-    return 0
-  fi
-
-  # Failed both checks, so return error status
-  return 1
-}
-

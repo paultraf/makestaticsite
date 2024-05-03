@@ -22,8 +22,8 @@
 ################################################
 # MakeStaticSite info
 ################################################
-version=0.29.5
-version_date='1 May 2024'
+version=0.29.5+1
+version_date='3 May 2024'
 version_header="MakeStaticSite version $version, released on $version_date."
 mss_license="GNU Affero General Public License version 3"
 mss_download="https://makestaticsite.sh/download/makestaticsite_latest.tar.gz"
@@ -205,11 +205,11 @@ sitemap_file_extensions=htm,html # List of file extensions allowed for inclusion
 
 
 ################################################
-# [module] Wayback Machine settings
+# Wayback Machine settings
 ################################################
+wayback_cli=no                  # Use a third-party client to download sites from the Wayback Machine (y/n)?  If not set to 'yes', then any Wayback sites will be retrieved natively using default (Wget).
 mod_wayback=mod_wayback.sh      # Wayback Machine module filename
-wayback_enable=no               # Enable Wayback Machine module (y/n)?  If not enabled, then any Wayback sites will be retrieved using default (Wget).
-wayback_hosts=web.archive.org,www.webarchive.org.uk  # Domains where Wayback Machine is hosted
+wayback_hosts=web.archive.org,www.webarchive.org.uk  # Partial list of domains where Wayback Machine is hosted
 wayback_date_from=              # Earliest date timestamp for Wayback Machine snapshot files
 wayback_date_to=                # Latest date timestamp for Wayback Machine snapshot files
 wayback_matchtype=prefix        # Wayback Machine CDX server match type:
