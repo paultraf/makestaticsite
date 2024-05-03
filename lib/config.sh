@@ -110,7 +110,7 @@ assign_option_variables() {
 }
 
 
-# Get a list of option variables from allOptions_deps array
+# Extract a list of option variables from allOptions_deps array
 # Expects one parameter: option key
 get_options_list() {
   [ -z "${1+x}" ] && return ""

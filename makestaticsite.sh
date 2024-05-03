@@ -584,9 +584,10 @@ initialise_variables() {
     deploy_remote_rsync=$(yesno "$(config_get deploy_remote_rsync "$myconfig")")
     deploy_netlify=$(yesno "$(config_get deploy_netlify "$myconfig")")
     if [ "$deploy_remote_rsync" = "yes" ]; then
-      deploy_host="$(config_get deploy_host "$myconfig")"
-      deploy_port="$(config_get deploy_port "$myconfig")"
-      deploy_user="$(config_get deploy_user "$myconfig")"
+      # Assign additional option variables for deployment
+      deploy_remote_rsync_list=$(get_options_list "deploy_remote_rsync")
+      deploy_remote_rsync_array=(${deploy_remote_rsync_list}) # convert string to array 
+      assign_option_variables "deploy_remote_rsync_array"    
     fi
     if [ "$deploy_netlify" = "yes" ]; then
       deploy_netlify_name="$(config_get deploy_netlify_name "$myconfig")"
@@ -622,10 +623,9 @@ prepare_static_generation() {
   # Prepare WordPress site for static archive, if applicable
   if [ "$wp_cli" = "yes" ] && [ "$use_wayback" != "yes" ]; then
     wp_cli_remote=$(yesno "$(config_get wp_cli_remote "$myconfig")")
-    source_host="$(config_get source_host "$myconfig")"
-    source_protocol="$(config_get source_protocol "$myconfig")"
-    source_port="$(config_get source_port "$myconfig")"
-    source_user="$(config_get source_user "$myconfig")"
+    wp_cli_remote_list=$(get_options_list "wp_cli_remote")
+    wp_cli_remote_array=(${wp_cli_remote_list}) # convert string to array 
+    assign_option_variables "wp_cli_remote_array"
 # shellcheck source=lib/mod_wp.sh
     source "lib/$mod_wp";
     wp_prep
