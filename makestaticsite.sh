@@ -388,6 +388,7 @@ initialise_variables() {
   wayback_cli=$(yesno "$wayback_cli")
   if check_wayback_url "$url" "$wayback_hosts"; then
     # Wayback Machine URL established
+    wayback_url=yes
     domain_wayback_machine=$(printf "%s" "$url" | awk -F/ '{print $3}' | awk -F: '{print $1}')
     printf "\nWayback Machine detected at %s, hosted on %s.\n" "$url" "$domain_wayback_machine."
     if [ "$wayback_cli" = "yes" ]; then
@@ -404,6 +405,8 @@ initialise_variables() {
       wget_extra_urls_count=1
       process_wayback_url "$url" # will change the value of $url to be that of the archived site
     fi
+  else
+    wayback_url=no  
   fi
 
   url_domain=$(printf "%s\n" "$url" | awk -F/ '{print $3}' | awk -F: '{print $1}')
@@ -1148,7 +1151,13 @@ wget_extra_urls() {
   # Pick out unique items
   echo "Pick out unique items" "1"
   webassets_unique=()
-  while IFS='' read -r line; do webassets_unique+=("$line"); done < <(for item in "${webassets_all[@]}"; do printf "%s\n" "${item}"; done | sort -u)
+  while IFS='' read -r line; do webassets_unique+=("$line"); done < <(for item in "${webassets_all[@]}"; do printf "%s\n" "${item}"; done |
+    if [ "$wayback_url" = "yes" ]; then
+      sort -u | sed 's/_\/http/ /g' | sort -u -t ' ' -k 2 | sed 's/ /_\/http/g'; # remove duplicate asset captures (different timestamps)
+    else
+      sort -u;
+    fi
+  )
   echo "webassets_unique array has ${#webassets_unique[@]} elements" "2"
 
   # Filter out all items not starting http
