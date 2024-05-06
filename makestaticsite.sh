@@ -1153,7 +1153,7 @@ wget_extra_urls() {
   webassets_unique=()
   while IFS='' read -r line; do webassets_unique+=("$line"); done < <(for item in "${webassets_all[@]}"; do printf "%s\n" "${item}"; done |
     if [ "$wayback_url" = "yes" ]; then
-      sort -u | sed 's/_\/http/ /g' | sort -u -t ' ' -k 2 | sed 's/ /_\/http/g'; # remove duplicate asset captures (different timestamps)
+      sort -u | sed 's/\/http/ /g' | sort -u -t ' ' -k 2 | sed 's/ /\/http/g'; # remove duplicate asset captures (different timestamps)
     else
       sort -u;
     fi
