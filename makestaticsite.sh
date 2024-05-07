@@ -354,8 +354,8 @@ initialise_variables() {
 
   # now augment Wget input files with .cfg label
   wget_inputs_main="$wget_inputs_main-$myconfig.txt"
-  wget_inputs_extra="$wget_inputs_extra-$myconfig.txt" # single run input file
   wget_inputs_extra_all="$wget_inputs_extra-${myconfig}-all.txt" # cumulative input file
+  wget_inputs_extra="$wget_inputs_extra-$myconfig.txt" # single run input file
   wget_long_filenames="$wget_long_filenames-$myconfig.txt"
   wget_extra_urls_count=1 # Initialise recursive calls to wget_extra_urls()
 
