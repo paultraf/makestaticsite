@@ -502,7 +502,7 @@ initialise_variables() {
     # Assign additional option variables for login sessions
     require_login_list=$(get_options_list "require_login")
 # shellcheck disable=SC2034
-    require_login_array=("${require_login_list}") # convert string to array 
+    IFS=" " read -ra require_login_array <<< "$require_login_list" # convert string to array 
     assign_option_variables "require_login_array"
     login_address="$url_base$login_path";
   }
@@ -592,8 +592,8 @@ initialise_variables() {
       # Assign additional option variables for deployment
       deploy_remote_rsync_list=$(get_options_list "deploy_remote_rsync")
 # shellcheck disable=SC2034
-      deploy_remote_rsync_array=("${deploy_remote_rsync_list}") # convert string to array 
-      assign_option_variables "deploy_remote_rsync_array"    
+      IFS=" " read -ra deploy_remote_rsync_array <<< "$deploy_remote_rsync_list" # convert string to array
+      assign_option_variables "deploy_remote_rsync_array"
     fi
     if [ "$deploy_netlify" = "yes" ]; then
       deploy_netlify_name="$(config_get deploy_netlify_name "$myconfig")"
@@ -631,7 +631,7 @@ prepare_static_generation() {
     wp_cli_remote=$(yesno "$(config_get wp_cli_remote "$myconfig")")
     wp_cli_remote_list=$(get_options_list "wp_cli_remote")
 # shellcheck disable=SC2034
-    wp_cli_remote_array=("${wp_cli_remote_list}") # convert string to array 
+    IFS=" " read -ra wp_cli_remote_array <<< "$wp_cli_remote_list" # convert string to array
     assign_option_variables "wp_cli_remote_array"
 # shellcheck source=lib/mod_wp.sh
     source "lib/$mod_wp";
