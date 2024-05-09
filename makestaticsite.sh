@@ -1430,15 +1430,13 @@ process_assets() {
       # if working with extra domains or a directory URL,
       if [ ${#urls_array[@]} -ne 0 ] && { [ "$extra_domains" != "" ] || [ "$url" != "$url_base/" ]; }; then
         for url_extra in "${urls_array[@]}"; do
+          asset_rel_path=$(env echo "$url_extra" | cut -d/ -f3-)
+          asset_rel_path=$(regex_escape "$asset_rel_path/" "BRE")
+          asset_rel_path="$pathpref$imports_directory$imports_dir_suffix$asset_rel_path"
           if [ "$url_wildcard_capture" = "yes" ]; then
-            asset_rel_path=$(env echo "$url_extra" | cut -d/ -f3-)
-            asset_rel_path=$(regex_escape "$asset_rel_path/" "BRE")
-            asset_rel_path="$pathpref$imports_directory$imports_dir_suffix$asset_rel_path"
             sed_subs1=('s~\([a-zA-Z0_9][[:space:]]*=[[:space:]]*["'"']"'\?\)'"$url_extra"'~'"\1$asset_rel_path"'~g' "$opt") # trims strictly
             sed_subs2=('s~\([[:space:]]*'"$url_separator_chars"'[[:space:]]*["'"']"'\?\)'"$url_extra"'~'"\1$asset_rel_path"'~g' "$opt") # trims loosely
           else
-            asset_rel_path=$(env echo "$url_extra" | cut -d/ -f3-)
-            asset_rel_path="$pathpref$imports_directory$imports_dir_suffix$asset_rel_path"
             sed_subs1=('s~\([a-zA-Z0_9][[:space:]]*=[[:space:]]*["'"']"'\?\)'"$url_extra"'~'"\1$asset_rel_path"'~g' "$opt") # trims strictly
             sed_subs2=('s~\([[:space:]]*'"$url_separator_chars"'[[:space:]]*["'"']"'\?.*\)'"$url_extra"'~'"\1$asset_rel_path"'~g' "$opt") # trims loosely
           fi
@@ -1449,15 +1447,13 @@ process_assets() {
         done
         # scheme relative URLs
         for url_extra in "${urls_array_2[@]}"; do
+          asset_rel_path=$(env echo "$url_extra" | cut -d/ -f3-)
+          asset_rel_path=$(regex_escape "$asset_rel_path/" "BRE")
+          asset_rel_path="$pathpref$imports_directory$imports_dir_suffix$asset_rel_path"
           if [ "$url_wildcard_capture" = "yes" ]; then
-            asset_rel_path=$(env echo "$url_extra" | cut -d/ -f3-)
-            asset_rel_path=$(regex_escape "$asset_rel_path/" "BRE")
-            asset_rel_path="$pathpref$imports_directory$imports_dir_suffix$asset_rel_path"
             sed_subs1=('s~\([a-zA-Z0_9][[:space:]]*=[[:space:]]*["'"']"'\?\)'"$url_extra"'~'"\1$asset_rel_path"'~g' "$opt") # trims strictly
             sed_subs2=('s~\([[:space:]]*'"$url_separator_chars"'[[:space:]]*["'"']"'\?\)'"$url_extra"'~'"\1$asset_rel_path"'~g' "$opt") # trims loosely
           else
-            asset_rel_path=$(env echo "$url_extra" | cut -d/ -f3-)
-            asset_rel_path="$pathpref$imports_directory$imports_dir_suffix$asset_rel_path"
             sed_subs1=('s~\([a-zA-Z0_9][[:space:]]*=[[:space:]]*["'"']"'\?\)'"$url_extra"'~'"\1$asset_rel_path"'~g' "$opt") # trims strictly
             sed_subs2=('s~\([[:space:]]*'"$url_separator_chars"'[[:space:]]*["'"']"'\?\)'"$url_extra"'~'"\1$asset_rel_path"'~g' "$opt") # trims loosely
           fi
@@ -2012,6 +2008,7 @@ cut_mss_dirs() {
   dir_path="$working_mirror_dir/$url_path"
   mv "$dir_path/"* "$working_mirror_dir/"
   echo "Moved files and folders from $dir_path to $working_mirror_dir/." "1"
+
   # remove top-level folder of $url_path
   url_root_dir=$(echo "$url_path" | cut -d/ -f1)
   if [ -d "$url_root_dir" ]; then
