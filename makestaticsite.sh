@@ -1513,9 +1513,11 @@ process_assets() {
     webpages=()
     while IFS= read -r line; do webpages+=("$line"); done <<<"$(for file_ext in "${asset_find_names[@]}"; do find . -type f -name "$file_ext" "${asset_exclude_dirs[@]}" -print; done)"
     num_webpages=${#webpages[@]}
+    [ "${webpages[*]}" = "" ] && echo "$msg_warning: no web pages found for processing."
     count=1
     echo "Additional processing for mirroring a directory, not a domain ... "
     for opt in "${webpages[@]}"; do
+      { [ -z ${opt+x} ] || [ "$opt" = "" ]; } && continue; # trap the case there are no web pages to process
       print_progress "$count" "$num_webpages"; (( count++ ))
       # but don't process XML files in guise of HTML files
       if grep -q "<?xml version" "$opt"; then
