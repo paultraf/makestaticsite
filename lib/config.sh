@@ -36,6 +36,12 @@ config_get() {
   if [ -n "${3+x}" ]; then
     config_home="$3/"
   fi
+  
+  # Just echo back an option if it's already defined before allOptions array
+  myvar_ref="$1"
+  tempvar=${!myvar_ref}
+  [ "$tempvar" != "" ] && { printf "%s" "$tempvar"; return; }
+
   val="$(config_read_file "${config_home}config/$2".cfg "$1")";
   if [ "$val" = "__UNDEFINED__" ]; then
     val="$(config_read_file config/default.cfg "$1")";
@@ -102,7 +108,7 @@ assign_option_variables() {
   for opt in "${options_list[@]}"; do
     # standardise values for options of type yes/no 
     if [[ ' '${options_check_yesno[*]}' ' =~ ' '$opt' ' ]]; then
-      printf -v "${opt}" '%s' "$(yesno "$(config_get "$opt" "$myconfig")")"  
+      printf -v "${opt}" '%s' "$(yesno "$(config_get "$opt" "$myconfig")")"
     else
       printf -v "${opt}" '%s' "$(config_get "$opt" "$myconfig")"
     fi
