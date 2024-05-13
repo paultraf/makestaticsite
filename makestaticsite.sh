@@ -385,7 +385,6 @@ initialise_variables() {
 
   # Wayback Machine support
   use_wayback_cli=
-  wayback_cli=$(yesno "$wayback_cli")
   if check_wayback_url "$url" "$wayback_hosts"; then
     # Wayback Machine URL established
     wayback_url=yes
@@ -424,7 +423,6 @@ initialise_variables() {
   fi
 
   # Validate additional, supported extensions and domains for stored assets
-  url_wildcard_capture=$(yesno "$url_wildcard_capture")
   asset_domains="$(echo "$asset_domains" | tr -d '[:space:]')"
   IFS=',' read -ra list <<< "$asset_domains"
   c=0; for asset_domain in "${list[@]}"; do
@@ -460,9 +458,6 @@ initialise_variables() {
     htmltidy_file_exts+=(  \*."$item" )
   done
 
-  # Support for CORS
-  cors_enable=$(yesno "$cors_enable")
-   
   # For backwards-compatibility check whether URL defined instead in url_base
   if [ "$url_domain" = "example.com" ]; then
     url="$(config_get url_base "$myconfig")"
@@ -796,7 +791,7 @@ wget_process_credentials() {
     # No run commands file defined
     echo "$msg_warning: no recognisable (.netrc or .wgetrc) run commands file specified, assuming none."
     echo "This means that credentials will be included directly in Wget."
-    confirm_continue ""
+    confirm_continue
   fi
 }
 
@@ -968,7 +963,7 @@ wget_mirror() {
         echo "note that it should be the same as the value of cookie_session_string (currently $cookie_session_string), as set in constants.sh."
       fi
       printf "Also check the username and password in %s.\n" "$myconfig.cfg"
-      confirm_continue ""
+      confirm_continue
     else
       echo "OK."
       # Add cookie as option for main Wget run
@@ -1134,7 +1129,7 @@ wget_extra_urls() {
   generate_extra_domains
 
   echo -n "Generating a list of extra asset URLs for Wget (run number $wget_extra_urls_count) ... "
-  if [ "$(yesno "$extra_assets_allow_query_strings")" = "no" ]; then
+  if [ "$extra_assets_allow_query_strings" = "no" ]; then
     url_grep="$(assets_search_string "$all_domains" "[^\?\"'<) ]+")" # ERE notation
   else
     url_grep="$(assets_search_string "$all_domains" "[^\"'<) ]+")" # ERE notation
@@ -1317,13 +1312,13 @@ process_assets() {
     # - that $url_grep is built correspondingly
     if [ "$url_wildcard_capture" != "yes" ]; then
       generate_extra_domains
-      if [ "$(yesno "$extra_assets_allow_query_strings")" = "no" ]; then
+      if [ "$extra_assets_allow_query_strings" = "no" ]; then
         url_grep="$(assets_search_string "$all_domains" "[^\?\"'<) ]+")"
       else
         url_grep="$(assets_search_string "$all_domains" "[^\"'<) ]+")"
       fi
     else
-      if [ "$(yesno "$extra_assets_allow_query_strings")" = "no" ]; then
+      if [ "$extra_assets_allow_query_strings" = "no" ]; then
         url_grep="$(assets_search_string "$domain_re0" "[^\?\"'<) ]+")"
       else
         url_grep="$(assets_search_string "$domain_re0" "[^\"'<) ]+")"
@@ -2027,7 +2022,6 @@ create_zip() {
     echo "Backed up $zip_archive to $zip_backup" "1"
   fi
   zip_options="-q -r $zip_archive $mirror_archive_dir"
-  zip_omit_download=$(yesno "$zip_omit_download")
   [ "$zip_omit_download" = "yes" ] && zip_options+=" -x $mirror_archive_dir$hostport_dir/$zip_download_folder/*" 
   IFS=" " read -r -a zip_options_all <<< "$zip_options"
   zip "${zip_options_all[@]}"
@@ -2119,7 +2113,7 @@ deploy() {
       echo "Source site path: $site_path"
       echo "Deployment path: $deploy_path"
       [ "$site_path" != "$deploy_path" ] && echo "The paths appear to be distinct, so deployment should not overwrite" || echo "$msg_warning: The paths appear to be the same - about to overwrite the source folder with the static mirror!"
-      confirm_continue ""
+      confirm_continue
     fi
   fi
 

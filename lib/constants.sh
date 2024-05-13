@@ -22,8 +22,8 @@
 ################################################
 # MakeStaticSite info
 ################################################
-version=0.29.5+1
-version_date='3 May 2024'
+version=0.29.5+2
+version_date='13 May 2024'
 version_header="MakeStaticSite version $version, released on $version_date."
 mss_license="GNU Affero General Public License version 3"
 mss_download="https://makestaticsite.sh/download/makestaticsite_latest.tar.gz"
@@ -61,7 +61,7 @@ mss_file_permissions=600        # Default Unix file permissions for file creatio
 mss_dir_permissions=700         # Default Unix file permissions for directory creation
 tmp_dir=tmp                     # Directory where temporary files are to be stored
 tab="  "                        # tab spacing for file outputs
-host_dir=auto                   # Host directory mode; for Wget, empty or no corresponds to -nh, else host directory included 
+host_dir=auto                   # Host directory mode; for Wget, empty or 'no' corresponds to -nh, else host directory included 
 long_filename_threshold=200     # Number of characters in filename to trigger (Wget) length checks - should be signficantly less than 255
 
 
@@ -142,7 +142,7 @@ feed_xml=feed/index.xml         # tail of valid feed URLs as replacement
 ################################################
 # Scope of assets to be captured from parent directories and extra domains
 url_asset_capture_level=3       # (0 fewest, 5 most) for URL matching in determining assets to download and localise
-url_wildcard_capture=yes        # Use a wildcard for matching URLs in asset processing (y/n)?  If set to 'yes', when capturing asset URLs on pages, a simple regex capture group will be used instead of the input file of itemised URLs generated in phases 2 and 3
+url_wildcard_capture=no         # Use a wildcard for matching URLs in asset processing (y/n)?  If set to 'yes', when capturing asset URLs on pages, a simple regex capture group will be used instead of the input file of itemised URLs generated in phases 2 and 3
 url_separator_chars="[,:]"      # additional class of separator characters (regular expression capture class) of URLs to be captured: for example, data-src (comma) and JSON (colon).  Leave empty to omit.
 
 # Specification of assets eligible for downloading by Wget in phase 3.
@@ -207,8 +207,8 @@ sitemap_file_extensions=htm,html # List of file extensions allowed for inclusion
 ################################################
 # Wayback Machine settings
 ################################################
-wayback_cli=no                  # Use a third-party client to download sites from the Wayback Machine (y/n)?  If not set to 'yes', then any Wayback sites will be retrieved natively using default (Wget).
 mod_wayback=mod_wayback.sh      # Wayback Machine module filename
+wayback_cli=no                  # Use a third-party client to download sites from the Wayback Machine (y/n)?  If not set to 'yes', then any Wayback sites will be retrieved natively using default (Wget).
 wayback_hosts=web.archive.org,www.webarchive.org.uk  # Partial list of domains where Wayback Machine is hosted
 wayback_date_from=              # Earliest date timestamp for Wayback Machine snapshot files
 wayback_date_to=                # Latest date timestamp for Wayback Machine snapshot files
@@ -547,9 +547,8 @@ options_allow_empty=(asset_domains page_element_domains wget_extra_options input
 options_check_cmd=(wget_cmd htmltidy_cmd) # Command line applications that need to be checked for existence
 options_check_dir=(site_path)   # Directories that need to be checked for existence
 options_check_url=(url)         # URLs that need to be validated
-options_check_yesno=(ssl_checks require_login wget_extra_urls site_post_processing archive wp_cli wp_cli_remote wp_helper_plugins add_search wp_restore_settings prune_query_strings use_snippets upload_zip deploy deploy_remote deploy_remote_rsync htmltidy add_extras) # Options that take yes/no values
+options_check_yesno=(ssl_checks require_login wget_extra_urls site_post_processing archive wp_cli wp_cli_remote wp_helper_plugins add_search wp_restore_settings prune_query_strings use_snippets upload_zip deploy deploy_remote deploy_remote_rsync htmltidy add_extras url_wildcard_capture cors_enable wayback_cli wget_protocol_relative_urls extra_assets_allow_query_strings zip_omit_download) # Options that take yes/no values
 options_check_remote=(site_path) # options that need to be checked on a remote server
 options_credentials=(site_user) # credentials that may/should be encrypted
 
-options_nodeps_load=(add_search deploy deploy_remote use_snippets upload_zip ssl_checks url asset_domains page_element_domains require_login 
-local_sitename input_urls_file site_post_processing prune_query_strings archive web_source_exclude_dirs htmltidy add_extras wp_cli site_path zip_filename zip_download_folder deploy_path deploy_domain) # Options that are not dependent on others
+options_nodeps_load=(add_search deploy deploy_remote use_snippets upload_zip ssl_checks url asset_domains page_element_domains require_login local_sitename url_wildcard_capture input_urls_file site_post_processing prune_query_strings archive web_source_exclude_dirs htmltidy add_extras wp_cli site_path zip_filename zip_download_folder deploy_path deploy_domain cors_enable wayback_cli extra_assets_allow_query_strings zip_omit_download) # Options that are not dependent on others
