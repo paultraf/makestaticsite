@@ -19,6 +19,25 @@
 ##########################################################################
 
 
+0.29.6 (released on 2024-05-13 )
+       * Maintenance, mainly bug fixes in initialisation *
+        [lib/constants.sh]
+          Renamed constant from wayback_enable to wayback_cli.
+        [lib/config.sh]
+          config_get(): Bug fix: for the case an option is already defined
+          before allOptions array, just echo it and return. 
+        [makestaticsite.sh]
+         initialise_variables(): made detection of Wayback URLs not dependent
+         on use of Wayback Machine client; defined a new variable, wayback_url,
+         to denote whether or not use of Wayback Machine has been established.
+         Bug fix: reading dependency options array ahead of assigning option
+         variables; minor bug fix to shorten filename for wget_inputs_extra_all.
+         wget_extra_urls(): added condition on wayback_url to filter out
+         duplicates in webassets array, ignoring timestamp.
+         process_assets(): refactored assignment of asset_rel_path to ensure
+         consistency when determining relative paths of assets.
+         Trap case and warn when there are no webpages for postprocessing.
+
 0.29.5 (released on 2024-05-01)
        * Maintenance and refinement, with Wget workaround to better support
         mirroring archive.org and refactoring of option variables assignment *
