@@ -470,6 +470,7 @@ initialise_variables() {
   domain=$(printf "%s" "$hostport" | awk -F: '{print $1}') # refer to this as the 'primary domain'
 
   # initialise list of all domains incorporated in the site
+  page_element_domains_constant="$page_element_domains" # make a copy of the original
   extra_domains=
   all_domains="$domain"
   if [ "$asset_domains" != "" ]; then
@@ -1294,18 +1295,14 @@ process_assets() {
   webpages=()
 
   extra_domains_array=()
-  if [ "$url_wildcard_capture" = "yes" ]; then
-    while IFS= read -r line; do
+  while IFS= read -r line; do
+    if [ "$line" != "$domain" ]; then
+      extra_domains+="$line,"
       extra_domains_array+=("$line");
-      if [ "$line" != "$domain" ]; then
-        extra_domains+="$line,"
-      fi
-    done <<<"$(find "$mirror_dir/$mirror_archive_dir/" -maxdepth 1 -type d -name "*.*" -exec basename {} \; )"
+    fi
+  done <<<"$(find "$mirror_dir/$mirror_archive_dir/" -maxdepth 1 -type d -name "*.*" -exec basename {} \; )"
 # shellcheck disable=SC2001
-    extra_domains=$(echo "$extra_domains" | sed 's/.$//') # remove final character
-  else
-    IFS="," read -r -a extra_domains_array <<< "$extra_domains"
-  fi
+  extra_domains=$(echo "$extra_domains" | sed 's/.$//') # remove final character
   if (( phase > 3 )); then
     # Ensure variables are assigned when starting run at postprocessing phase
     # - that $all_domains includes the extra domains
@@ -1366,7 +1363,7 @@ process_assets() {
     # Initialise URLs array
     urls_array=()
     # If asset_domains is empty and page_element_domains is set to 'auto', then devise a wildcard urls_array
-    if [ "$asset_domains" = "" ] && [ "$page_element_domains" = "auto" ]; then
+    if [ "$asset_domains" = "" ] && [ "$page_element_domains_constant" = "auto" ]; then
       # create URLs array via directory names (domain names) from file system
       for item in "${extra_domains_array[@]}"; do
         # Append a regex to match file paths
