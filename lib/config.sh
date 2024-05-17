@@ -36,17 +36,15 @@ config_get() {
   if [ -n "${3+x}" ]; then
     config_home="$3/"
   fi
-  
-  # Just echo back an option if it's already defined before allOptions array
-  myvar_ref="$1"
-  tempvar=${!myvar_ref}
-  [ "$tempvar" != "" ] && { printf "%s" "$tempvar"; return; }
+  # Determine the referenced variable name
+  var_ref="$1"
+  var_label=${!var_ref}
 
   val="$(config_read_file "${config_home}config/$2".cfg "$1")";
   if [ "$val" = "__UNDEFINED__" ]; then
     val="$(config_read_file config/default.cfg "$1")";
     inputvar="$1"
-    if [ "$val" = "__UNDEFINED__" ]; then
+    if [ "$val" = "__UNDEFINED__" ] && [ "$var_label" = "" ]; then
       val=""                              # Assume empty string if not defined    
       for opt in "${allOptions[@]}"; do
         defaultvar=$(expr "$opt" : '\([^=]*\)')       # Everything up to '='
@@ -58,6 +56,9 @@ config_get() {
           break
         fi
       done
+    else
+      # Just echo back an option if it's defined in constants.sh, but not the .cfg file
+      printf "%s" "$var_label"; return;
     fi
   fi
   val=$(expr "$val" : '\([^#]*[^ #]\)')    # ignore appended spaces and hash
