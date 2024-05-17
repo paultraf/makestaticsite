@@ -413,13 +413,12 @@ initialise_variables() {
   if [ "$url_path" = "" ]; then
     url_path_depth=0
   else
+    if [ "$path_doubleslash_workaround" = "yes" ]; then
+      # Replace double slashes in URL paths with single slashes
+      url_path=${url_path//\/\//\/}
+    fi
     url_slashes=${url_path//[!\/]};
     url_path_depth=$(( ${#url_slashes}+1 ))
-  fi
-
-  # Replace double slashes in URL paths with single slashes?
-  if [ "$path_doubleslash_workaround" = "yes" ]; then
-    url_path=${url_path//\/\//\/}
   fi
 
   # Validate additional, supported extensions and domains for stored assets
@@ -1389,7 +1388,6 @@ process_assets() {
     # Derive another URLs array with scheme relative URLs
     urls_array_2=()
     for i in "${urls_array[@]}"; do urls_array_2+=("${i/http*:/}"); done
-
     num_webpages=${#webpages[@]}
     count=1
     # Convert absolute links to relative links
@@ -1402,18 +1400,33 @@ process_assets() {
       fi
       pathpref=
       depth=${opt//[!\/]};
-      for ((i=1;i<${#depth};i++)); do
+      depth_num=${#depth}
+      for ((i=1;i<depth_num;i++)); do
         pathpref+="../";
       done
+      if [ "$url" != "$url_base/" ]; then
+        dir_pathpref=
+        for ((i=1;i<depth_num-url_path_depth;i++)); do
+          dir_pathpref+="../";
+        done
+      fi
 
       # Carry out universal search and replace on primary domain;
-      # in the case of directory URL with --no-parent, we need to limit matches
-      # to full URL and tweak the replacements
+      # Case: no URL path
       if [ "$url" = "$url_base/" ] || { [ "$external_dir_links" != "" ] && [ "$external_dir_links" != "off" ]; }; then
         sed_subs1=('s~\([a-zA-Z0_9][[:space:]]*=[[:space:]]*["'"']"'\?\)https\?://'"$hostport/"'~'"\1$pathpref"'~g' "$opt") # trims strictly
         sed "${sed_options[@]}" "${sed_subs1[@]}"
         if (( url_asset_capture_level > 2 )); then
           sed_subs2=('s~\([[:space:]]*'"$url_separator_chars"'[[:space:]]*["'"']"'\?\)https\?://'"$hostport/"'~'"\1$pathpref"'~g' "$opt") # trims loosely
+          sed "${sed_options[@]}" "${sed_subs2[@]}"
+        fi
+      # Case: URL path
+      #  with --no-parent, we need to limit matches to be within the tree
+      elif [ "$url" != "$url_base/" ]; then
+       sed_subs1=('s~\([a-zA-Z0_9][[:space:]]*=[[:space:]]*["'"']"'\?\)https\?://'"$hostport/$url_path/"'~'"\1$dir_pathpref"'~g' "$opt") # trims strictly
+        sed "${sed_options[@]}" "${sed_subs1[@]}"
+        if (( url_asset_capture_level > 2 )); then
+          sed_subs2=('s~\([[:space:]]*'"$url_separator_chars"'[[:space:]]*["'"']"'\?\)https\?://'"$hostport/$url_path/"'~'"\1$dir_pathpref"'~g' "$opt") # trims loosely
           sed "${sed_options[@]}" "${sed_subs2[@]}"
         fi
       fi
