@@ -352,6 +352,9 @@ initialise_variables() {
   check_config_file "$myconfig"
   printf "Reading custom configuration data from config/%s ... " "$myconfig.cfg"
 
+  # Assign option variables for those that have no dependencies
+  assign_option_variables "options_nodeps_load"
+
   # now augment Wget input files with .cfg label
   wget_inputs_main="$wget_inputs_main-$myconfig.txt"
   wget_inputs_extra_all="$wget_inputs_extra-${myconfig}-all.txt" # cumulative input file
@@ -367,9 +370,6 @@ initialise_variables() {
   else
     rvol=; wvol=-nv; wpvol=
   fi
-
-  # Assign option variables for those that have no dependencies
-  assign_option_variables "options_nodeps_load"
 
   # Check system requirements for cURL, Wget and SSL
   msg_checking="Checking your system for Wget and other essential components ... "
@@ -1434,38 +1434,22 @@ process_assets() {
       # Loop over all non-primary-domain assets
       # if working with extra domains or a directory URL,
       if [ ${#urls_array[@]} -ne 0 ] && { [ "$extra_domains" != "" ] || [ "$url" != "$url_base/" ]; }; then
-        for url_extra in "${urls_array[@]}"; do
-          asset_rel_path=$(env echo "$url_extra" | cut -d/ -f3-)
-          asset_rel_path=$(regex_escape "$asset_rel_path/" "BRE")
-          asset_rel_path="$pathpref$imports_directory$imports_dir_suffix$asset_rel_path"
-          if [ "$url_wildcard_capture" = "yes" ]; then
-            sed_subs1=('s~\([a-zA-Z0_9][[:space:]]*=[[:space:]]*["'"']"'\?\)'"$url_extra"'~'"\1$asset_rel_path"'~g' "$opt") # trims strictly
-            sed_subs2=('s~\([[:space:]]*'"$url_separator_chars"'[[:space:]]*["'"']"'\?\)'"$url_extra"'~'"\1$asset_rel_path"'~g' "$opt") # trims loosely
-          else
-            sed_subs1=('s~\([a-zA-Z0_9][[:space:]]*=[[:space:]]*["'"']"'\?\)'"$url_extra"'~'"\1$asset_rel_path"'~g' "$opt") # trims strictly
-            sed_subs2=('s~\([[:space:]]*'"$url_separator_chars"'[[:space:]]*["'"']"'\?.*\)'"$url_extra"'~'"\1$asset_rel_path"'~g' "$opt") # trims loosely
-          fi
-          sed "${sed_options[@]}" "${sed_subs1[@]}"
-          if (( url_asset_capture_level > 2 )); then
-            sed "${sed_options[@]}" "${sed_subs2[@]}"
-          fi
-        done
-        # scheme relative URLs
-        for url_extra in "${urls_array_2[@]}"; do
-          asset_rel_path=$(env echo "$url_extra" | cut -d/ -f3-)
-          asset_rel_path=$(regex_escape "$asset_rel_path/" "BRE")
-          asset_rel_path="$pathpref$imports_directory$imports_dir_suffix$asset_rel_path"
-          if [ "$url_wildcard_capture" = "yes" ]; then
-            sed_subs1=('s~\([a-zA-Z0_9][[:space:]]*=[[:space:]]*["'"']"'\?\)'"$url_extra"'~'"\1$asset_rel_path"'~g' "$opt") # trims strictly
-            sed_subs2=('s~\([[:space:]]*'"$url_separator_chars"'[[:space:]]*["'"']"'\?\)'"$url_extra"'~'"\1$asset_rel_path"'~g' "$opt") # trims loosely
-          else
-            sed_subs1=('s~\([a-zA-Z0_9][[:space:]]*=[[:space:]]*["'"']"'\?\)'"$url_extra"'~'"\1$asset_rel_path"'~g' "$opt") # trims strictly
-            sed_subs2=('s~\([[:space:]]*'"$url_separator_chars"'[[:space:]]*["'"']"'\?\)'"$url_extra"'~'"\1$asset_rel_path"'~g' "$opt") # trims loosely
-          fi
-          sed "${sed_options[@]}" "${sed_subs1[@]}"
-          if (( url_asset_capture_level > 2  )); then
-            sed "${sed_options[@]}" "${sed_subs2[@]}"
-          fi
+        urls_type=(urls_array urls_array_2) # standard and scheme relative URLs respectively (for use below with indirect references)
+        for url_type in "${urls_type[@]}"; do
+          url_nameref="$url_type"
+          url_type_array="${url_nameref}[@]"
+          for url_extra in "${!url_type_array}"; do
+            asset_rel_path=$(env echo "$url_extra" | cut -d/ -f3)
+            asset_rel_path=$(regex_escape "$asset_rel_path/" "BRE")
+            asset_rel_path="$pathpref$imports_directory$imports_dir_suffix$asset_rel_path"
+            # url_extra itself contains a bracketed regular expression - hence backreference \2 below
+            sed_subs1=('s~\([a-zA-Z0_9][[:space:]]*=[[:space:]]*["'"']"'\?\)'"$url_extra"'~'"\1$asset_rel_path\2"'~g' "$opt") # trims strictly
+            sed_subs2=('s~\([[:space:]]*'"$url_separator_chars"'[[:space:]]*["'"']"'\?\)'"$url_extra"'~'"\1$asset_rel_path\2"'~g' "$opt") # trims loosely
+            sed "${sed_options[@]}" "${sed_subs1[@]}"
+            if (( url_asset_capture_level > 2 )); then
+              sed "${sed_options[@]}" "${sed_subs2[@]}"
+            fi
+          done
         done
       fi
     done
@@ -2123,7 +2107,7 @@ deploy() {
       echo "Source site path: $site_path"
       echo "Deployment path: $deploy_path"
       [ "$site_path" != "$deploy_path" ] && echo "The paths appear to be distinct, so deployment should not overwrite" || echo "$msg_warning: The paths appear to be the same - about to overwrite the source folder with the static mirror!"
-      confirm_continue
+      confirm_continue ""
     fi
   fi
 
