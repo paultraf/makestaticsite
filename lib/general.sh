@@ -159,7 +159,8 @@ which_version() {
 #  - default setting (y/n) for 'yes' or 'no'
 #  - message to display on not continuing
 confirm_continue() {
-  msg_abort="OK, aborting. Please review the settings."
+  local msg_abort="OK, aborting. Please review the settings."
+  local opt
   if [ -n "${1+x}" ]; then
     opt=$(echo "$1" | tr '[:lower:]' '[:upper:]')
     if [ "$opt" != "Y" ] && [ "$opt" != "N" ]; then
@@ -181,7 +182,7 @@ confirm_continue() {
     read -r -e -p "Do you wish to continue? [$choose] " confirm
     confirm=${confirm:0:1}
     if [ "$opt" = "Y" ] && { [ "$confirm" != "$opt_lc" ] && [ "$confirm" != "$opt" ] && [ "$confirm" != "" ]; }; then
-      printf "%s\nAborting.\n" "$msg_abort"; exit
+      printf "%s\n" "$msg_abort"; exit
     elif [ "$opt" = "N" ] && { [ "$confirm" = "$opt_lc" ] || [ "$confirm" = "$opt" ] || [ "$confirm" = "" ]; }; then
       printf "%s\n" "$msg_abort"; exit
     else
@@ -193,6 +194,7 @@ confirm_continue() {
 }
 
 get_phase_desc() {
+  local opt var
   for opt in "${all_phases[@]}"; do
     var=$(expr "$opt" : '\([^=]*\)')              # Everything up to '='
     phase_desc=$(expr "$opt" : '[^=]*.\(.*\)')    # Everything after '='
@@ -263,7 +265,7 @@ input_encrypted_password() {
     msg_guidance="$1"
   fi
   if [ "$msg_guidance" != "-" ]; then
-    printf "\n$msg_guidance (you will need to enter it twice and it will be encrypted).\n"
+    printf "\n%s (you will need to enter it twice and it will be encrypted).\n" "$msg_guidance"
   fi
   while true; do
     "$credentials_manage_cmd" insert "$credentials_insert_path" || {
@@ -319,8 +321,9 @@ print_to_file() {
 # Comment out or uncomment lines that contain the supplied string
 # N.B. By default, in the examples below sed replaces every occurrence
 comment_uncomment() {
-  myfile="$1"
-  mystring="$2"
+  local myfile="$1"
+  local mystring="$2"
+  local replacement_string backup_dir file_name edited_file
   if [ "$comment_status" = "1" ]; then
     # Assume $mystring= starts with zero or more whitespace chars followed by '#'; 
     # what follows becomes the replacement string (whitespace trimmed at tail)
@@ -366,6 +369,7 @@ comment_uncomment() {
 
 # Offer to update Hosts file (typically /etc/hosts) if there's an entry for the domain
 hosts_toggle() {
+  local entry
   entry="$(grep -e "$ip4re$domain" -e "$ip6re$domain" "$etc_hosts")"
   if [ "$entry" != "" ]; then
     entry_count=$(env echo "$entry"| wc -l | xargs)
@@ -498,8 +502,9 @@ touchmod() {
 
 # Apply backslash prefix to enable regex metacharacters (BRE only)
 regex_apply() {
-  string="$1"
-  charlist=("|" "?" "+" "(" ")" "{" "}")
+  local string="$1"
+  local char
+  local charlist=("|" "?" "+" "(" ")" "{" "}")
   for char in "${charlist[@]}"; do
     search="$char"; replace='\'"$char"   # make regex
     string=${string//"$search"/"$replace"}
@@ -515,7 +520,8 @@ regex_apply() {
 # One optional parameter: regex type ('ERE' or 'BRE')
 # (BRE is the default)
 regex_escape() {
-  string="$1"
+  local string="$1"
+  local char charlist search replace
   if [ -z ${2+x} ] || [ "$2" = "BRE" ]; then
     charlist=('\' "^"  "." "$"  "*" "[")
   elif [ "$2" != "BRE" ]; then
