@@ -22,8 +22,8 @@
 ################################################
 # MakeStaticSite info
 ################################################
-version=0.29.6
-version_date='13 May 2024'
+version=0.29.6+1
+version_date='20 May 2024'
 version_header="MakeStaticSite version $version, released on $version_date."
 mss_license="GNU Affero General Public License version 3"
 mss_download="https://makestaticsite.sh/download/makestaticsite_latest.tar.gz"
@@ -158,7 +158,7 @@ asset_extensions_external="$web_element_extensions,$image_extensions,$font_exten
 
 # Query strings
 prune_query_strings=yes         # Remove query strings appended to paths and URLs in anchors limited to files of type given in query_prune_list (y/n)?
-query_prune_list="js,css,png,svg,$font_extensions" # List of file extensions in requests that may have query string appended for versioning or other non-essential purposes. For static sites these can be pruned without loss of functionality.
+query_prune_list="$web_element_extensions,$image_extensions,$audiovideo_extensions,$doc_extensions,$font_extensions" # List of file extensions in requests that may have query string appended for versioning or other non-essential purposes. For static sites these can be pruned without loss of functionality.
 extra_assets_allow_query_strings=yes # Allow Wget to fetch additional URLs with query strings in phase 3 (y/n)? 
 extra_assets_query_strings_limit=100000 # Only fetch URLs with query strings when the total number of assets is less than this number 
 
@@ -542,13 +542,13 @@ htmltidy="(htmltidy_cmd htmltidy_options)"
 
 # Options and dependencies
 options_min=(url)               # Level 0 options
-options_std=(url extra_domains local_sitename wp_cli site_path wp_helper_plugins add_search use_snippets upload_zip zip_filename zip_download_folder deploy deploy_domain deploy_remote deploy_remote_rsync deploy_host deploy_user deploy_path htmltidy add_extras) # Level 1 options
+options_std=(url local_sitename wp_cli site_path wp_helper_plugins add_search use_snippets upload_zip zip_filename zip_download_folder deploy deploy_domain deploy_remote deploy_remote_rsync deploy_host deploy_user deploy_path htmltidy add_extras) # Level 1 options
 options_allow_empty=(asset_domains page_element_domains wget_extra_options input_urls_file) # Options that can have empty/null values
 options_check_cmd=(wget_cmd htmltidy_cmd) # Command line applications that need to be checked for existence
 options_check_dir=(site_path)   # Directories that need to be checked for existence
 options_check_url=(url)         # URLs that need to be validated
-options_check_yesno=(ssl_checks require_login wget_extra_urls site_post_processing archive wp_cli wp_cli_remote wp_helper_plugins add_search wp_restore_settings prune_query_strings use_snippets upload_zip deploy deploy_remote deploy_remote_rsync htmltidy add_extras url_wildcard_capture cors_enable wayback_cli wget_protocol_relative_urls extra_assets_allow_query_strings zip_omit_download) # Options that take yes/no values
+options_check_yesno=(ssl_checks require_login wget_extra_urls site_post_processing archive wp_cli wp_cli_remote wp_helper_plugins add_search wp_restore_settings prune_query_strings use_snippets upload_zip deploy deploy_remote deploy_remote_rsync htmltidy add_extras url_wildcard_capture cors_enable wayback_cli wget_protocol_relative_urls extra_assets_allow_query_strings zip_omit_download clean_query_extensions credentials_cleanup wget_cookies_nullify_user_agent rename_wget_tmps) # Options that take yes/no values
 options_check_remote=(site_path) # options that need to be checked on a remote server
 options_credentials=(site_user) # credentials that may/should be encrypted
 
-options_nodeps_load=(add_search deploy deploy_remote use_snippets upload_zip ssl_checks url asset_domains page_element_domains require_login local_sitename url_wildcard_capture input_urls_file site_post_processing prune_query_strings archive web_source_exclude_dirs htmltidy add_extras wp_cli site_path zip_filename zip_download_folder deploy_path deploy_domain cors_enable wayback_cli extra_assets_allow_query_strings zip_omit_download) # Options that are not dependent on others
+options_nodeps_load=(add_search deploy deploy_remote use_snippets upload_zip ssl_checks url asset_domains page_element_domains require_login local_sitename url_wildcard_capture input_urls_file site_post_processing prune_query_strings archive web_source_exclude_dirs htmltidy add_extras wp_cli site_path zip_filename zip_download_folder deploy_path deploy_domain cors_enable wayback_cli extra_assets_allow_query_strings zip_omit_download clean_query_extensions credentials_cleanup wget_protocol_relative_urls wget_cookies_nullify_user_agent rename_wget_tmps) # Options that are not dependent on others
