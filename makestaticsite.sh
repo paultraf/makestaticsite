@@ -1222,7 +1222,10 @@ wget_extra_urls() {
   # Return if empty (all those found were filtered out)
   [ ${#webassets[@]} -eq 0 ] && { echo "None suitable found. " "1"; (( wget_extra_urls_count=wget_extra_urls_depth+1 )); echo "Done."; return 0; }
 
-  printf "%s\n" "${webassets[@]}" > "$input_file_extra"
+  # Reverse URL encoding (just &amp; to &)
+  webassets_filtered=("${webassets[@]//&amp;/&}")
+
+  printf "%s\n" "${webassets_filtered[@]}" > "$input_file_extra"
   if (( wget_extra_urls_count == 1 )); then
     cp "$input_file_extra" "$input_file_extra_all" 
   else
