@@ -1441,15 +1441,23 @@ process_assets() {
           url_nameref="$url_type"
           url_type_array="${url_nameref}[@]"
           for url_extra in "${!url_type_array}"; do
-            asset_rel_path=$(env echo "$url_extra" | cut -d/ -f3)
-            asset_rel_path=$(regex_escape "$asset_rel_path/" "BRE")
-            asset_rel_path="$pathpref$imports_directory$imports_dir_suffix$asset_rel_path"
-            # url_extra itself contains a bracketed regular expression - hence backreference \2 below
-            sed_subs1=('s~\([a-zA-Z0_9][[:space:]]*=[[:space:]]*["'"']"'\?\)'"$url_extra"'~'"\1$asset_rel_path\2"'~g' "$opt") # trims strictly
-            sed_subs2=('s~\([[:space:]]*'"$url_separator_chars"'[[:space:]]*["'"']"'\?\)'"$url_extra"'~'"\1$asset_rel_path\2"'~g' "$opt") # trims loosely
-            sed "${sed_options[@]}" "${sed_subs1[@]}"
-            if (( url_asset_capture_level > 2 )); then
-              sed "${sed_options[@]}" "${sed_subs2[@]}"
+            if [ "$url_wildcard_capture" = "yes" ]; then
+              asset_rel_path=$(env echo "$url_extra" | cut -d/ -f3)
+              asset_rel_path="$pathpref$imports_directory$imports_dir_suffix$asset_rel_path"
+              asset_rel_path=$(regex_escape "$asset_rel_path/" "BRE")
+              # url_extra itself contains a bracketed regular expression - hence backreference \2 below
+              sed_subs1=('s~\([a-zA-Z0_9][[:space:]]*=[[:space:]]*["'"']"'\?\)'"$url_extra"'~'"\1$asset_rel_path\2"'~g' "$opt") # trims strictly
+              sed_subs2=('s~\([[:space:]]*'"$url_separator_chars"'[[:space:]]*["'"']"'\?\)'"$url_extra"'~'"\1$asset_rel_path\2"'~g' "$opt") # trims loosely
+              sed "${sed_options[@]}" "${sed_subs1[@]}"
+              if (( url_asset_capture_level > 2 )); then
+                sed "${sed_options[@]}" "${sed_subs2[@]}"
+              fi
+            else
+              asset_rel_path=$(env echo "$url_extra" | cut -d/ -f3-)
+              asset_rel_path="$assets_directory$assets_dir_suffix$imports_directory$imports_dir_suffix$asset_rel_path"
+              asset_rel_path=$(regex_escape "$asset_rel_path" "BRE")
+              sed_subs=('s~'"$url_extra"'~'"$asset_rel_path"'~g' "$opt")
+              sed "${sed_options[@]}" "${sed_subs[@]}"
             fi
           done
         done
