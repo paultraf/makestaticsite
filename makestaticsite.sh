@@ -1364,8 +1364,7 @@ process_assets() {
   elif [ "$cut_dirs" = "0" ]; then
     # Initialise URLs array
     urls_array=()
-    # If asset_domains is empty and page_element_domains is set to 'auto', then devise a wildcard urls_array
-    if [ "$asset_domains" = "" ] && [ "$page_element_domains_constant" = "auto" ]; then
+    if [ "$url_wildcard_capture" = "yes" ]; then
       # create URLs array via directory names (domain names) from file system
       for item in "${extra_domains_array[@]}"; do
         # Append a regex to match file paths
