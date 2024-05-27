@@ -1222,7 +1222,7 @@ wget_extra_urls() {
   # Return if empty (all those found were filtered out)
   [ ${#webassets[@]} -eq 0 ] && { echo "None suitable found. " "1"; (( wget_extra_urls_count=wget_extra_urls_depth+1 )); echo "Done."; return 0; }
 
-  # Reverse URL encoding (just &amp; to &)
+  # URL decode for Wget calls: revert &amp; to & 
   webassets_filtered=("${webassets[@]//&amp;/&}")
 
   printf "%s\n" "${webassets_filtered[@]}" > "$input_file_extra"
@@ -1383,7 +1383,7 @@ process_assets() {
       if [ -f "$input_file_extra_all" ]; then
         domain_BRE=$(regex_escape "$domain" "BRE")
         domain_BRE=${domain_BRE//\\/\\\\\\} # need to escape \, so replace \ with \\\ .
-        if read -d '' -r -a urls_array; then :; fi < <(grep -v "//$domain_BRE" "$input_file_extra_all_BRE")
+        if read -d '' -r -a urls_array; then :; fi < <(grep -v "//$domain_BRE" "$input_file_extra_all_BRE" | sed 's~&~&amp;~g')
       fi
     fi
 
