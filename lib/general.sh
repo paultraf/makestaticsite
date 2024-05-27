@@ -535,3 +535,32 @@ regex_escape() {
   done
   printf "%s" "$string"
 }
+
+# Escape special characters in right hand side of sed expressions
+# Expects one parameter: string to be escaped
+sed_rhs_escape() {
+  local string="$1"
+  local char charlist search replace
+  charlist=('&')
+  for char in "${charlist[@]}"; do
+    search="$char"; replace='\'"$char"
+    string=${string//"$search"/"$replace"}
+    search='\\'"$char"; replace="$char"    # revert if already prefixed
+    string=${string//"$search"/"$replace"}
+  done
+  printf "%s" "$string"
+}
+
+# Percent encode URL strings 
+# Expects one parameter: URL to be encoded
+url_percent_encode() {
+  local string="$1"
+  local charlist
+  charlist=('?|%3F')
+  for char in "${charlist[@]}"; do
+    search=$(echo "$char" | cut -d'|' -f1 )
+    replace=$(echo "$char" | cut -d'|' -f2 )
+    string=${string//"$search"/"$replace"}
+  done
+  printf "%s" "$string"
+}
