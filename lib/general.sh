@@ -293,7 +293,7 @@ assets_search_string() {
       url_path+="|[[:space:]]*$url_separator_chars[[:space:]]*[\"=']?https?://$opt/$path" # the '?' is intended for ERE 0 or 1
     done
   fi
-  [ "$url_path" != "" ] && url_path="${url_path:1}"
+  [ "$url_path" != "" ] && url_path="${url_path:1}" # Remove the first character using parameter expansion
   echo "$url_path"
 }
 

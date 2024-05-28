@@ -1136,7 +1136,9 @@ wget_extra_urls() {
   fi
 
   webassets_all=()
-  while IFS='' read -r line; do trimmed_line="${line#"${line%%[![:space:],:\'\"]*}"}"; webassets_all+=("$trimmed_line"); done < <(grep -Eroha "$url_grep" "$working_mirror_dir" "${asset_grep_includes[@]}" | cut -c2- )  # Strip out initial character (as each result will start with a quote or '=' as per url_grep match condition)
+  # In generating list of asset URLs, strip out initial characters 
+  # such as a quote or '=' arising from url_grep match condition.
+  while IFS='' read -r line; do trimmed_line="${line#"${line%%[![:space:],:\'\"=]*}"}"; webassets_all+=("$trimmed_line"); done < <(grep -Eroha "$url_grep" "$working_mirror_dir" "${asset_grep_includes[@]}")
   echo "webassets_all array has ${#webassets_all[@]} elements" "1"
 
   # Return if empty (nothing further found)
@@ -1441,8 +1443,9 @@ process_assets() {
           url_nameref="$url_type"
           url_type_array="${url_nameref}[@]"
           for url_extra in "${!url_type_array}"; do
+            asset_rel_path=$(env echo ${url_extra#*//})
             if [ "$url_wildcard_capture" = "yes" ]; then
-              asset_rel_path=$(env echo "$url_extra" | cut -d/ -f3)
+              asset_rel_path=$(env echo ${asset_rel_path%%/*})
               asset_rel_path="$pathpref$imports_directory$imports_dir_suffix$asset_rel_path"
               asset_rel_path=$(url_percent_encode "$asset_rel_path")
               asset_rel_path=$(regex_escape "$asset_rel_path/" "BRE")
@@ -1455,7 +1458,6 @@ process_assets() {
                 sed "${sed_options[@]}" "${sed_subs2[@]}"
               fi
             else
-              asset_rel_path=$(env echo "$url_extra" | cut -d/ -f3-)
               asset_rel_path="$assets_directory$assets_dir_suffix$imports_directory$imports_dir_suffix$asset_rel_path"
               asset_rel_path=$(url_percent_encode "$asset_rel_path")
               asset_rel_path=$(regex_escape "$asset_rel_path" "BRE")
