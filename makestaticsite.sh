@@ -1138,7 +1138,11 @@ wget_extra_urls() {
   webassets_all=()
   # In generating list of asset URLs, strip out initial characters 
   # such as a quote or '=' arising from url_grep match condition.
-  while IFS='' read -r line; do trimmed_line="${line#"${line%%[![:space:],:\'\"=]*}"}"; webassets_all+=("$trimmed_line"); done < <(grep -Eroha "$url_grep" "$working_mirror_dir" "${asset_grep_includes[@]}")
+  url_grep_array=()
+  IFS='|' read -ra url_grep_array <<< "$url_grep"
+  for item in "${url_grep_array[@]}"; do
+    while IFS='' read -r line; do trimmed_line="${line#"${line%%[![:space:],:\'\"=]*}"}"; webassets_all+=("$trimmed_line"); done < <(grep -Eroha "$item" "$working_mirror_dir" "${asset_grep_includes[@]}")
+  done
   echo "webassets_all array has ${#webassets_all[@]} elements" "1"
 
   # Return if empty (nothing further found)
