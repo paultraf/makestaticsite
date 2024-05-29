@@ -19,7 +19,38 @@
 ##########################################################################
 
 
-0.29.7 (released on 2024-05-20 )
+0.29.8 (released on 2024-05-29)
+       * Maintenance, with bug fixes and performance enhancements *
+        [makestaticsite.sh]
+         wget_extra_urls(): Partially reverse URL encoding (just &amp; to &)
+         to ensure that input_file_extra is accurate.
+         Removed superfluous uses of 'cut'.
+         process_assets():
+         Refactored how pages with potentially relevant assets are found,
+         introducing a loop over individual URL regex, avoiding long grep
+         search patterns.
+         In conversion of absolute links to relative links, simplified
+         construction of urls_array to two cases depending on value of
+         url_wildcard_capture; when not 'yes' further process items by URL
+         encoding ampersands.
+         Split url_grep into components to loop over and generate assets list.
+         In determining asset_rel_path, replaced use of 'cut' by shell
+         parameter expansion to boost performance.
+         Bug fix: when looping over all non-primary-domain assets, restored
+         separation of two cases depending on value of url_wildcard_capture. 
+         Inserted calls to url_percent_encode and sed_rhs_escape in
+         replacement paths to enable more accurate links to downloaded assets.
+        [lib/constants.sh]
+         Added constant, wayback_memento_check, to specify whether or not to
+         perform dynamic check for Memento site using HTTP request header.
+         Set to 'no'.
+         Moved constant wayback_header here from validate.sh
+        [lib/general.sh]
+         Added functions url_percent_encode() to percent encode URL strings,
+         intended for relative URLs; and sed_rhs_escape() to escape special
+         characters in right hand side of sed expressions
+
+0.29.7 (released on 2024-05-20)
        * Maintenance, with bug fixes in initialisation and asset processing *
         [lib/constants.sh]
          Added file type categories to query prune list plus a few changes to
@@ -42,7 +73,7 @@
          in case URLs contain the domain name, added the case where the URL is
          a directory path (as a backup when Wget omits any link conversions.)
 
-0.29.6 (released on 2024-05-13 )
+0.29.6 (released on 2024-05-13)
        * Maintenance, mainly bug fixes in initialisation *
         [lib/constants.sh]
          Renamed constant from wayback_enable to wayback_cli.
