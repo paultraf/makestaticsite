@@ -1300,8 +1300,6 @@ process_assets() {
 
   # First, generate a list of all the web pages that contain relevant URLs to process
   # (makes subsequent sed replacements more targeted than searching all web pages).
-  webpages=()
-
   extra_domains_array=()
   while IFS= read -r line; do
     if [ "$line" != "$domain" ]; then
@@ -1333,11 +1331,18 @@ process_assets() {
 
   [ -z ${url_grep+x} ] && url_grep="$(assets_search_string "$all_domains" "[^\"'<) ]+")" # define $url_grep as necessary
 
-  # Find pages where there are relevant assets
-  for opt in "${url_grep[@]}"; do
-    while IFS='' read -r line; do webpages+=("$line"); done < <(grep -Erl "$opt" . "${asset_grep_includes[@]}")
+  # Find pages where there are relevant assets (relative paths)
+  webpages0=() # to stores paths, duplication likely
+  url_grep_array=()
+  IFS='|' read -ra url_grep_array <<< "$url_grep"
+  for item in "${url_grep_array[@]}"; do
+    while IFS='' read -r line; do
+    webpages0+=("$line"); done < <(grep -Erl "$item" . "${asset_grep_includes[@]}")
   done
-  
+  # Filter out duplicates
+  webpages=() # to store unique paths
+  while IFS='' read -r line; do webpages+=("$line"); done < <(for item in "${webpages0[@]}"; do printf "%s\n" "${item}"; done | sort -u; )
+
   echo "Converting paths to become relative to imports and assets directories ... " 
 
   # Prepare adjustment for relative paths with assets directory
