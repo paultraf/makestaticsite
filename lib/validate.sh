@@ -286,8 +286,9 @@ check_wayback_url(){
     return 0
   fi
 
+  [ "$wayback_memento_check" != "yes" ] && return 1
+
   # cURL check (-I : header, -s: silent, -k: don't check SSL certs)
-  wayback_header="Memento-Datetime:"
   if curl -skI "$url" | grep -Fiq "$wayback_header"; then
     return 0
   fi
