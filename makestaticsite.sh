@@ -469,7 +469,6 @@ initialise_variables() {
   domain=$(printf "%s" "$hostport" | awk -F: '{print $1}') # refer to this as the 'primary domain'
 
   # initialise list of all domains incorporated in the site
-  page_element_domains_constant="$page_element_domains" # make a copy of the original
   extra_domains=
   all_domains="$domain"
   if [ "$asset_domains" != "" ]; then
@@ -1452,9 +1451,9 @@ process_assets() {
           url_nameref="$url_type"
           url_type_array="${url_nameref}[@]"
           for url_extra in "${!url_type_array}"; do
-            asset_rel_path=$(env echo ${url_extra#*//})
+            asset_rel_path=$(env echo "${url_extra#*//}")
             if [ "$url_wildcard_capture" = "yes" ]; then
-              asset_rel_path=$(env echo ${asset_rel_path%%/*})
+              asset_rel_path=$(env echo "${asset_rel_path%%/*}")
               asset_rel_path="$pathpref$imports_directory$imports_dir_suffix$asset_rel_path"
               asset_rel_path=$(url_percent_encode "$asset_rel_path")
               asset_rel_path=$(regex_escape "$asset_rel_path/" "BRE")
