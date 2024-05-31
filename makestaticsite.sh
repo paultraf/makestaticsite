@@ -1393,7 +1393,11 @@ process_assets() {
       if [ -f "$input_file_extra_all" ]; then
         domain_BRE=$(regex_escape "$domain" "BRE")
         domain_BRE=${domain_BRE//\\/\\\\\\} # need to escape \, so replace \ with \\\ .
-        if read -d '' -r -a urls_array; then :; fi < <(grep -v "//$domain_BRE" "$input_file_extra_all_BRE" | sed 's~&~&amp;~g')
+        if [ "$url" = "$url_base/" ]; then
+          if read -d '' -r -a urls_array; then :; fi < <(grep -v "//$domain_BRE" "$input_file_extra_all_BRE" | sed 's~&~&amp;~g')
+        else
+          if read -d '' -r -a urls_array; then :; fi < <(< "$input_file_extra_all_BRE" sed 's~&~&amp;~g')
+        fi
       fi
     fi
 
@@ -1443,8 +1447,8 @@ process_assets() {
         fi
       fi
 
-      # Loop over all non-primary-domain assets
-      # if working with extra domains or a directory URL,
+      # Loop over all assets if working with extra domains or a directory URL.
+      # (Note this will generate erroneous paths for primary domain assets, fixed later on.)
       if [ ${#urls_array[@]} -ne 0 ] && { [ "$extra_domains" != "" ] || [ "$url" != "$url_base/" ]; }; then
         urls_type=(urls_array urls_array_2) # standard and scheme relative URLs respectively (for use below with indirect references)
         for url_type in "${urls_type[@]}"; do
@@ -1564,6 +1568,11 @@ process_assets() {
           done
         done
       fi
+      # Rectify main domain paths
+      domain_assets_search="$assets_directory$assets_dir_suffix$imports_directory$imports_dir_suffix$domain"
+      domain_assets_replace="$assets_directory"
+      sed_subs=('s~'"$domain_assets_search"'~'"$domain_assets_replace"'~g' "$opt")
+      sed "${sed_options[@]}" "${sed_subs[@]}"
     done
     printf "\n"
 
