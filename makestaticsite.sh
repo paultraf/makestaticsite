@@ -1134,23 +1134,35 @@ wget_extra_urls() {
     url_grep="$(assets_search_string "$all_domains" "[^\"'<) ]+")" # ERE notation
   fi
 
+  (( num_webasset_steps=9*10 )) # 9 phases with multiplier of 10 for granularity
+  webasset_step_count=1
+  count=0
+  col_width=$(tput cols);
+
   webassets_all=()
   # In generating list of asset URLs, strip out initial characters 
   # such as a quote or '=' arising from url_grep match condition.
   url_grep_array=()
   IFS='|' read -ra url_grep_array <<< "$url_grep"
+  url_grep_array_count=${#url_grep_array[@]}; (( url_grep_array_count=num_webasset_steps*url_grep_array_count ))
+
   for item in "${url_grep_array[@]}"; do
     while IFS='' read -r line; do trimmed_line="${line#"${line%%[![:space:],:\'\"=]*}"}"; webassets_all+=("$trimmed_line"); done < <(grep -Eroha "$item" "$working_mirror_dir" "${asset_grep_includes[@]}")
+    print_progress "$count" "$url_grep_array_count" "$col_width";
+    (( count++ ))
   done
-  echo "webassets_all array has ${#webassets_all[@]} elements" "1"
+  webassets_all_count=${#webassets_all[@]}
+  echo "webassets_all array has $webassets_all_count elements" "1"
 
   # Return if empty (nothing further found)
-  [ ${#webassets_all[@]} -eq 0 ] && { echo "None found. " "1"; (( wget_extra_urls_count=wget_extra_urls_depth+1 )); echo "Done."; return 0; }
+  [ ${#webassets_all[@]} -eq 0 ] && { echo "None found. " "1"; (( wget_extra_urls_count=wget_extra_urls_depth+1 )); print_progress "100" "100"; printf "\n"; echo "Done."; return 0; }
   [ "$output_level" != "quiet" ] && echo " "
 
   # Pick out unique items
   echo "Pick out unique items" "1"
   webassets_unique=()
+  (( webasset_step_count++ ))
+  print_progress "$webasset_step_count" "$num_webasset_steps" "$col_width"
   while IFS='' read -r line; do webassets_unique+=("$line"); done < <(for item in "${webassets_all[@]}"; do printf "%s\n" "${item}"; done |
     if [ "$wayback_url" = "yes" ]; then
       sort -u | sed 's/\/http/ /g' | sort -u -t ' ' -k 2 | sed 's/ /\/http/g'; # remove duplicate asset captures (different timestamps)
@@ -1159,39 +1171,59 @@ wget_extra_urls() {
     fi
   )
   echo "webassets_unique array has ${#webassets_unique[@]} elements" "2"
+  (( webasset_step_count++ ))
+  print_progress "$webasset_step_count" "$num_webasset_steps" "$col_width"
 
   # Filter out all items not starting http
   echo "Filter out all items not starting http" "1"
   webassets_http=()
   while IFS='' read -r line; do webassets_http+=("$line"); done < <(for item in "${webassets_unique[@]}"; do if [ "${item:0:4}" = "http" ]; then printf "%s\n" "${item}"; else continue; fi; done)
-  [ ${#webassets_http[@]} -eq 0 ] && { echo "None found. " "1"; (( wget_extra_urls_count=wget_extra_urls_depth+1 )); echo "Done."; return 0; }
-  echo "webassets_http array has ${#webassets_http[@]} elements" "2"
+  [ ${#webassets_http[@]} -eq 0 ] && { echo "None found. " "1"; (( wget_extra_urls_count=wget_extra_urls_depth+1 )); print_progress "100" "100"; printf "\n"; echo "Done."; return 0; }
+  num_webassets_http="${#webassets_http[@]}"
+  echo "webassets_http array has $num_webassets_http elements" "2"
+  (( webasset_step_count++ ))
+  print_progress "$webasset_step_count" "$num_webasset_steps" "$col_width"
 
-  # Filter out web pages and newsfeeds (limit to non-HTML assets, such as images and JS files)
+  # Filter out web pages and newsfeeds; limit to non-HTML assets, such as images and JS files
+  # (this filter is the most process-intensive)
+  (( count=0 ))
   echo "Filter out web pages and newsfeeds (limit to non-HTML assets, such as images and JS files)" "1"
   webassets_nohtml=()
   assets_or='\.('${asset_extensions//,/|}')'
   assets_or_external='\.('${asset_extensions_external//,/|}')'
-  while IFS='' read -r line; do webassets_nohtml+=("$line"); done < <(for opt in "${webassets_http[@]}"; do
+  (( num_webasset_steps_nohtml=num_webasset_steps-5 )) # i.e. most of the processing
+  while IFS='' read -r line; do
+    count=$(echo "$line" | awk -F'|' '{print $1}')
+    assetline=$(echo "$line" | awk -F'|' '{print $2}')
+    if [ "${assetline:0:4}" = "http" ]; then
+      webassets_nohtml+=("$assetline");
+    fi
+    (( subcount=webasset_step_count+(num_webasset_steps_nohtml*count/num_webassets_http) ))
+    print_progress "$subcount" "$num_webasset_steps" "$col_width"
+  done < <(for i in "${!webassets_http[@]}"; do
+    opt="${webassets_http[$i]}"
     if [ "$asset_extensions" != "" ]; then
       # Loop over an inclusion list of allowable extensions
       opt_domain=$(printf "%s\n" "$opt" | awk -F/ '{print $3}' | awk -F: '{print $1}')
       if [[ ' '${page_element_domains_array[*]}' ' =~ ' '$opt_domain' ' ]]; then
-        echo "$opt" | grep -E "$assets_or_external" > /dev/null && printf "%s\n" "$opt";
+        echo "$opt" | grep -E "$assets_or_external" > /dev/null && printf "%s|%s\n" "$i" "$opt";
       else
-        echo "$opt" | grep -E "$assets_or" > /dev/null && printf "%s\n" "$opt";
+        echo "$opt" | grep -E "$assets_or" > /dev/null && printf "%s|%s\n" "$i" "$opt";
       fi
     else
       # Remove HTML assets
       type=$(curl -skI "$opt" -o/dev/null -w '%{content_type}\n')
       if [[ "$type" != *"text/html"* ]] && [[ "$type" != *"application/rss+xml"* ]] && [[ "$type" != *"application/atom+xml"* ]]; then
-        printf "%s\n" "$opt";
+        printf "%s|%s\n" "$i" "$opt"
       fi
     fi
   done)
-  [ ${#webassets_nohtml[@]} -eq 0 ] && { echo "None found. " "1"; (( wget_extra_urls_count=wget_extra_urls_depth+1 )); echo "Done."; return 0; }
-  echo "webassets_nohtml array has ${#webassets_nohtml[@]} elements" "2"
+  (( webasset_step_count=subcount+1 ))
 
+  [ ${#webassets_nohtml[@]} -eq 0 ] && { echo "None found. " "1"; (( wget_extra_urls_count=wget_extra_urls_depth+1 )); print_progress "100" "100"; printf "\n"; echo "Done."; return 0; }
+  echo "webassets_nohtml array has ${#webassets_nohtml[@]} elements" "2"
+  (( webasset_step_count++ ))
+  print_progress "$webasset_step_count" "$num_webasset_steps"
   if [ ${#wget_extra_options[@]} -ne 0 ]; then
     url_bas="$protocol://$hostport"
     # Filter out URLs whose paths match an excluded directory (via subloop)
@@ -1210,9 +1242,11 @@ wget_extra_urls() {
   fi
   num_webassets_omissions="${#webassets_omissions[@]}"
   echo "webassets_omissions array has $num_webassets_omissions elements" "2"
+  (( webasset_step_count++ ))
+  print_progress "$webasset_step_count" "$num_webasset_steps"
 
   # Return if empty (nothing further found)
-  [ "$num_webassets_omissions" -eq 0 ] && { echo "None found. " "1"; (( wget_extra_urls_count=wget_extra_urls_depth+1 )); echo "Done."; return 0; }
+  [ "$num_webassets_omissions" -eq 0 ] && { echo "None found. " "1"; (( wget_extra_urls_count=wget_extra_urls_depth+1 )); print_progress "100" "100"; printf "\n"; echo "Done."; return 0; }
 
   if (( extra_assets_query_strings_limit < num_webassets_omissions )); then
     # Filter out URLs with query strings
@@ -1222,10 +1256,12 @@ wget_extra_urls() {
   else
     webassets=("${webassets_omissions[@]}")
   fi
+  (( webasset_step_count++ ))
+  print_progress "$webasset_step_count" "$num_webasset_steps"
 
   echo "webassets array has ${#webassets[@]} elements" "2"
   # Return if empty (all those found were filtered out)
-  [ ${#webassets[@]} -eq 0 ] && { echo "None suitable found. " "1"; (( wget_extra_urls_count=wget_extra_urls_depth+1 )); echo "Done."; return 0; }
+  [ ${#webassets[@]} -eq 0 ] && { echo "None suitable found. " "1"; (( wget_extra_urls_count=wget_extra_urls_depth+1 )); print_progress "100" "100"; printf "\n"; echo "Done."; return 0; }
 
   # URL decode for Wget calls: revert &amp; to & 
   webassets_filtered=("${webassets[@]//&amp;/&}")
@@ -1243,11 +1279,11 @@ wget_extra_urls() {
       cat "$input_file_extra" >> "$input_file_extra_all"
     else
       # file empty - nothing further to process
-      (( wget_extra_urls_count = wget_extra_urls_depth+1 )); echo "No further URLs found.  Done."; return 0; 
+      (( wget_extra_urls_count = wget_extra_urls_depth+1 )); print_progress "100" "100"; printf "\n"; echo "No further URLs found.  Done."; return 0; 
     fi
   fi
-  echo "Done."
-
+  (( webasset_step_count++ ))
+  print_progress "$webasset_step_count" "$num_webasset_steps"
   wget_asset_options=("$wget_ssl" --directory-prefix "$mirror_archive_dir")
 
   if [ "$wvol" != "-q" ] || [ "$output_level" = "silent" ]; then
@@ -1260,7 +1296,7 @@ wget_extra_urls() {
     wget_extra_core_options+=("$wvol")
   fi
 
-  echo -n "Checking URLs for very long filenames ... "
+  echo "Checking URLs for very long filenames ... " "1"
   # Read the file line by line and store it in the array
   while IFS= read -r line; do
     # check Wget report for occurrence of string: The destination name is too long (M), reducing to N
@@ -1278,6 +1314,8 @@ wget_extra_urls() {
       fi
     fi
   done < "$input_file_extra"
+  (( webasset_step_count++ ))
+  print_progress "100" "100"; printf "\n"
   echo "Done."
 
   echo "Running Wget on these additional URLs with options: " "${wget_extra_core_options[@]}" "${wget_extra_options[@]}" "${wget_asset_options[@]}"
