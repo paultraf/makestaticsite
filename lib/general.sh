@@ -293,7 +293,7 @@ assets_search_string() {
       url_path+="|[[:space:]]*$url_separator_chars[[:space:]]*[\"=']?https?://$opt/$path" # the '?' is intended for ERE 0 or 1
     done
   fi
-  [ "$url_path" != "" ] && url_path="${url_path:1}" # Remove the first character using parameter expansion
+  [ "$url_path" != "" ] && url_path="${url_path:1}" # Remove the first separator character using parameter expansion
   echo "$url_path"
 }
 
@@ -425,10 +425,14 @@ EOT
 }
 
 # Print a progress bar where iteration details known
-# Receives two numerical parameters, count and maximum count, 
-# and outputs a progress bar.
+# Expects two numerical parameters, count and maximum count;
+# optional third parameter for number of columns for display
 print_progress() {
-  col_width=$(tput cols)
+  if [ -n "${3+x}" ]; then
+    local col_width="$3"
+  else
+    local col_width=$(tput cols)
+  fi
   (( col_width = col_width - 8 )) # keep some space for printing a number
   hash_string=$(printf '#%.0s' $(seq 1 $col_width))
   hash_string_length=${#hash_string}
