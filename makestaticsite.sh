@@ -1372,13 +1372,18 @@ process_assets() {
   webpages0=() # to stores paths, duplication likely
   url_grep_array=()
   IFS='|' read -ra url_grep_array <<< "$url_grep"
+  num_url_grep_array="${#url_grep_array[@]}";
+  count=1
+  echo "Generating list of pages with relevant assets ... "
   for item in "${url_grep_array[@]}"; do
+    print_progress "$count" "$num_url_grep_array"; (( count++ ))
     while IFS='' read -r line; do
     webpages0+=("$line"); done < <(grep -Erl "$item" . "${asset_grep_includes[@]}")
   done
   # Filter out duplicates
   webpages=() # to store unique paths
   while IFS='' read -r line; do webpages+=("$line"); done < <(for item in "${webpages0[@]}"; do printf "%s\n" "${item}"; done | sort -u; )
+  printf "\n"
 
   echo "Converting paths to become relative to imports and assets directories ... " 
 
