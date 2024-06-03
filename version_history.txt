@@ -19,6 +19,26 @@
 ##########################################################################
 
 
+0.29.9 (released on 2024-06-03)
+       * Maintenance, with additional processing of assets and display
+         refinements *
+        [lib/constants.sh]
+         Added constant, relativise_primarydomain_assets, for the handling
+         of additional assets from the primary domain.
+        [lib/general.sh]
+         print_progress(): added optional parameter for column width.
+        [makestaticsite.sh]
+         wget_extra_urls(): Added progress bar for filtering steps.
+         Added condition to filter out lines with primary domain if not
+         relativising such assets URLs.
+         process_assets(): modified assignment of urls_array to include
+         assets from primary domain for site URL with path, conditional on
+         the value of relativise_primarydomain_assets. When included, added
+         rectification of paths arising from conversion of absolute URLs to
+         relative URLs.
+         Added progress bar for generating list of pages for converting
+         asset URLs to relative links.
+
 0.29.8 (released on 2024-05-29)
        * Maintenance, with bug fixes and performance enhancements *
         [makestaticsite.sh]
