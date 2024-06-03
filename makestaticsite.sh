@@ -1140,14 +1140,21 @@ wget_extra_urls() {
   col_width=$(tput cols);
 
   webassets_all=()
-  # In generating list of asset URLs, strip out initial characters 
-  # such as a quote or '=' arising from url_grep match condition.
   url_grep_array=()
   IFS='|' read -ra url_grep_array <<< "$url_grep"
   url_grep_array_count=${#url_grep_array[@]}; (( url_grep_array_count=num_webasset_steps*url_grep_array_count ))
 
+  # In generating list of asset URLs, strip out initial characters 
+  # such as a quote or '=' arising from url_grep match condition.
+  # Remove lines with primary domain if not relativising such assets URLs.
   for item in "${url_grep_array[@]}"; do
-    while IFS='' read -r line; do trimmed_line="${line#"${line%%[![:space:],:\'\"=]*}"}"; webassets_all+=("$trimmed_line"); done < <(grep -Eroha "$item" "$working_mirror_dir" "${asset_grep_includes[@]}")
+    while IFS='' read -r line; do trimmed_line="${line#"${line%%[![:space:],:\'\"=]*}"}"; webassets_all+=("$trimmed_line");
+    done < <(
+      if [ "$relativise_primarydomain_assets" = "no" ]; then
+        grep -Eroha "$item" "$working_mirror_dir" "${asset_grep_includes[@]}" | grep -v "//$domain"
+      else
+        grep -Eroha "$item" "$working_mirror_dir" "${asset_grep_includes[@]}"
+      fi)
     print_progress "$count" "$url_grep_array_count" "$col_width";
     (( count++ ))
   done
@@ -1436,8 +1443,8 @@ process_assets() {
       if [ -f "$input_file_extra_all" ]; then
         domain_BRE=$(regex_escape "$domain" "BRE")
         domain_BRE=${domain_BRE//\\/\\\\\\} # need to escape \, so replace \ with \\\ .
-        if [ "$url" = "$url_base/" ]; then
-          if read -d '' -r -a urls_array; then :; fi < <(grep -v "//$domain_BRE" "$input_file_extra_all_BRE" | sed 's~&~&amp;~g')
+        if [ "$url" = "$url_base/" ] || [ "$relativise_primarydomain_assets" = "no" ]; then
+           if read -d '' -r -a urls_array; then :; fi < <(grep -v "//$domain_BRE" "$input_file_extra_all_BRE" | sed 's~&~&amp;~g')
         else
           if read -d '' -r -a urls_array; then :; fi < <(< "$input_file_extra_all_BRE" sed 's~&~&amp;~g')
         fi
