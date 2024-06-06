@@ -1816,8 +1816,9 @@ clean_mirror() {
     if [ "$link_href_tail" = "" ] || [ "$link_href_tail" = "/" ]; then
       url_canonical="${url_canonical/index\.html/}"
     fi
+    url_canonical=$(sed_rhs_escape "$url_canonical")
     sed_subs_canonical=('/<code>.*<\/code>/b
-     s~="canonical" href="index.html"'~'="canonical" href="'"$url_canonical"'"~g' "$opt")
+     s|="canonical" href="index.html|canonical" href="'"$url_canonical"'"|g' "$opt")
     sed "${sed_options[@]}" "${sed_subs_canonical[@]}"
   done <   <(for file_ext in "${asset_find_names[@]}"; do find . -type f -name "$file_ext" -print0; done)
   echo "Done."
