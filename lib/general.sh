@@ -179,7 +179,7 @@ confirm_continue() {
     choose="y/N"
   fi
   if [ "$run_unattended" != "yes" ]; then
-    read -r -e -p "Do you wish to continue? [$choose] " confirm
+    read -r -e -p "Do you wish to continue? [$choose] " confirm < /dev/tty
     confirm=${confirm:0:1}
     if [ "$opt" = "Y" ] && { [ "$confirm" != "$opt_lc" ] && [ "$confirm" != "$opt" ] && [ "$confirm" != "" ]; }; then
       printf "%s\n" "$msg_abort"; exit
