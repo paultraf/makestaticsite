@@ -384,26 +384,11 @@ initialise_variables() {
   [[ ${url:length-1:1} != "/" ]] && url="$url/"; # ensure URL ends in trailing slash
 
   # Wayback Machine support
-  use_wayback_cli=
+  use_wayback_cli=no # Initially assume not using Wayback client
   if check_wayback_url "$url" "$wayback_hosts"; then
-    # Wayback Machine URL established
-    wayback_url=yes
-    domain_wayback_machine=$(printf "%s" "$url" | awk -F/ '{print $3}' | awk -F: '{print $1}')
-    printf "\nWayback Machine detected at %s, hosted on %s.\n" "$url" "$domain_wayback_machine."
-    if [ "$wayback_cli" = "yes" ]; then
 # shellcheck source=lib/mod_wayback.sh
-      source "lib/$mod_wayback";
-      if (( phase < 4 )) && ! validate_internet; then
-        echo " "; echo "$msg_error: Unable to establish Internet access. Please check your network connectivity."
-        echo "Aborting."
-        exit
-      fi
-      use_wayback_cli=yes
-      wget_extra_urls=no
-      wget_extra_urls_depth=0
-      wget_extra_urls_count=1
-      process_wayback_url "$url" # will change the value of $url to be that of the archived site
-    fi
+    source "lib/$mod_wayback";
+    initialise_wayback
   else
     wayback_url=no  
   fi
@@ -431,7 +416,11 @@ initialise_variables() {
     }
   done
   [ "$c" == "1" ] && echo -n $'\n'
-  page_element_domains="$(echo "$page_element_domains" | tr -d '[:space:]')"
+  if [ "$wayback_url" = "yes" ] && [ "$wayback_mementos_only" = "yes" ]; then  
+    page_element_domains=
+  else
+    page_element_domains="$(echo "$page_element_domains" | tr -d '[:space:]')"
+  fi
   IFS=',' read -ra list <<< "$page_element_domains"
   if [ "$page_element_domains" != "auto" ]; then
     c=0; for page_element_domain in "${list[@]}"; do
@@ -1170,13 +1159,7 @@ wget_extra_urls() {
   webassets_unique=()
   (( webasset_step_count++ ))
   print_progress "$webasset_step_count" "$num_webasset_steps" "$col_width"
-  while IFS='' read -r line; do webassets_unique+=("$line"); done < <(for item in "${webassets_all[@]}"; do printf "%s\n" "${item}"; done |
-    if [ "$wayback_url" = "yes" ]; then
-      sort -u | sed 's/\/http/ /g' | sort -u -t ' ' -k 2 | sed 's/ /\/http/g'; # remove duplicate asset captures (different timestamps)
-    else
-      sort -u;
-    fi
-  )
+  while IFS='' read -r line; do webassets_unique+=("$line"); done < <(for item in "${webassets_all[@]}"; do printf "%s\n" "${item}"; done | sort -u)
   echo "webassets_unique array has ${#webassets_unique[@]} elements" "2"
   (( webasset_step_count++ ))
   print_progress "$webasset_step_count" "$num_webasset_steps" "$col_width"
@@ -1270,6 +1253,10 @@ wget_extra_urls() {
   # Return if empty (all those found were filtered out)
   [ ${#webassets[@]} -eq 0 ] && { echo "None suitable found. " "1"; (( wget_extra_urls_count=wget_extra_urls_depth+1 )); print_progress "100" "100"; printf "\n"; echo "Done."; return 0; }
 
+  if [ "$wayback_url" = "yes" ]; then
+    get_webassets_wayback
+  fi
+
   # URL decode for Wget calls: revert &amp; to & 
   webassets_filtered=("${webassets[@]//&amp;/&}")
 
@@ -1277,7 +1264,7 @@ wget_extra_urls() {
   if (( wget_extra_urls_count == 1 )); then
     cp "$input_file_extra" "$input_file_extra_all" 
   else
-  # generate a diff and store result as $input_file_extra
+    # generate a diff and store result as $input_file_extra
     diff "$input_file_extra_all" "$input_file_extra" | grep "> " | grep -o "http[^[:space:]]*" > "${input_file_extra}.tmp"
     if [ -s "${input_file_extra}.tmp" ]; then
       # update input file
@@ -1424,7 +1411,7 @@ process_assets() {
   elif [ "$cut_dirs" = "0" ]; then
     # Initialise URLs array
     urls_array=()
-    if [ "$url_wildcard_capture" = "yes" ]; then
+    if [ "$url_wildcard_capture" = "yes" ] && [ "$wayback_url" != "yes" ]; then
       # create URLs array via directory names (domain names) from file system
       for item in "${extra_domains_array[@]}"; do
         # Append a regex to match file paths
@@ -1434,9 +1421,15 @@ process_assets() {
       done
     else
       # Produce a copy of input_file_extra_all ready for sed to process with extended regular expressions
-      input_string_extra=$(<"$input_file_extra_all")
-      input_string_extra_all=$(regex_escape "$input_string_extra" "BRE")
-      input_file_extra_all_BRE="${input_file_extra_all}.BRE"
+      if [ "$wayback_url" = "yes" ] && [ "$wayback_assets_mode" = "original" ]; then
+        input_string_extra=$(<"$input_file_wayback_extra")
+        input_string_extra_all=$(regex_escape "$input_string_extra" "BRE")
+        input_file_extra_all_BRE="${input_file_wayback_extra}.BRE"
+      else
+        input_string_extra=$(<"$input_file_extra_all")
+        input_string_extra_all=$(regex_escape "$input_string_extra" "BRE")
+        input_file_extra_all_BRE="${input_file_extra_all}.BRE"
+      fi
       printf "%s\n" "$input_string_extra_all" > "$input_file_extra_all_BRE"
 
       # Populate URLs array from Wget's additional input file
@@ -1444,7 +1437,7 @@ process_assets() {
         domain_BRE=$(regex_escape "$domain" "BRE")
         domain_BRE=${domain_BRE//\\/\\\\\\} # need to escape \, so replace \ with \\\ .
         if [ "$url" = "$url_base/" ] || [ "$relativise_primarydomain_assets" = "no" ]; then
-           if read -d '' -r -a urls_array; then :; fi < <(grep -v "//$domain_BRE" "$input_file_extra_all_BRE" | sed 's~&~&amp;~g')
+          if read -d '' -r -a urls_array; then :; fi < <(grep -v "//$domain_BRE" "$input_file_extra_all_BRE" | sed 's~&~&amp;~g')
         else
           if read -d '' -r -a urls_array; then :; fi < <(< "$input_file_extra_all_BRE" sed 's~&~&amp;~g')
         fi
@@ -1454,9 +1447,10 @@ process_assets() {
     # Derive another URLs array with scheme relative URLs
     urls_array_2=()
     for i in "${urls_array[@]}"; do urls_array_2+=("${i/http*:/}"); done
+
+    # Convert absolute links to relative links
     num_webpages=${#webpages[@]}
     count=1
-    # Convert absolute links to relative links
     for opt in "${webpages[@]}"; do
       print_progress "$count" "$num_webpages"; (( count++ ))
 
@@ -1467,6 +1461,9 @@ process_assets() {
       pathpref=
       depth=${opt//[!\/]};
       depth_num=${#depth}
+      if [ "$wayback_url" = "yes" ]; then
+        (( depth_num=depth_num-url_path_depth ))
+      fi
       for ((i=1;i<depth_num;i++)); do
         pathpref+="../";
       done
@@ -1508,9 +1505,24 @@ process_assets() {
             asset_rel_path=$(env echo "${url_extra#*//}")
             if [ "$url_wildcard_capture" = "yes" ]; then
               asset_rel_path=$(env echo "${asset_rel_path%%/*}")
-              asset_rel_path="$pathpref$imports_directory$imports_dir_suffix$asset_rel_path"
+              if [ "$wayback_url" = "yes" ]; then
+              
+                asset_rel_path=$(env echo "$asset_rel_path" | cut -d/ -f2-)
+                if [ "$wayback_assets_mode" = "original" ]; then
+                  asset_rel_path=$(env echo "$asset_rel_path" | cut -d/ -f5-)
+                  asset_rel_path="$pathpref$asset_rel_path"
+                else
+                  asset_rel_path="$pathpref$assets_directory$assets_dir_suffix$asset_rel_path"
+                fi
+              else
+                asset_rel_path="$pathpref$imports_directory$imports_dir_suffix$asset_rel_path"
+              fi
               asset_rel_path=$(url_percent_encode "$asset_rel_path")
-              asset_rel_path=$(regex_escape "$asset_rel_path/" "BRE")
+              asset_rel_path=$(regex_escape "$asset_rel_path\/" "BRE")
+              if [ "$path_doubleslash_workaround" = "yes" ]; then
+                # Replace double slashes in paths with single slashes
+                asset_rel_path=${asset_rel_path//\/\//\/}
+              fi
               asset_rel_path=$(sed_rhs_escape "$asset_rel_path")
               # url_extra itself contains a bracketed regular expression - hence backreference \2 below
               sed_subs1=('s|\([a-zA-Z0_9][[:space:]]*=[[:space:]]*["'"']"'\?\)'"$url_extra"'|'"\1$asset_rel_path\2"'|g' "$opt") # trims strictly
@@ -1520,12 +1532,30 @@ process_assets() {
                 sed "${sed_options[@]}" "${sed_subs2[@]}"
               fi
             else
-              asset_rel_path="$assets_directory$assets_dir_suffix$imports_directory$imports_dir_suffix$asset_rel_path"
+              if [ "$wayback_url" = "yes" ]; then
+                asset_rel_path=$(env echo "$asset_rel_path" | cut -d/ -f2-)
+                if [ "$wayback_assets_mode" = "original" ]; then
+                  asset_rel_path=$(env echo "$asset_rel_path" | cut -d/ -f6-)
+                  asset_rel_path="$pathpref$asset_rel_path"
+                else
+                  asset_rel_path="$pathpref$assets_directory$assets_dir_suffix$asset_rel_path"
+                fi
+              else
+                asset_rel_path="$assets_directory$assets_dir_suffix$imports_directory$imports_dir_suffix$asset_rel_path"
+              fi
               asset_rel_path=$(url_percent_encode "$asset_rel_path")
               asset_rel_path=$(regex_escape "$asset_rel_path" "BRE")
+              if [ "$path_doubleslash_workaround" = "yes" ]; then
+                # Replace double slashes in paths with single slashes
+                asset_rel_path=${asset_rel_path//\/\//\/}
+              fi
               asset_rel_path=$(sed_rhs_escape "$asset_rel_path")
-              sed_subs=('s~'"$url_extra"'~'"$asset_rel_path"'~g' "$opt")
-              sed "${sed_options[@]}" "${sed_subs[@]}"
+              sed_subs1=('s|\([a-zA-Z0_9][[:space:]]*=[[:space:]]*["'"']"'\?\)'"$url_extra"'|'"\1$asset_rel_path"'|g' "$opt") # trims strictly
+              sed_subs2=('s|\([[:space:]]*'"$url_separator_chars"'[[:space:]]*["'"']"'\?.*\)'"$url_extra"'|'"\1$asset_rel_path"'|g' "$opt") # trims loosely
+              sed "${sed_options[@]}" "${sed_subs1[@]}"
+              if (( url_asset_capture_level > 2 )) && [ "$wayback_url" != "yes" ]; then
+                sed "${sed_options[@]}" "${sed_subs2[@]}"
+              fi
             fi
           done
         done
@@ -1573,7 +1603,7 @@ process_assets() {
   fi
 
   # Special case: mirroring a directory not a whole domain: readjust internal links
-  if [ "$url" != "$url_base/" ] && [ "$cut_dirs" = "0" ]; then
+  if [ "$url" != "$url_base/" ] && [ "$cut_dirs" = "0" ] && [ "$wayback_url" != "yes" ] ; then
     extra_dirs_list=()
     while IFS= read -r line; do extra_dirs_list+=("$line"); done <<<"$(find "." -name "*" -type d -print | grep -v "$url_path" | grep -vx "." | sed s'/^..//')"
     # Determine which web pages to search and replace
@@ -1667,6 +1697,10 @@ process_assets() {
         fi
       done
     fi
+  fi
+
+  if [ "$wayback_url" = "yes" ] && [ "$use_wayback_cli" != "yes" ] && [ "$wayback_assets_mode" = "original" ]; then
+    consolidate_assets
   fi
   echo "Done."
 }

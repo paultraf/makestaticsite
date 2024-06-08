@@ -22,8 +22,8 @@
 ################################################
 # MakeStaticSite info
 ################################################
-version=0.29.9
-version_date='3 June 2024'
+version=0.30-alpha1
+version_date='8 June 2024'
 version_header="MakeStaticSite version $version, released on $version_date."
 mss_license="GNU Affero General Public License version 3"
 mss_download="https://makestaticsite.sh/download/makestaticsite_latest.tar.gz"
@@ -212,9 +212,20 @@ sitemap_file_extensions=htm,html # List of file extensions allowed for inclusion
 ################################################
 mod_wayback=mod_wayback.sh      # Wayback Machine module filename
 wayback_cli=no                  # Use a third-party client to download sites from the Wayback Machine (y/n)?  If not set to 'yes', then any Wayback sites will be retrieved natively using default (Wget).
+use_wayback_id=no               # When retrieving natively, capture the original page rather than the Wayback Machine's processed version (y/n)?
 wayback_hosts=web.archive.org,www.webarchive.org.uk  # Partial list of domains where Wayback Machine is hosted
 wayback_memento_check=no        # Perform dynamic check for Memento site using HTTP request header (y/n)?
 wayback_header="Memento-Datetime:" # Memento header search string
+wayback_mementos_only=yes       # Only download assets with Memento URLs (y/n)? (This resets page_element_domains to be empty.)
+wayback_assets_mode=original    # How to incorporate assets downloaded during phase 3
+                                #  - 'off' to take no action, not use any
+                                #  - 'original' to recreate original layout as far as possible (timestamps removed)
+                                #  - 'timestamp' to leave and reference assets in Wayback Machine timestamped folders
+wayback_timestamp_policy=any  # Timestamp policy
+                                #  - 'exact' to only download and refer to assets with exact timestamp
+                                #  - 'any' to download assets with any date
+                                #  - 'range' to download subject to specified date range (see below)
+wayback_anchors_original_domain=no # When partially capturing a site on the Wayback Machine, restore anchors (links) to original domain rather to archive on Wayback Machine (y/n)?
 wayback_date_from=              # Earliest date timestamp for Wayback Machine snapshot files
 wayback_date_to=                # Latest date timestamp for Wayback Machine snapshot files
 wayback_matchtype=prefix        # Wayback Machine CDX server match type:
@@ -552,8 +563,8 @@ options_allow_empty=(asset_domains page_element_domains wget_extra_options input
 options_check_cmd=(wget_cmd htmltidy_cmd) # Command line applications that need to be checked for existence
 options_check_dir=(site_path)   # Directories that need to be checked for existence
 options_check_url=(url)         # URLs that need to be validated
-options_check_yesno=(ssl_checks require_login wget_extra_urls site_post_processing archive wp_cli wp_cli_remote wp_helper_plugins add_search wp_restore_settings prune_query_strings use_snippets upload_zip deploy deploy_remote deploy_remote_rsync htmltidy add_extras url_wildcard_capture cors_enable wayback_cli wget_protocol_relative_urls extra_assets_allow_query_strings zip_omit_download clean_query_extensions credentials_cleanup wget_cookies_nullify_user_agent rename_wget_tmps wayback_memento_check relativise_primarydomain_assets) # Options that take yes/no values
+options_check_yesno=(ssl_checks require_login wget_extra_urls site_post_processing archive wp_cli wp_cli_remote wp_helper_plugins add_search wp_restore_settings prune_query_strings use_snippets upload_zip deploy deploy_remote deploy_remote_rsync htmltidy add_extras url_wildcard_capture cors_enable wayback_cli use_wayback_id wayback_memento_check wayback_mementos_only wget_protocol_relative_urls extra_assets_allow_query_strings zip_omit_download clean_query_extensions credentials_cleanup wget_cookies_nullify_user_agent rename_wget_tmps relativise_primarydomain_assets) # Options that take yes/no values
 options_check_remote=(site_path) # options that need to be checked on a remote server
 options_credentials=(site_user) # credentials that may/should be encrypted
 
-options_nodeps_load=(add_search deploy deploy_remote use_snippets upload_zip ssl_checks url asset_domains page_element_domains require_login local_sitename url_wildcard_capture input_urls_file site_post_processing prune_query_strings archive web_source_exclude_dirs htmltidy add_extras wp_cli site_path zip_filename zip_download_folder deploy_path deploy_domain cors_enable wayback_cli extra_assets_allow_query_strings zip_omit_download clean_query_extensions credentials_cleanup wget_protocol_relative_urls wget_cookies_nullify_user_agent rename_wget_tmps wayback_memento_check relativise_primarydomain_assets) # Options that are not dependent on others
+options_nodeps_load=(add_search deploy deploy_remote use_snippets upload_zip ssl_checks url asset_domains page_element_domains require_login local_sitename url_wildcard_capture input_urls_file site_post_processing prune_query_strings archive web_source_exclude_dirs htmltidy add_extras wp_cli site_path zip_filename zip_download_folder deploy_path deploy_domain cors_enable wayback_cli use_wayback_id wayback_memento_check wayback_mementos_only extra_assets_allow_query_strings zip_omit_download clean_query_extensions credentials_cleanup wget_protocol_relative_urls wget_cookies_nullify_user_agent rename_wget_tmps relativise_primarydomain_assets) # Options that are not dependent on others
