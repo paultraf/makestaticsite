@@ -246,3 +246,59 @@ consolidate_assets() {
   done
   cd "$working_mirror_dir" || echo "Unable to enter $working_mirror_dir"
 }
+
+# Convert absolute URLs to relative URLs for internal anchors
+process_asset_anchors() {
+  url_timeless=${url/${wayback_date_from_to}/[0-9]+}
+  url_timeless=$(regex_escape "$url_timeless")
+  url_timeless=$(regex_apply "$url_timeless")
+  url_timeless=${url_timeless//\\[/[} # final adjustment to remove '\' in front of '['
+
+  # Generate a list of webassets
+  cd "$url_path"
+  webpages_output1=() # to store file paths
+  webpages_output2=() # to store directory paths
+
+  while IFS='' read -r line; do
+    webpages_output1+=("$line")
+    line=${line:2}
+    url_line=$(regex_escape "$url_timeless$line")
+  done < <(
+  for file_ext in "${asset_find_names[@]}"; do
+    find "." -type f -name "$file_ext" "${asset_exclude_dirs[@]}" -print
+  done)
+
+  while IFS='' read -r line; do
+    webpages_output2+=("$line")
+    line=${line:2}
+    url_line=$(regex_escape "$url_timeless$line")
+  done < <(
+  for file_ext in "${asset_find_names[@]}"; do
+    find "." -type d "${asset_exclude_dirs[@]}" -print
+  done)
+
+  # Carry out substitutions
+  for opt in "${webpages_output1[@]}"; do
+    pathpref=
+    depth=${opt//[!\/]};
+    depth_num=${#depth}
+    for ((i=1;i<depth_num;i++)); do
+      pathpref+="../";
+    done
+      
+    for item in "${webpages_output1[@]}"; do
+      item=${item:2}
+      item=$(regex_escape "$item")
+      sed_subs=('s|\('"$url_timeless"'\)\('"$item"'\)|'"$pathpref\2"'|g' "$opt")
+      sed "${sed_options[@]}" "${sed_subs[@]}"
+    done
+
+    for item in "${webpages_output2[@]}"; do
+      item=${item:2}
+      item=$(regex_escape "$item")
+      sed_subs=('s|\('"$url_timeless"'\)\('"$item"'\)\([^[:alnum:]\~]\)|'"$pathpref\2index.html\3"'|g' "$opt")
+      sed "${sed_options[@]}" "${sed_subs[@]}"
+    done
+  done
+  cd "$working_mirror_dir"
+}
