@@ -1540,8 +1540,10 @@ process_assets() {
                 else
                   asset_rel_path="$pathpref$assets_directory$assets_dir_suffix$asset_rel_path"
                 fi
+              elif [ "$url" != "$url_base/" ]; then
+                asset_rel_path="$pathpref$assets_directory$assets_dir_suffix$imports_directory$imports_dir_suffix$asset_rel_path"
               else
-                asset_rel_path="$assets_directory$assets_dir_suffix$imports_directory$imports_dir_suffix$asset_rel_path"
+                asset_rel_path="$pathpref$imports_directory$imports_dir_suffix$asset_rel_path"
               fi
               asset_rel_path=$(url_percent_encode "$asset_rel_path")
               asset_rel_path=$(regex_escape "$asset_rel_path" "BRE")
