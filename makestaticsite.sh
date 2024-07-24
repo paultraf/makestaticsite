@@ -480,6 +480,11 @@ initialise_variables() {
   # assign URL-related variables
   protocol=$(printf "%s" "$url" | awk -F/ '{print $1}' | awk -F: '{print $1}')
   url_base="$protocol://$hostport"
+  if [ "$url" != "$url_base/" ]; then
+    url_has_path=yes
+  else
+    url_has_path=no
+  fi
   
   [ "$require_login" = "yes" ] && {
     # Assign additional option variables for login sessions
@@ -503,7 +508,7 @@ initialise_variables() {
   wget_extra_options_tmp=$(wget_canonical_options "$(config_get wget_extra_options "$myconfig")")
 
   # If URL contains one or more directories, then ensure --no-parent option, subject to option settings
-  if [ "$url" != "$url_base/" ] && [[ ! $wget_extra_options_tmp =~ "-np" ]] && [[ ! $wget_extra_options_tmp =~ "--no-parent" ]]; then
+  if [ "$url_has_path" = "yes" ] && [[ ! $wget_extra_options_tmp =~ "-np" ]] && [[ ! $wget_extra_options_tmp =~ "--no-parent" ]]; then
     if [ "$wget_no_parent" = "auto" ] || [ "$wget_no_parent" = "yes" ]; then
       wget_extra_options_tmp+=" -np"
     fi
@@ -1436,7 +1441,7 @@ process_assets() {
       if [ -f "$input_file_extra_all" ]; then
         domain_BRE=$(regex_escape "$domain" "BRE")
         domain_BRE=${domain_BRE//\\/\\\\\\} # need to escape \, so replace \ with \\\ .
-        if [ "$url" = "$url_base/" ] || [ "$relativise_primarydomain_assets" = "no" ]; then
+        if [ "$url_has_path" = "no" ] || [ "$relativise_primarydomain_assets" = "no" ]; then
           if read -d '' -r -a urls_array; then :; fi < <(grep -v "//$domain_BRE" "$input_file_extra_all_BRE" | sed 's~&~&amp;~g')
         else
           if read -d '' -r -a urls_array; then :; fi < <(< "$input_file_extra_all_BRE" sed 's~&~&amp;~g')
@@ -1461,13 +1466,13 @@ process_assets() {
       pathpref=
       depth=${opt//[!\/]};
       depth_num=${#depth}
-      if [ "$wayback_url" = "yes" ]; then
+      if [ "$url_has_path" = "yes" ]; then
         (( depth_num=depth_num-url_path_depth ))
       fi
       for ((i=1;i<depth_num;i++)); do
         pathpref+="../";
       done
-      if [ "$url" != "$url_base/" ]; then
+      if [ "$url_has_path" = "yes" ]; then
         dir_pathpref=
         for ((i=1;i<depth_num-url_path_depth;i++)); do
           dir_pathpref+="../";
@@ -1476,7 +1481,7 @@ process_assets() {
 
       # Carry out universal search and replace on primary domain;
       # Case: no URL path
-      if [ "$url" = "$url_base/" ] || { [ "$external_dir_links" != "" ] && [ "$external_dir_links" != "off" ]; }; then
+      if [ "$url_has_path" = "no" ] || { [ "$external_dir_links" != "" ] && [ "$external_dir_links" != "off" ]; }; then
         sed_subs1=('s|\([a-zA-Z0_9][[:space:]]*=[[:space:]]*["'"']"'\?\)https\?://'"$hostport/"'|'"\1$pathpref"'|g' "$opt") # trims strictly
         sed "${sed_options[@]}" "${sed_subs1[@]}"
         if (( url_asset_capture_level > 2 )); then
@@ -1485,7 +1490,7 @@ process_assets() {
         fi
       # Case: URL path
       #  with --no-parent, we need to limit matches to be within the tree
-      elif [ "$url" != "$url_base/" ]; then
+      elif [ "$url_has_path" = "yes" ]; then
        sed_subs1=('s|\([a-zA-Z0_9][[:space:]]*=[[:space:]]*["'"']"'\?\)https\?://'"$hostport/$url_path/"'|'"\1$dir_pathpref"'|g' "$opt") # trims strictly
         sed "${sed_options[@]}" "${sed_subs1[@]}"
         if (( url_asset_capture_level > 2 )); then
@@ -1496,7 +1501,7 @@ process_assets() {
 
       # Loop over all assets if working with extra domains or a directory URL.
       # (Note this will generate erroneous paths for primary domain assets, fixed later on.)
-      if [ ${#urls_array[@]} -ne 0 ] && { [ "$extra_domains" != "" ] || [ "$url" != "$url_base/" ]; }; then
+      if [ ${#urls_array[@]} -ne 0 ] && { [ "$extra_domains" != "" ] || [ "$url_has_path" = "yes" ]; }; then
         urls_type=(urls_array urls_array_2) # standard and scheme relative URLs respectively (for use below with indirect references)
         for url_type in "${urls_type[@]}"; do
           url_nameref="$url_type"
@@ -1506,7 +1511,6 @@ process_assets() {
             if [ "$url_wildcard_capture" = "yes" ]; then
               asset_rel_path=$(env echo "${asset_rel_path%%/*}")
               if [ "$wayback_url" = "yes" ]; then
-              
                 asset_rel_path=$(env echo "$asset_rel_path" | cut -d/ -f2-)
                 if [ "$wayback_assets_mode" = "original" ]; then
                   asset_rel_path=$(env echo "$asset_rel_path" | cut -d/ -f5-)
@@ -1540,7 +1544,7 @@ process_assets() {
                 else
                   asset_rel_path="$pathpref$assets_directory$assets_dir_suffix$asset_rel_path"
                 fi
-              elif [ "$url" != "$url_base/" ]; then
+              elif [ "$url_has_path" = "yes" ]; then
                 asset_rel_path="$pathpref$assets_directory$assets_dir_suffix$imports_directory$imports_dir_suffix$asset_rel_path"
               else
                 asset_rel_path="$pathpref$imports_directory$imports_dir_suffix$asset_rel_path"
@@ -1605,7 +1609,7 @@ process_assets() {
   fi
 
   # Special case: mirroring a directory not a whole domain: readjust internal links
-  if [ "$url" != "$url_base/" ] && [ "$cut_dirs" = "0" ] && [ "$wayback_url" != "yes" ] ; then
+  if [ "$url_has_path" = "yes" ] && [ "$cut_dirs" = "0" ] && [ "$wayback_url" != "yes" ] ; then
     extra_dirs_list=()
     while IFS= read -r line; do extra_dirs_list+=("$line"); done <<<"$(find "." -name "*" -type d -print | grep -v "$url_path" | grep -vx "." | sed s'/^..//')"
     # Determine which web pages to search and replace
@@ -1720,7 +1724,7 @@ site_postprocessing() {
   echo "Carrying out site postprocessing in $working_mirror_dir ... "
 
   # Adjust storage locations of assets, where applicable
-  if [ -s "$input_file_extra_all" ] || [ "$url" != "$url_base/" ]; then
+  if [ -s "$input_file_extra_all" ] || [ "$url_has_path" = "yes" ]; then
     process_assets
   fi
 
@@ -2109,7 +2113,7 @@ process_snippets() {
 
 #  If Wget --cut-dirs not specified, then move top-level index.html to root directory.
 cut_mss_dirs() {
-  if [ "$url" = "$url_base/" ]; then
+  if [ "$url_has_path" = "no" ]; then
     echo "$msg_info: You have specified mss_cut_dirs to cut directories, but this is only effective for a URL with a directory path. No action taken."
     return 0
   fi
