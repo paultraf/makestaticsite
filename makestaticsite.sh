@@ -1463,21 +1463,21 @@ process_assets() {
       if grep -q "<?xml version" "$opt"; then
         continue
       fi
+
+      # Generate a path prefix to traverse higher directories in relative paths
       pathpref=
       depth=${opt//[!\/]};
       depth_num=${#depth}
       if [ "$url_has_path" = "yes" ]; then
         (( depth_num=depth_num-url_path_depth ))
+        dir_pathpref=
+        for ((i=1;i<depth_num;i++)); do
+          dir_pathpref+="../";
+        done
       fi
       for ((i=1;i<depth_num;i++)); do
         pathpref+="../";
       done
-      if [ "$url_has_path" = "yes" ]; then
-        dir_pathpref=
-        for ((i=1;i<depth_num-url_path_depth;i++)); do
-          dir_pathpref+="../";
-        done
-      fi
 
       # Carry out universal search and replace on primary domain;
       # Case: no URL path
