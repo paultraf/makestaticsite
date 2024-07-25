@@ -1186,7 +1186,7 @@ wget_extra_urls() {
   webassets_nohtml=()
   assets_or='\.('${asset_extensions//,/|}')'
   assets_or_external='\.('${asset_extensions_external//,/|}')'
-  (( num_webasset_steps_nohtml=num_webasset_steps-5 )) # i.e. most of the processing
+  (( num_webasset_steps_nohtml=num_webasset_steps-5 )) # Progress bar: this is most of the processing
   while IFS='' read -r line; do
     count=$(echo "$line" | awk -F'|' '{print $1}')
     assetline=$(echo "$line" | awk -F'|' '{print $2}')
@@ -1201,9 +1201,9 @@ wget_extra_urls() {
       # Loop over an inclusion list of allowable extensions
       opt_domain=$(printf "%s\n" "$opt" | awk -F/ '{print $3}' | awk -F: '{print $1}')
       if [[ ' '${page_element_domains_array[*]}' ' =~ ' '$opt_domain' ' ]]; then
-        echo "$opt" | grep -E "$assets_or_external" > /dev/null && printf "%s|%s\n" "$i" "$opt";
+        echo "$opt" | grep -E "$assets_or_external$" > /dev/null && printf "%s|%s\n" "$i" "$opt";
       else
-        echo "$opt" | grep -E "$assets_or" > /dev/null && printf "%s|%s\n" "$i" "$opt";
+        echo "$opt" | grep -E "$assets_or$" > /dev/null && printf "%s|%s\n" "$i" "$opt";
       fi
     else
       # Remove HTML assets
