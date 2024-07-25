@@ -1201,9 +1201,9 @@ wget_extra_urls() {
       # Loop over an inclusion list of allowable extensions
       opt_domain=$(printf "%s\n" "$opt" | awk -F/ '{print $3}' | awk -F: '{print $1}')
       if [[ ' '${page_element_domains_array[*]}' ' =~ ' '$opt_domain' ' ]]; then
-        echo "$opt" | grep -E "$assets_or_external$" > /dev/null && printf "%s|%s\n" "$i" "$opt";
+        echo "$opt" | grep -Ei "$assets_or_external$" > /dev/null && printf "%s|%s\n" "$i" "$opt";
       else
-        echo "$opt" | grep -E "$assets_or$" > /dev/null && printf "%s|%s\n" "$i" "$opt";
+        echo "$opt" | grep -Ei "$assets_or$" > /dev/null && printf "%s|%s\n" "$i" "$opt";
       fi
     else
       # Remove HTML assets
@@ -1704,6 +1704,8 @@ process_assets() {
       done
     fi
   fi
+
+exit
 
   if [ "$wayback_url" = "yes" ] && [ "$use_wayback_cli" != "yes" ] && [ "$wayback_assets_mode" = "original" ]; then
     consolidate_assets
