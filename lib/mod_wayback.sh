@@ -97,7 +97,7 @@ initialise_wayback() {
   url_wildcard_capture=no # reset as the Wayback Machine doesn't yet have a means to handle this; also note that it will refer to all external assets under its own host name.
   domain_wayback_machine=$(printf "%s" "$url" | awk -F/ '{print $3}' | awk -F: '{print $1}')
   process_wayback_url "$url" # will set the value of $url_original to be that of the archived site
-  printf "\nWayback Machine detected at %s, hosted on %s.\n" "$url" "$domain_wayback_machine."
+  printf "\nWayback Machine detected at %s, hosted on %s.\n" "$url" "$domain_wayback_machine"
   if [ "$wayback_timestamp_policy" = "exact" ] && [ "$wayback_date_from" != "" ]; then
     echo "$msg_warning: you have specified a date range for the Wayback Machine, but the constant wayback_timestamp_policy is set to 'exact'."
     echo "To resolve this conflict, MakeStaticSite will only download assets for the most recent timestamp, $wayback_date_to. But you may like to set wayback_timestamp_policy=range."
@@ -183,9 +183,15 @@ consolidate_assets() {
     snapshot_list+=("$line")
   done <<<"$(find "." -maxdepth 1 -type d ! -empty "${snapshot_exclude_dirs[@]}" -print)"
 
+  (( snapshot_path_depth=url_path_depth-1 ))
+  snapshot_path_list=()
+  while IFS= read -r line; do
+    line="${line#./}"
+    snapshot_path_list+=("$line")
+  done <<<"$(find . -mindepth $snapshot_path_depth -maxdepth $snapshot_path_depth -print)"
+
   cd "$working_mirror_dir" || { echo "msg_error: Unable to return to $working_mirror_dir. Aborting."; exit; } 
 
-  urlpath_chunk=$(printf "%s" "$url_path" | cut -d/ -f3-) 
   # Initialised source and destination paths (trunks)
   dest_path="$working_mirror_dir/$url_path"
 
@@ -200,8 +206,7 @@ consolidate_assets() {
 
   cd "$src_path_snapshot" || { echo "$msg_error: Unable to enter $src_path_snapshot.  Aborting"; exit; }
 
-  for snapshot in "${snapshot_list[@]}"; do
-    snapshot_dir="$snapshot/$urlpath_chunk"
+  for snapshot_dir in "${snapshot_path_list[@]}"; do
     echo "Entering $snapshot_dir" "1"
     if [ -d "$snapshot_dir" ]; then
       cd "$snapshot_dir"
