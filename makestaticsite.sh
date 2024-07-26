@@ -485,7 +485,16 @@ initialise_variables() {
   else
     url_has_path=no
   fi
-  
+
+  # Define URL to be used in robots.txt file
+  if [ "$wayback_url" = "yes" ] && [ "$wayback_domain_original_sitemap" = "yes" ]; then
+    url_robots="${url_original}robots.txt"
+    url_sitemap="${url_original}$sitemap_file"
+  else
+    url_robots="$url/robots.txt"
+    url_sitemap="https://$deploy_domain/$sitemap_file"
+  fi
+    
   [ "$require_login" = "yes" ] && {
     # Assign additional option variables for login sessions
     require_login_list=$(get_options_list "require_login")
@@ -859,7 +868,6 @@ wget_mirror() {
   cookies_tmppath="$tmp_dir_path/tmp$wget_cookies"; touchmod "$cookies_tmppath"
   wget_login_options=("$wget_ssl" --directory-prefix "$tmp_mirror_path" --save-cookies "$cookies_path" --keep-session-cookies)
 
-  url_robots="$url/robots.txt"
   wget_robot_options=("$wget_ssl" --directory-prefix "$mirror_archive_dir$hostport_dir" "$url_robots")
   wget_sitemap_options=("$wget_ssl" --directory-prefix "$mirror_archive_dir$hostport_dir")
 
@@ -1926,7 +1934,7 @@ clean_mirror() {
     else
       touchmod "$robots_path"
     fi
-    printf "\nSitemap: %s\n" "https://$deploy_domain/$sitemap_file" >> "$robots_path"
+    printf "\nSitemap: %s\n" "$url_sitemap" >> "$robots_path"
   fi
 
   # Create sitemap, where necessary
@@ -1948,7 +1956,18 @@ clean_mirror() {
       fi
       sitemap_content+="$tab<url>"$'\n'
       loc=$(echo "$loc" | sed "s/index.html//" | sed "s/.\///") # remove any trailing filename from $loc
-      sitemap_content+="$tab$tab<loc>https://$deploy_domain/$loc</loc>"$'\n'
+      if [ "$wayback_url" = "yes" ] && [ "$wayback_domain_original_sitemap" = "yes" ]; then
+        loc_full=$(echo "$loc" | cut -d':' -f2-)
+        if [[ $url_path == *"http:"* ]]; then
+          http_prefix="http:/"
+        else
+          http_prefix="https:/"
+        fi
+        loc_full="$http_prefix$loc_full"
+      else  
+        loc_full="https://$deploy_domain/$loc"
+      fi
+      sitemap_content+="$tab$tab<loc>$loc_full</loc>"$'\n'
       sitemap_content+="$tab</url>"$'\n'
     done
     sitemap_content+="</urlset>"$'\n'
@@ -2006,6 +2025,15 @@ clean_mirror() {
     fi
   fi
 
+  # For Wayback Machine mirrors, optionally rename domain folder
+  if [ "$wayback_url" = "yes" ] && [ "$wayback_domain_original" = "yes" ]; then
+    cd "$mirror_dir/$mirror_archive_dir/" || { echo "$msg_error: Unable to enter $mirror_dir/$mirror_archive_dir/"; exit; }
+    mv "$domain" "$domain_original" || echo "$msg_warning: Unable to rename working_mirror_dir $mirror_dir/$mirror_archive_dir/$domain_original"
+    echo "Renamed $working_mirror_dir to $mirror_dir$mirror_archive_dir/$domain_original."
+    # Update mirror variable
+    working_mirror_dir="$mirror_dir/$mirror_archive_dir/$domain_original"
+  fi
+  
   cd "$mirror_dir" || { printf "Unable to enter %s.\nAborting.\n" "$mirror_dir"; exit; }
 }
 

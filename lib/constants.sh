@@ -22,7 +22,7 @@
 ################################################
 # MakeStaticSite info
 ################################################
-version=0.30-beta2
+version=0.30-beta3
 version_date='26 July 2024'
 version_header="MakeStaticSite version $version, released on $version_date."
 mss_license="GNU Affero General Public License version 3"
@@ -233,6 +233,8 @@ wayback_matchtype=prefix        # Wayback Machine CDX server match type:
                                 #  - 'host' will return results from host domain, but no other domains 
                                 #  - 'exact' will return results matching URL exactly
                                 #  - 'prefix' will return results for all results under a URL path
+wayback_domain_original=yes     # Restore original domain folder when generating a mirror of site archived by the Wayback Machine (y/n)?
+wayback_domain_original_sitemap=yes  # Restore original URLs when generating the sitemap for a site archived by the Wayback Machine (y/n)?
 
 # Settings specifically for Wayback Machine downloader coded in Ruby
 # https://github.com/hartator/wayback-machine-downloader
@@ -563,8 +565,8 @@ options_allow_empty=(asset_domains page_element_domains wget_extra_options input
 options_check_cmd=(wget_cmd htmltidy_cmd) # Command line applications that need to be checked for existence
 options_check_dir=(site_path)   # Directories that need to be checked for existence
 options_check_url=(url)         # URLs that need to be validated
-options_check_yesno=(ssl_checks require_login wget_extra_urls site_post_processing archive wp_cli wp_cli_remote wp_helper_plugins add_search wp_restore_settings prune_query_strings use_snippets upload_zip deploy deploy_remote deploy_remote_rsync htmltidy add_extras url_wildcard_capture cors_enable wayback_cli use_wayback_id wayback_memento_check wayback_mementos_only wget_protocol_relative_urls extra_assets_allow_query_strings zip_omit_download clean_query_extensions credentials_cleanup wget_cookies_nullify_user_agent rename_wget_tmps relativise_primarydomain_assets) # Options that take yes/no values
+options_check_yesno=(ssl_checks require_login wget_extra_urls site_post_processing archive wp_cli wp_cli_remote wp_helper_plugins add_search wp_restore_settings prune_query_strings use_snippets upload_zip deploy deploy_remote deploy_remote_rsync htmltidy add_extras url_wildcard_capture cors_enable wayback_cli use_wayback_id wayback_memento_check wayback_mementos_only wayback_domain_original wayback_domain_original_sitemap wget_protocol_relative_urls extra_assets_allow_query_strings zip_omit_download clean_query_extensions credentials_cleanup wget_cookies_nullify_user_agent rename_wget_tmps relativise_primarydomain_assets) # Options that take yes/no values
 options_check_remote=(site_path) # options that need to be checked on a remote server
 options_credentials=(site_user) # credentials that may/should be encrypted
 
-options_nodeps_load=(add_search deploy deploy_remote use_snippets upload_zip ssl_checks url asset_domains page_element_domains require_login local_sitename url_wildcard_capture input_urls_file site_post_processing prune_query_strings archive web_source_exclude_dirs htmltidy add_extras wp_cli site_path zip_filename zip_download_folder deploy_path deploy_domain cors_enable wayback_cli use_wayback_id wayback_memento_check wayback_mementos_only extra_assets_allow_query_strings zip_omit_download clean_query_extensions credentials_cleanup wget_protocol_relative_urls wget_cookies_nullify_user_agent rename_wget_tmps relativise_primarydomain_assets) # Options that are not dependent on others
+options_nodeps_load=(add_search deploy deploy_remote use_snippets upload_zip ssl_checks url asset_domains page_element_domains require_login local_sitename url_wildcard_capture input_urls_file site_post_processing prune_query_strings archive web_source_exclude_dirs htmltidy add_extras wp_cli site_path zip_filename zip_download_folder deploy_path deploy_domain cors_enable wayback_cli use_wayback_id wayback_memento_check wayback_mementos_only wayback_domain_original wayback_domain_original_sitemap extra_assets_allow_query_strings zip_omit_download clean_query_extensions credentials_cleanup wget_protocol_relative_urls wget_cookies_nullify_user_agent rename_wget_tmps relativise_primarydomain_assets) # Options that are not dependent on others

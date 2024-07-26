@@ -88,6 +88,7 @@ process_wayback_url() {
       echo "Aborting."
       exit
     fi
+    domain_original=$(printf "%s\n" "$url_original" | awk -F/ '{print $3}' | awk -F: '{print $1}')
   fi  
 }
 
