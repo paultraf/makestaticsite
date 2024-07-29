@@ -1716,6 +1716,7 @@ process_assets() {
   if [ "$wayback_url" = "yes" ] && [ "$use_wayback_cli" != "yes" ] && [ "$wayback_assets_mode" = "original" ]; then
     consolidate_assets
     process_asset_anchors
+    wayback_output_clean
   fi
   echo "Done."
 }
