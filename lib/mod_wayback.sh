@@ -299,10 +299,11 @@ process_asset_anchors() {
       sed "${sed_options[@]}" "${sed_subs[@]}"
     done
 
+    # Conversion of anchors, based on wildcard timestamps and not limited to asset types, to assist in internal navigation
     for item in "${webpages_output2[@]}"; do
       item=${item:2}
       item=$(regex_escape "$item")
-      sed_subs=('s|\('"$url_timeless"'\)\('"$item"'\)\([^[:alnum:]\~]\)|'"$pathpref\2index.html\3"'|g' "$opt")
+      sed_subs=('s|\('"$url_timeless"'\)\('"$item"'\)\([\"'\'']\)|'"$pathpref\2index.html\3"'|g' "$opt")
       sed "${sed_options[@]}" "${sed_subs[@]}"
     done
   done
