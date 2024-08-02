@@ -19,7 +19,21 @@
 ##########################################################################
 
 
-0.30 (released on 2024-07-)
+0.30.1 (released on 2024-08-02)
+       * Maintenance: bug fixes to enhance support for Wayback Machine *
+        [lib/constants.sh]
+         Set prune_query_strings to 'yes' as default
+        [lib/mod_wayback.sh]
+         process_asset_anchors(): Copying of assets to inside the canonical
+         path and the conversion of relative links now based on directories
+         in snapshot_path_list, which itself is limited to directories in its
+         determination by the 'find' command.
+         Bug fix for internal links that support internal navigation.
+        [lib/validate.sh]
+         validate_http(): When a URL redirects, store the effective URL also
+         when it's the Wayback Machine.
+
+0.30 (released on 2024-07-30)
      * Native support for sites hosted on the Wayback Machine plus
        refinements that improve the incorporation of assets. *
       [lib/constants.sh]
