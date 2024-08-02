@@ -168,9 +168,11 @@ consolidate_assets() {
   url_path_snapshot=$(echo "$url_path_snapshot" | cut -d' ' -f2- )
   url_path_snapshot="$wayback_date_to$url_path_snapshot"
   url_path_sibling="$url_path_snapshot"
+  url_path_prefix=
   for ((i=1;i<url_path_depth;i++)); do
-    url_path_sibling="../$url_path_sibling"
+    url_path_prefix+="../"
   done
+  url_path_sibling="$url_path_prefix$url_path_sibling"
   src_path_snapshot="$working_mirror_dir/$url_path_snapshot_prefix"
   cd "$src_path_snapshot" || echo "Unable to enter $src_path_snapshot"
   snapshot_exclude_dirs=()
@@ -184,21 +186,22 @@ consolidate_assets() {
     snapshot_list+=("$line")
   done <<<"$(find "." -maxdepth 1 -type d ! -empty "${snapshot_exclude_dirs[@]}" -print)"
 
-  (( snapshot_path_depth=url_path_depth-1 ))
+  (( snapshot_path_depth=3 )) # This is the number of directories to reach inside a domain folder
   snapshot_path_list=()
   while IFS= read -r line; do
     line="${line#./}"
     snapshot_path_list+=("$line")
-  done <<<"$(find . -mindepth $snapshot_path_depth -maxdepth $snapshot_path_depth -print)"
+  done <<<"$(find . -mindepth $snapshot_path_depth -type d -not -path "./$wayback_date_to" -not -path "./$wayback_date_to/"\* -print)"
 
   cd "$working_mirror_dir" || { echo "msg_error: Unable to return to $working_mirror_dir. Aborting."; exit; } 
 
   # Initialised source and destination paths (trunks)
   dest_path="$working_mirror_dir/$url_path"
 
+  # Replace the relative links created by Wget (that point to levels higher up in the directory hierarchy)
   for opt in "${webpages[@]}"; do
-    for item in "${snapshot_list[@]}"; do
-      snapshot_src_path=${url_path_sibling/$wayback_date_to/$item}
+    for item in "${snapshot_path_list[@]}"; do
+      snapshot_src_path="$url_path_prefix$item"
       snapshot_src_path=$(regex_escape "$snapshot_src_path")
       sed_subs=('s~'"$snapshot_src_path/"'~'""'~g' "$opt")
       sed "${sed_options[@]}" "${sed_subs[@]}"

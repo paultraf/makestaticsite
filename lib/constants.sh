@@ -22,8 +22,8 @@
 ################################################
 # MakeStaticSite info
 ################################################
-version=0.30
-version_date='30 July 2024'
+version=0.30.1
+version_date='2 August 2024'
 version_header="MakeStaticSite version $version, released on $version_date."
 mss_license="GNU Affero General Public License version 3"
 mss_download="https://makestaticsite.sh/download/makestaticsite_latest.tar.gz"
@@ -160,7 +160,7 @@ asset_extensions_external="$web_element_extensions,$image_extensions,$font_exten
 relativise_primarydomain_assets=yes # Convert absolute links to relative links for primary domain assets (y/n)?
 
 # Query strings
-prune_query_strings=no         # Remove query strings appended to paths and URLs in anchors limited to files of type given in query_prune_list (y/n)?
+prune_query_strings=yes         # Remove query strings appended to paths and URLs in anchors limited to files of type given in query_prune_list (y/n)?
 query_prune_list="$web_element_extensions,$image_extensions,$audiovideo_extensions,$doc_extensions,$font_extensions" # List of file extensions in requests that may have query string appended for versioning or other non-essential purposes. For static sites these can be pruned without loss of functionality.
 extra_assets_allow_query_strings=yes # Allow Wget to fetch additional URLs with query strings in phase 3 (y/n)? 
 extra_assets_query_strings_limit=100000 # Only fetch URLs with query strings when the total number of assets is less than this number 
@@ -225,7 +225,7 @@ wayback_timestamp_policy=any  # Timestamp policy
                                 #  - 'exact' to only download and refer to assets with exact timestamp
                                 #  - 'any' to download assets with any date
                                 #  - 'range' to download subject to specified date range (see below)
-wayback_anchors_original_domain=no # When partially capturing a site on the Wayback Machine, restore anchors (links) to original domain rather to archive on Wayback Machine (y/n)?
+wayback_anchors_original_domain=no # When partially capturing a site on the Wayback Machine, restore all anchors (links) to original domain (or make relative) rather that link to archive on Wayback Machine (y/n)?
 wayback_date_from=              # Earliest date timestamp for Wayback Machine snapshot files
 wayback_date_to=                # Latest date timestamp for Wayback Machine snapshot files
 wayback_matchtype=prefix        # Wayback Machine CDX server match type:
@@ -569,8 +569,8 @@ options_allow_empty=(asset_domains page_element_domains wget_extra_options input
 options_check_cmd=(wget_cmd htmltidy_cmd) # Command line applications that need to be checked for existence
 options_check_dir=(site_path)   # Directories that need to be checked for existence
 options_check_url=(url)         # URLs that need to be validated
-options_check_yesno=(ssl_checks require_login wget_extra_urls site_post_processing archive wp_cli wp_cli_remote wp_helper_plugins add_search wp_restore_settings prune_query_strings use_snippets upload_zip deploy deploy_remote deploy_remote_rsync htmltidy add_extras url_wildcard_capture cors_enable wayback_cli use_wayback_id wayback_memento_check wayback_mementos_only wayback_domain_original wayback_domain_original_sitemap wayback_code_clean wayback_comments_clean wget_protocol_relative_urls extra_assets_allow_query_strings zip_omit_download clean_query_extensions credentials_cleanup wget_cookies_nullify_user_agent rename_wget_tmps relativise_primarydomain_assets web_print_runtime_data) # Options that take yes/no values
+options_check_yesno=(ssl_checks require_login wget_extra_urls site_post_processing archive wp_cli wp_cli_remote wp_helper_plugins add_search wp_restore_settings prune_query_strings use_snippets upload_zip deploy deploy_remote deploy_remote_rsync htmltidy add_extras url_wildcard_capture cors_enable wayback_cli use_wayback_id wayback_memento_check wayback_mementos_only wayback_anchors_original_domain wayback_domain_original wayback_domain_original_sitemap wayback_code_clean wayback_comments_clean wget_protocol_relative_urls extra_assets_allow_query_strings zip_omit_download clean_query_extensions credentials_cleanup wget_cookies_nullify_user_agent rename_wget_tmps relativise_primarydomain_assets web_print_runtime_data) # Options that take yes/no values
 options_check_remote=(site_path) # options that need to be checked on a remote server
 options_credentials=(site_user) # credentials that may/should be encrypted
 
-options_nodeps_load=(add_search deploy deploy_remote use_snippets upload_zip ssl_checks url asset_domains page_element_domains require_login local_sitename url_wildcard_capture input_urls_file site_post_processing prune_query_strings archive web_source_exclude_dirs htmltidy add_extras wp_cli site_path zip_filename zip_download_folder deploy_path deploy_domain cors_enable wayback_cli use_wayback_id wayback_memento_check wayback_mementos_only wayback_domain_original wayback_domain_original_sitemap wayback_code_clean wayback_comments_clean extra_assets_allow_query_strings zip_omit_download clean_query_extensions credentials_cleanup wget_protocol_relative_urls wget_cookies_nullify_user_agent rename_wget_tmps relativise_primarydomain_assets web_print_runtime_data) # Options that are not dependent on others
+options_nodeps_load=(add_search deploy deploy_remote use_snippets upload_zip ssl_checks url asset_domains page_element_domains require_login local_sitename url_wildcard_capture input_urls_file site_post_processing prune_query_strings archive web_source_exclude_dirs htmltidy add_extras wp_cli site_path zip_filename zip_download_folder deploy_path deploy_domain cors_enable wayback_cli use_wayback_id wayback_memento_check wayback_mementos_only wayback_anchors_original_domain wayback_domain_original wayback_domain_original_sitemap wayback_code_clean wayback_comments_clean extra_assets_allow_query_strings zip_omit_download clean_query_extensions credentials_cleanup wget_protocol_relative_urls wget_cookies_nullify_user_agent rename_wget_tmps relativise_primarydomain_assets web_print_runtime_data) # Options that are not dependent on others
