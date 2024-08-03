@@ -203,7 +203,7 @@ consolidate_assets() {
     for item in "${snapshot_path_list[@]}"; do
       snapshot_src_path="$url_path_prefix$item"
       snapshot_src_path=$(regex_escape "$snapshot_src_path")
-      sed_subs=('s~'"$snapshot_src_path/"'~'""'~g' "$opt")
+      sed_subs=('s|'"$snapshot_src_path/"'|'""'|g' "$opt")
       sed "${sed_options[@]}" "${sed_subs[@]}"
     done
   done
