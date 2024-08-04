@@ -562,8 +562,8 @@ url_percent_encode() {
   local charlist
   charlist=('?|%3F')
   for char in "${charlist[@]}"; do
-    search=$(echo "$char" | cut -d'|' -f1 )
-    replace=$(echo "$char" | cut -d'|' -f2 )
+    search=$(env echo "$char" | cut -d'|' -f1 )
+    replace=$(env echo "$char" | cut -d'|' -f2 )
     string=${string//"$search"/"$replace"}
   done
   printf "%s" "$string"
