@@ -568,3 +568,21 @@ url_percent_encode() {
   done
   printf "%s" "$string"
 }
+
+# Calculate the longest line in a file
+# or just its length
+# Expects one parameter: file name 
+# One optional parameter: a non-empty string to
+# return the longest line or else returns just
+# its length
+longest_line() {
+  if [ -n "${1+x}" ]; then
+    return 1
+  elif [ -n "${2+x}" ]; then
+    output=$(awk '{ if (length($0) > max) {max = length($0); maxline = $0} } END { print maxline }' "$1")
+  else
+    output=$(awk '{ if (length($0) > max) {max = length($0)} } END { print max }' "$1")
+  fi
+  printf "%s" "$output"
+}
+

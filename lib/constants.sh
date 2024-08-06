@@ -22,8 +22,8 @@
 ################################################
 # MakeStaticSite info
 ################################################
-version=0.30.1
-version_date='2 August 2024'
+version=0.30.2-beta1
+version_date='6 August 2024'
 version_header="MakeStaticSite version $version, released on $version_date."
 mss_license="GNU Affero General Public License version 3"
 mss_download="https://makestaticsite.sh/download/makestaticsite_latest.tar.gz"
@@ -158,6 +158,13 @@ asset_extensions_external="$web_element_extensions,$image_extensions,$font_exten
 
 # Other processing
 relativise_primarydomain_assets=yes # Convert absolute links to relative links for primary domain assets (y/n)?
+shorten_longlines=auto          # Break apart long lines to reduce processing time
+                                # - 'off' to not touch any files
+                                # - 'auto' to decide whether or not shorten on a per file basis according to criteria based on file size and number of lines in document
+                                # - 'on' to apply line shortening to all files                                 
+average_linelength_max=1000     # For 'auto', shorten lines when the average line length exceeds this number of characters. 
+longest_linelength_max=10000    # For 'auto', shorten lines when the longest line length exceeds this number of characters. 
+newline_inserts=('<\/script></<\/script>$'"'\n'"'<' '<\/style></<\/style>$'"'\n'"'<' '<\div></<\div>$'"'\n'"'<' '\\\"\,\\\"/\\\"\,$'"'\n'"'\\\"' '\}@media/\}$'"'\n'"'@media' '\}@font-face/\}$'"'\n'"'@font-face') # Replacements to be made for shortening line length (array)
 
 # Query strings
 prune_query_strings=yes         # Remove query strings appended to paths and URLs in anchors limited to files of type given in query_prune_list (y/n)?

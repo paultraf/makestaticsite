@@ -1399,6 +1399,34 @@ process_assets() {
   while IFS='' read -r line; do webpages+=("$line"); done < <(for item in "${webpages0[@]}"; do printf "%s\n" "${item}"; done | sort -u; )
   printf "\n"
 
+  num_webpages=${#webpages[@]}
+  # Break apart long lines to reduce processing time
+  if [ "$shorten_longlines" != "off" ] && (( num_webpages != 0 )); then
+    echo "Reducing the length of long lines in files (to speed up processing) ... "
+    count=0
+    print_progress "$count" "$num_webpages"; 
+    for item in "${webpages[@]}"; do
+      if [ "$shorten_longlines" = "auto" ]; then
+        item_chars=$(wc -m "$item" | awk '{print $1}')
+        item_newlines=$(wc -l "$item" | awk '{print $1}')
+        item_longest_line=$(longest_line "$item")        
+        if (( item_chars/item_newlines <= average_linelength_max )) && (( item_longest_line <= longest_linelength_max )); then continue
+        else
+          echo "Shortening lines in $item" "1"
+        fi
+      fi
+      file_contents=$(<"$item")
+      for item_replace in "${newline_inserts[@]}"; do
+        file_contents_cmd=(file_contents=\"\$'{'file_contents//"$item_replace"'}'\")
+        eval "${file_contents_cmd[0]}"  # Security note (eval): the input source for $item_replace is $newline_inserts, which is defined in constants.sh; it is safe.
+      done
+      printf "%s\n" "$file_contents" > "$item"
+      (( count++ ))
+      print_progress "$count" "$num_webpages"; 
+    done
+    printf "\n";
+  fi
+
   echo "Converting paths to become relative to imports and assets directories ... " 
 
   # Prepare adjustment for relative paths with assets directory
@@ -1469,10 +1497,9 @@ process_assets() {
     for i in "${urls_array[@]}"; do urls_array_2+=("${i/http*:/}"); done
 
     # Convert absolute links to relative links
-    num_webpages=${#webpages[@]}
-    count=1
+    count=0
+    print_progress "$count" "$num_webpages";
     for opt in "${webpages[@]}"; do
-      print_progress "$count" "$num_webpages"; (( count++ ))
 
       # but don't process XML files in guise of HTML files
       if grep -q "<?xml version" "$opt"; then
@@ -1581,6 +1608,8 @@ process_assets() {
           done
         done
       fi
+      (( count++ ))
+      print_progress "$count" "$num_webpages"
     done
     printf "\n"
 
