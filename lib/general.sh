@@ -427,7 +427,12 @@ EOT
 # Print a progress bar where iteration details known
 # Expects two numerical parameters, count and maximum count;
 # optional third parameter for number of columns for display
+# If no parameters are passed, then it calls itself for a
+# full-width progress bar, adds a newline and returns (i.e. done).
 print_progress() {
+  if [ -z ${1+x} ]; then
+    print_progress "100" "100"; printf "\n"; return
+  fi
   if [ -n "${3+x}" ]; then
     local col_width="$3"
   else

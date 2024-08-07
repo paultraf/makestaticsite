@@ -1171,7 +1171,7 @@ wget_extra_urls() {
   echo "webassets_all array has $webassets_all_count elements" "1"
 
   # Return if empty (nothing further found)
-  [ ${#webassets_all[@]} -eq 0 ] && { echo "None found. " "1"; (( wget_extra_urls_count=wget_extra_urls_depth+1 )); print_progress "100" "100"; printf "\n"; echo "Done."; return 0; }
+  [ ${#webassets_all[@]} -eq 0 ] && { echo "None found. " "1"; (( wget_extra_urls_count=wget_extra_urls_depth+1 )); print_progress; echo "Done."; return 0; }
   [ "$output_level" != "quiet" ] && echo " "
 
   # Pick out unique items
@@ -1188,7 +1188,7 @@ wget_extra_urls() {
   echo "Filter out all items not starting http" "1"
   webassets_http=()
   while IFS='' read -r line; do webassets_http+=("$line"); done < <(for item in "${webassets_unique[@]}"; do if [ "${item:0:4}" = "http" ]; then printf "%s\n" "${item}"; else continue; fi; done)
-  [ ${#webassets_http[@]} -eq 0 ] && { echo "None found. " "1"; (( wget_extra_urls_count=wget_extra_urls_depth+1 )); print_progress "100" "100"; printf "\n"; echo "Done."; return 0; }
+  [ ${#webassets_http[@]} -eq 0 ] && { echo "None found. " "1"; (( wget_extra_urls_count=wget_extra_urls_depth+1 )); print_progress; echo "Done."; return 0; }
   num_webassets_http="${#webassets_http[@]}"
   echo "webassets_http array has $num_webassets_http elements" "2"
   (( webasset_step_count++ ))
@@ -1230,7 +1230,7 @@ wget_extra_urls() {
   done)
   (( webasset_step_count=subcount+1 ))
 
-  [ ${#webassets_nohtml[@]} -eq 0 ] && { echo "None found. " "1"; (( wget_extra_urls_count=wget_extra_urls_depth+1 )); print_progress "100" "100"; printf "\n"; echo "Done."; return 0; }
+  [ ${#webassets_nohtml[@]} -eq 0 ] && { echo "None found. " "1"; (( wget_extra_urls_count=wget_extra_urls_depth+1 )); print_progress; echo "Done."; return 0; }
   echo "webassets_nohtml array has ${#webassets_nohtml[@]} elements" "2"
   (( webasset_step_count++ ))
   print_progress "$webasset_step_count" "$num_webasset_steps"
@@ -1256,7 +1256,7 @@ wget_extra_urls() {
   print_progress "$webasset_step_count" "$num_webasset_steps"
 
   # Return if empty (nothing further found)
-  [ "$num_webassets_omissions" -eq 0 ] && { echo "None found. " "1"; (( wget_extra_urls_count=wget_extra_urls_depth+1 )); print_progress "100" "100"; printf "\n"; echo "Done."; return 0; }
+  [ "$num_webassets_omissions" -eq 0 ] && { echo "None found. " "1"; (( wget_extra_urls_count=wget_extra_urls_depth+1 )); print_progress; echo "Done."; return 0; }
 
   if (( extra_assets_query_strings_limit < num_webassets_omissions )); then
     # Filter out URLs with query strings
@@ -1271,7 +1271,7 @@ wget_extra_urls() {
 
   echo "webassets array has ${#webassets[@]} elements" "2"
   # Return if empty (all those found were filtered out)
-  [ ${#webassets[@]} -eq 0 ] && { echo "None suitable found. " "1"; (( wget_extra_urls_count=wget_extra_urls_depth+1 )); print_progress "100" "100"; printf "\n"; echo "Done."; return 0; }
+  [ ${#webassets[@]} -eq 0 ] && { echo "None suitable found. " "1"; (( wget_extra_urls_count=wget_extra_urls_depth+1 )); print_progress; echo "Done."; return 0; }
 
   if [ "$wayback_url" = "yes" ]; then
     get_webassets_wayback
@@ -1293,7 +1293,7 @@ wget_extra_urls() {
       cat "$input_file_extra" >> "$input_file_extra_all"
     else
       # file empty - nothing further to process
-      (( wget_extra_urls_count = wget_extra_urls_depth+1 )); print_progress "100" "100"; printf "\n"; echo "No further URLs found.  Done."; return 0; 
+      (( wget_extra_urls_count = wget_extra_urls_depth+1 )); print_progress; echo "No further URLs found.  Done."; return 0; 
     fi
   fi
   (( webasset_step_count++ ))
@@ -1329,7 +1329,7 @@ wget_extra_urls() {
     fi
   done < "$input_file_extra"
   (( webasset_step_count++ ))
-  print_progress "100" "100"; printf "\n"
+  print_progress
   echo "Done."
 
   echo "Running Wget on these additional URLs with options: " "${wget_extra_core_options[@]}" "${wget_extra_options[@]}" "${wget_asset_options[@]}"
@@ -1403,14 +1403,14 @@ process_assets() {
   # Break apart long lines to reduce processing time
   if [ "$shorten_longlines" != "off" ] && (( num_webpages != 0 )); then
     echo "Reducing the length of long lines in files (to speed up processing) ... "
-    count=0
-    print_progress "$count" "$num_webpages"; 
+    (( count=0 ))
     for item in "${webpages[@]}"; do
+      print_progress "$count" "$num_webpages";
       if [ "$shorten_longlines" = "auto" ]; then
         item_chars=$(wc -m "$item" | awk '{print $1}')
         item_newlines=$(wc -l "$item" | awk '{print $1}')
         item_longest_line=$(longest_line "$item")        
-        if (( item_chars/item_newlines <= average_linelength_max )) && (( item_longest_line <= longest_linelength_max )); then continue
+        if (( item_chars/item_newlines <= average_linelength_max )) && (( item_longest_line <= longest_linelength_max )); then { (( count++ )); continue; }
         else
           echo "Shortening lines in $item" "1"
         fi
@@ -1422,9 +1422,8 @@ process_assets() {
       done
       printf "%s\n" "$file_contents" > "$item"
       (( count++ ))
-      print_progress "$count" "$num_webpages"; 
     done
-    printf "\n";
+    print_progress
   fi
 
   echo "Converting paths to become relative to imports and assets directories ... " 
@@ -1470,11 +1469,11 @@ process_assets() {
     else
       # Produce a copy of input_file_extra_all ready for sed to process with extended regular expressions
       if [ "$wayback_url" = "yes" ] && [ "$wayback_assets_mode" = "original" ]; then
-        input_string_extra=$(<"$input_file_wayback_extra")
+        input_string_extra=$(<"$input_file_wayback_extra") || echo "$msg_error: Expected file $input_file_wayback_extra not found!  No further absolute links will be converted to relative links."
         input_string_extra_all=$(regex_escape "$input_string_extra" "BRE")
         input_file_extra_all_BRE="${input_file_wayback_extra}.BRE"
       else
-        input_string_extra=$(<"$input_file_extra_all")
+        input_string_extra=$(<"$input_file_extra_all") || echo "$msg_error: no file $input_file_wayback_extra found!  No further absolute links will be converted to relative links."
         input_string_extra_all=$(regex_escape "$input_string_extra" "BRE")
         input_file_extra_all_BRE="${input_file_extra_all}.BRE"
       fi
@@ -1611,7 +1610,7 @@ process_assets() {
       (( count++ ))
       print_progress "$count" "$num_webpages"
     done
-    printf "\n"
+    print_progress
 
     num_domain_dirs=$(find "$mirror_dir/$mirror_archive_dir/" -maxdepth 1 -type d -name "*.*" | wc -l )
     if [ "$num_domain_dirs" != "1" ] && [ "$extra_assets_mode" = "contain" ]; then
