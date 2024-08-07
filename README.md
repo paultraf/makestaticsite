@@ -44,29 +44,30 @@ Please note that the system is not designed for [Wget2](https://gitlab.com/gnuwg
 ### Features
 
 * A straightforward command line interface
-* Able to create static versions of a wide range of dynamic websites
+* Able to create static versions of a wide range of dynamic websites, with support for retrieving content from the site root or any subdirectory 
 * Support for managing multiple sites, each with custom settings
-* Setup script guides users with an interactive dialogue and automatically generates a configuration file.
+* Setup script, which guides users with an interactive dialogue and automatically generates a configuration file.
 * During setup, choose from three run levels to determine the amount of customisation - from minimal to advanced.
-* In addition to the main host domain, additional assets such as JavaScript, CSS and images can be retrieved from other domains and subdomains.
+* In addition to the main host domain, additional assets such as JavaScript, CSS and images can be retrieved and collated from other domains and subdomains
 * A phased-based workflow separating different aspects in the build process
-* Manage multiple sites, each with custom settings defined in their own configuration file (and multiple config files can also be used for any given site).
+* Deep search for orphaned Web assets, later retrieved in further runs of Wget
 * Suitable for batch processes, allowing operations to be scaled up so that any or all of the sites are updated in one process.
-* Support for http basic authentication and/or CMS login (experimental, only tested with WordPress)
+* Support for HTTP basic authentication and/or CMS login (experimental, only tested with WordPress)
+* Partial support for sites archived by the [Wayback Machine](https://web.archive.org/) 
 * Runtime settings include verbosity (amount of information) for terminal output and logging to file
-* Option of a downloadable copy of the entire site (zip file) for offline use 
+* Option of a downloadable copy of the entire site (ZIP file) for offline use 
+* Local and remote (server) deployment options, including rsync over ssh and [Netlify](https://netlify.com).
 * For [WordPress](https://wordpress.org) installations, optional WP-CLI-based site streamlining with a drop-in search replacement (WP Offline Search plugin) that works offline.
 * Snippets &mdash; for tweaking page with offline variants using chunks of HTML.
-* Deep search for orphaned Web assets (phase 3), later retrieved in further runs of Wget (phase 5)
-* Assistance for W3C standards compliance with [HTML Tidy](https://www.html-tidy.org/). The system also generates a sitemap XML and `robots.txt` file to match the outputted files.
+* Assistance for W3C standards compliance with [HTML Tidy](https://www.html-tidy.org/). The system also generates a sitemap XML and `robots.txt` file under the primary domain to match the outputted files.
 
 ### Limitations
 
-* MakeStaticSite is prototype software, provided as-is and tested on only a few sites, but in the hope that it will prove useful and become community-supported
+* MakeStaticSite is prototype software, provided as-is and tested on only a few sites, but in the hope that it will prove useful and become community-supported.
 * The system is designed for the original GNU Wget, whereas most development effort is now on GNU Wget2.
-* Not a general crawler, but designed to retrieve from a single site, with supporting assets (CSS, multimedia, etc.) incorporated from other domains and subdomains
+* Not a general crawler, but designed to retrieve from a single site, with supporting assets (CSS, multimedia, etc.) incorporated from other domains and subdomains.
+* This is a _static_ HTML crawler that retrieves web content without running any JavaScript for client-side rendering, not a _dynamic_ crawler that can process the JavaScript on that page and then render it. Even so, the workflow architecture might support processing of web page outputs in this way.
 * It is not a good fit for sites that uses query strings extensively, as is the case for collections databases with a large inventory.  Whilst query strings are supported in the initial run of Wget, requests for URLs in the post-processing do not currently include query strings.
-* Links generated dynamically by JavaScript are not included.
 * The script can only provide a snapshot of comments, discussions, surveys, etc. that are provided by the Website itself; the interactivity of such components is generally lost.  In this case, this kind of interactivity will need to be provided by third-parties, typically through the use of embedded JavaScript.
 * Performance: MakeStaticSite output is not instant.  It typically takes up to a few minutes to build a site, which, depending on usage scenario, may or may not be a significant duration.  Some acceleration is possible by running Wget threads in parallel (see the `wget_threads` option).
 * For WordPress sites, using WP-CLI remotely over ssh may not be fully supported by hosting providers running jailed shells for shared hosting. In that case, WordPress updates need to be done manually.
@@ -93,6 +94,7 @@ This will create a `makestaticsite` directory.  Enter it and then make the scrip
 
     .
     ├── config/                 # site configuration files
+    ├── extras/                 # additional site files (copied over)
     ├── lib/                    # library files
     ├── log/                    # log files (generated)
     ├── tmp/                    # temporary files (generated)
@@ -103,9 +105,21 @@ This will create a `makestaticsite` directory.  Enter it and then make the scrip
     └── README.md
 
 
-## How to use
+## First run
 
-Once extracted, for the first use, at the command line enter the `makestaticsite` directory and run `./setup.sh` to get started.  You will be asked a series of questions (with suggested defaults) about the site you are mirroring with (for WordPress) options to tweak it beforehand; then, the precise `wget` options to create the mirror, how it should be deployed (locally or on a remote server), whether to create a zip file, and various other options.
+Once extracted, to try it out for the first time, at the command line enter the `makestaticsite` directory and run `./setup.sh` on a URL of your choosing.
+
+<pre>
+./setup.sh -u <em>url</em>
+</pre>
+
+This will set up a configuration file with default options, which is then supplied to the main script `makestaticsite.sh` to generate the site. The terminal output will provide various information, including the location of the output. 
+
+## Customised use 
+
+For standard usage, at the command line run `./setup.sh`
+
+You will be asked a series of questions (with suggested defaults) about the site you are mirroring with (for WordPress) options to tweak it beforehand; then, the precise `wget` options to create the mirror, how it should be deployed (locally or on a remote server), whether to create a zip file, and various other options.
 
 Once you have set up a configuration, `mysite.cfg` for a domain `example.com`, say, you can proceed to build the static version with: 
 <pre>
