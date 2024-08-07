@@ -19,6 +19,38 @@
 ##########################################################################
 
 
+0.30.2 (released on 2024-08-07)
+       * Maintenance with improved performance for processing assets. *
+        [lib/constants.sh]
+         New constants: shorten_longlines - whether to enable line shortening
+         to support asset processing; average_linelength_max - average line
+         length as a criterion for line shortening; longest_linelength_max -
+         longest line length as a criteron for line shortening; and
+         newline_inserts - list of search and replace expressions, including
+         newlines to reduce line lengths. 
+        [lib/general.sh]
+         url_percent_encode(): bug fix: use 'env echo' to prevent useless
+         output to log file.
+         New function longest_line() to compute a file's longest line and its
+         length.
+        [lib/mod_wayback.sh]
+         consolidate_assets(): Changed sed character separator from '~' to
+         '|' where URL expected as input; '|' is neither a reserved nor
+         unreserved character in RFC 3986 so would need to be escaped if used
+         in a URL (as %7C). Added progress bar.
+         print_progress(): Added case for no parameters - to call itself with
+         full-width bar, print newline and return.
+         process_asset_anchors(): Added progress bar.
+        [makestaticsite.sh]
+         Streamlined calls to progress_bar on completion of progress bar.
+         process_assets(): introduced routine to break apart long lines to
+         reduce processing time for link conversion using sed.  When printing
+         the progress bar, made sure to print the initial state of 0%.
+        [README.md]
+         Updated features and limitations, particularly to reference support
+         for the Wayback Machine.  
+         Added section 'First run' as a usage quickstart.
+
 0.30.1 (released on 2024-08-02)
        * Maintenance: bug fixes to enhance support for Wayback Machine *
         [lib/constants.sh]
