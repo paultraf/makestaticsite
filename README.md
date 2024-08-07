@@ -15,6 +15,8 @@ MakeStaticSite (project site [https://makestaticsite.sh/](https://makestaticsite
   * [Layout](#layout)
   
 * [How to use](#how-to-use)
+  * [First run](#first-run)
+  * [Customisation](#customisation)
   * [Workflow](#workflow)
   * [Options](#options)
   * [Snippets](#snippets)
@@ -105,7 +107,9 @@ This will create a `makestaticsite` directory.  Enter it and then make the scrip
     └── README.md
 
 
-## First run
+## How to use
+
+### First run
 
 Once extracted, to try it out for the first time, at the command line enter the `makestaticsite` directory and run `./setup.sh` on a URL of your choosing.
 
@@ -115,7 +119,7 @@ Once extracted, to try it out for the first time, at the command line enter the 
 
 This will set up a configuration file with default options, which is then supplied to the main script `makestaticsite.sh` to generate the site. The terminal output will provide various information, including the location of the output. 
 
-## Customised use 
+### Customisation
 
 For standard usage, at the command line run `./setup.sh`
 
