@@ -131,8 +131,115 @@ initialise_wayback() {
   fi
 }
 
-# Apply Wayback-specific filters to determine web assets (URLs)
-get_webassets_wayback() {
+
+# Various Wayback-related URLs and paths
+wayback_url_paths() {
+  # Locate source directories to copy
+  url_path_snapshot="${url_path/$wayback_date_to/ }"
+  url_path_snapshot_prefix=$(echo "$url_path_snapshot" | cut -d' ' -f1 | cut -d'/' -f1 )
+  url_path_snapshot=$(echo "$url_path_snapshot" | cut -d' ' -f2- )
+  url_path_snapshot="$wayback_date_to$url_path_snapshot"
+  url_path_sibling="$url_path_snapshot"
+  url_path_prefix=
+  for ((i=1;i<url_path_depth;i++)); do
+    url_path_prefix+="../"
+  done
+  url_path_sibling="$url_path_prefix$url_path_sibling"
+  src_path_snapshot="$working_mirror_dir/$url_path_snapshot_prefix"
+}
+
+
+# Apply filters on candidate Wayback URLs based on domains and paths,
+# and remove URLs originally from external domains.
+# (Currently, there is no filtering based on wayback_timestamp_policy.)
+wayback_filter_domains() {
+  wayback_url_paths
+  webassets_wayback=()
+  url_regex=$(echo "$url"|sed 's|\(/\)'"$wayback_datetime_regex"'|\1'"$wayback_datetime_regex"'|') # turn original URL into wildcard expression
+  url_regex=${url_regex/"$url_base"/} # trim the URL base to support relative links
+
+  # Add a constraint on Wget searches
+  if (( wget_extra_urls_count == 1 )); then
+    wget_extra_core_options+=( "--accept-regex" "\"$url_regex\"" ) # Every link in the Wayback Machine is to an absolute URL
+    wget_extra_options+=("--max-redirect=1") # Reduce the risk of Wget fetching external resources whilst allowing the possibility for a standard internal redirect to fetch nearest timestamp 
+  fi
+
+  # Constrain further Wget runs to Wayback URLs involving the primary domain
+  # and not got a valid asset extension
+  for opt in "${webassets_http[@]}"; do
+    opt_regex=$(echo "$opt"|sed 's|\(/\)'"$wayback_datetime_regex"'|\1'"$wayback_datetime_regex"'|') # turn original URL into wildcard expression
+    # Add a further condition to check whether asset already in list modulo timestamps
+    if [[ $opt =~ $url_regex ]] && [[ ! ${webassets_wayback0[@]} =~ $opt_regex ]]; then
+      opt=$(env echo $opt | sed 's/#[[:alnum:]]*$//') # remove internal anchors
+      webassets_wayback0+=("$opt") 
+    else
+      continue                  # URL is not allowed, so drop
+    fi
+  done
+
+  # Add further filters based on a list of existing downloaded URLs.
+  # Wget run 1 will only generate one timestamped folder with web pages,
+  # but subsequent runs will potentially generate many more, depending on
+  # the URLs harvested from the initially downloaded pages.
+  # For web pages, timestamped folder names contain only numbers.
+  cd "$src_path_snapshot" || { echo "$msg_error: Unable to enter $src_path_snapshot.  Aborting"; exit; }
+
+  snapshot_path_list=()
+  while IFS= read -r line; do
+    line="${line#./}"
+    snapshot_path_list+=("$line")
+  done <<<"$(find . -mindepth $wayback_snapshot_path_depth -maxdepth $wayback_snapshot_path_depth -print)"
+
+  wayback_domain_exceptions=()
+  for snapshot_dir in "${snapshot_path_list[@]}"; do
+    while IFS= read -r item; do
+      item="${item#.}"
+      # To reconstruct a Memento URL from a Wget-generated path,
+      # need to insert a '/' after the second protocol instance
+      item="${item/\/http:\//\/http:\/\/}" 
+      item="${item/\/https:\//\/https:\/\/}"
+
+      # Now generate wildcard version
+      item_regex=$(echo "$item"|sed 's|\(/\)'"$wayback_datetime_regex"'|\1'"$wayback_datetime_regex"'|')
+
+      # If the candidate item is not already in the list of Wayback domain-based exceptions, then add it
+      if [[ ! ${wayback_domain_exceptions[@]} =~ $item_regex ]]; then
+#      if [[ ! " ${wayback_domain_exceptions[*]} " =~ [[:space:]]${item_regex}[[:space:]] ]]; then
+        wayback_domain_exceptions+=("$item_regex")
+      fi
+
+      # Take account of index pages implicit by requests to URLs ending in '/'
+      # by truncating Wget default page (usually index.html), as appropriate
+      if [[ $item =~ $wget_default_page$ ]]; then
+        item_regex="${item_regex/%\/$wget_default_page/\/}" # (need to avoid false positives such as cindex.html and index.htmlx)
+        if [[ ! " ${wayback_domain_exceptions[*]} " =~ [[:space:]]${item_regex}[[:space:]] ]]; then
+          wayback_domain_exceptions+=("$item_regex")
+        fi
+      fi
+    done <<<"$(find "." -type f ! -empty -print)"
+  done
+  IFS=$'\n' wayback_exceptions=($(sort -u <<<"${wayback_domain_exceptions[*]}")); unset IFS
+
+  ## Apply filter
+  webassets_wayback=()
+  while IFS= read -r line; do
+    webassets_wayback+=("$line");
+  done < <(
+  for opt in "${webassets_wayback0[@]}"; do
+    for exception in "${wayback_exceptions[@]}"; do
+      if [[ $opt =~ $exception$ ]]; then
+        continue 2              # URL is not allowed, so drop
+      fi
+    done
+    printf "%s\n" "$opt"
+  done)
+
+  IFS=$'\n' webassets_http=($(sort -u <<<"${webassets_wayback[*]}")); unset IFS
+  cd "$mirror_dir"
+}
+
+# Apply Wayback snapshot-related filters to determine web assets (URLs)
+wayback_filter_snapshots() {
   webassets_wayback=()
   if [ "$wayback_assets_mode" = "original" ] && (( wget_extra_urls_count == 1 )); then
     # Pick out unique items, accepting multiple snapshots for the same file and write out
@@ -143,7 +250,7 @@ get_webassets_wayback() {
     echo "webassets_unique_snapshots array has ${#webassets_unique_snapshots[@]} elements" "2"
     printf "%s\n" "${webassets_unique_snapshots[@]}" > "$input_file_wayback_extra"
   fi
-  # Apply filters
+  # Apply timestamp-related filters
   while IFS='' read -r line; do webassets_wayback+=("$line"); done < <(for item in "${webassets[@]}"; do printf "%s\n" "${item}"; done |
     if [ "$wayback_timestamp_policy" = "exact" ]; then
       # Only match (and hence download) assets with given timestamp
@@ -163,18 +270,7 @@ consolidate_assets() {
   echo "Consolidating snapshot assets in a single location, reflecting original layout ... "
   print_progress "0" "100";
 
-  # Locate source directories to copy
-  url_path_snapshot="${url_path/$wayback_date_to/ }"
-  url_path_snapshot_prefix=$(echo "$url_path_snapshot" | cut -d' ' -f1 | cut -d'/' -f1 )
-  url_path_snapshot=$(echo "$url_path_snapshot" | cut -d' ' -f2- )
-  url_path_snapshot="$wayback_date_to$url_path_snapshot"
-  url_path_sibling="$url_path_snapshot"
-  url_path_prefix=
-  for ((i=1;i<url_path_depth;i++)); do
-    url_path_prefix+="../"
-  done
-  url_path_sibling="$url_path_prefix$url_path_sibling"
-  src_path_snapshot="$working_mirror_dir/$url_path_snapshot_prefix"
+  wayback_url_paths
   cd "$src_path_snapshot" || echo "Unable to enter $src_path_snapshot"
   snapshot_exclude_dirs=()
   snapshot_list=("$wayback_date_to")
@@ -187,12 +283,11 @@ consolidate_assets() {
     snapshot_list+=("$line")
   done <<<"$(find "." -maxdepth 1 -type d ! -empty "${snapshot_exclude_dirs[@]}" -print)"
 
-  (( snapshot_path_depth=3 )) # This is the number of directories to reach inside a domain folder
   snapshot_path_list=()
   while IFS= read -r line; do
     line="${line#./}"
     snapshot_path_list+=("$line")
-  done <<<"$(find . -mindepth $snapshot_path_depth -type d -not -path "./$wayback_date_to" -not -path "./$wayback_date_to/"\* -print)"
+  done <<<"$(find . -mindepth $wayback_snapshot_path_depth -maxdepth $wayback_snapshot_path_depth -type d -not -path "./$wayback_date_to" -not -path "./$wayback_date_to/"\* -print)"
 
   cd "$working_mirror_dir" || { echo "msg_error: Unable to return to $working_mirror_dir. Aborting."; exit; } 
 
@@ -266,20 +361,22 @@ process_asset_anchors() {
   echo "Converting absolute URLs to relative URLs for Wayback internal anchors ... "
   print_progress "0" "100";
 
-  url_timeless=${url/${wayback_date_from_to}/[0-9]+}
+  url_timeless=${url/${wayback_date_from_to}/[0-9]+[a-z]\{0,2\}_\?} # This could be tightened - use $wayback_datetime_regex
   url_timeless=$(regex_escape "$url_timeless")
   url_timeless=$(regex_apply "$url_timeless")
   url_timeless=${url_timeless//\\[/[} # final adjustment to remove '\' in front of '['
+  url_base_regex=$(regex_escape "$url_base")
+  url_timeless_nodomain=${url_timeless/"$url_base_regex"/}   # Truncated version
 
-  # Generate a list of webassets
+  # Generate lists of webasset paths
   cd "$url_path"
-  webpages_output1=() # to store file paths
-  webpages_output2=() # to store directory paths
+  webpages_output1=() # to store file paths to web pages only
+  webpaths_output1=() # to store file paths to web assets for internal links
+  webpaths_output2=() # to store directory paths for internal links
 
   while IFS='' read -r line; do
     webpages_output1+=("$line")
     line=${line:2}
-    url_line=$(regex_escape "$url_timeless$line")
   done < <(
   for file_ext in "${asset_find_names[@]}"; do
     find "." -type f -name "$file_ext" "${asset_exclude_dirs[@]}" -print
@@ -287,15 +384,16 @@ process_asset_anchors() {
   num_webpages1="${#webpages_output1[@]}"
 
   while IFS='' read -r line; do
-    webpages_output2+=("$line")
     line=${line:2}
-    url_line=$(regex_escape "$url_timeless$line")
-  done < <(
-  for file_ext in "${asset_find_names[@]}"; do
-    find "." -type d "${asset_exclude_dirs[@]}" -print
-  done)
+    webpaths_output1+=("$line")
+  done < <(find "." -type f "${asset_exclude_dirs[@]}" -print)
 
-  # Carry out substitutions
+  while IFS='' read -r line; do
+    webpaths_output2+=("$line")
+    line=${line:2}
+  done < <(find "." -type d "${asset_exclude_dirs[@]}" -print)
+
+  # Carry out substitutions in web pages
   count=0
   for opt in "${webpages_output1[@]}"; do
     print_progress "$count" "$num_webpages1";  
@@ -306,19 +404,21 @@ process_asset_anchors() {
       pathpref+="../";
     done
       
-    for item in "${webpages_output1[@]}"; do
-      item=${item:2}
+    for item in "${webpaths_output1[@]}"; do
       item=$(regex_escape "$item")
-      sed_subs=('s|\('"$url_timeless"'\)\('"$item"'\)|'"$pathpref\2"'|g' "$opt")
-      sed "${sed_options[@]}" "${sed_subs[@]}"
+      sed_subs1=('s|\('"$url_timeless"'\)\('"$item"'\)|'"$pathpref\2"'|g' "$opt")
+      sed_subs2=('s|\([\"'\'']\)\('"$url_timeless_nodomain"'\)\('"$item"'\)|'"\1$pathpref\3"'|g' "$opt")
+      sed "${sed_options[@]}" "${sed_subs1[@]}"
+      sed "${sed_options[@]}" "${sed_subs2[@]}"
     done
-
-    # Conversion of anchors, based on wildcard timestamps and not limited to asset types, to assist in internal navigation
-    for item in "${webpages_output2[@]}"; do
+    # Conversion of anchors make implicit index pages explicit, to assist in internal navigation
+    for item in "${webpaths_output2[@]}"; do
       item=${item:2}
       item=$(regex_escape "$item")
-      sed_subs=('s|\('"$url_timeless"'\)\('"$item"'\)\([\"'\'']\)|'"$pathpref\2index.html\3"'|g' "$opt")
-      sed "${sed_options[@]}" "${sed_subs[@]}"
+      sed_subs1=('s|\('"$url_timeless"'\)\('"$item"'\)\([\"'\'']\)|'"$pathpref\2index.html\3"'|g' "$opt")
+      sed_subs2=('s|\([\"'\'']\)\('"$url_timeless_nodomain"'\)\('"$item"'\)\([\"'\'']\)|'"\1$pathpref\3index.html\4"'|g' "$opt")
+      sed "${sed_options[@]}" "${sed_subs1[@]}"
+      sed "${sed_options[@]}" "${sed_subs2[@]}"
     done
     (( count++ ))
   done
@@ -336,7 +436,11 @@ wayback_output_clean() {
     echo "Delete (JavaScript) Playback code inserted by Wayback Machine ... " "1"
     for opt in "${webpages[@]}"; do
       tmp_file="$opt.tmp"
-      awk -v RS='\x7' '{sub(/'"$wayback_code_re"'/,"<head>"); print}' "$opt" > "$tmp_file" && mv "$tmp_file" "$opt"
+      if [ -f "$opt" ]; then
+        awk -v RS='\x7' '{sub(/'"$wayback_code_re"'/,"<head>"); print}' "$opt" > "$tmp_file" && mv "$tmp_file" "$opt"
+      else
+        echo "$msg_warning: File $opt not found, so not running awk on it." "1"
+      fi
     done
   fi
 
@@ -345,7 +449,11 @@ wayback_output_clean() {
     echo "Delete HTML comments inserted by Wayback Machine ... " "1"
     for opt in "${webpages[@]}"; do
       tmp_file="$opt.tmp"
-      awk -v RS='\x7' '{sub(/'"$wayback_comments_re"'/,"</html>"); print}' "$opt" > "$tmp_file" && mv "$tmp_file" "$opt"
+      if [ -f "$opt" ]; then
+        awk -v RS='\x7' '{sub(/'"$wayback_comments_re"'/,"</html>"); print}' "$opt" > "$tmp_file" && mv "$tmp_file" "$opt"
+      else
+        echo "$msg_warning: File $opt not found, so not running awk on it." "1"
+      fi
     done
   fi
 }

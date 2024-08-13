@@ -1198,24 +1198,32 @@ wget_extra_urls() {
   # (this filter is the most process-intensive)
   (( count=0 ))
   echo "Filter out web pages and newsfeeds (limit to non-HTML assets, such as images and JS files)" "1"
-  webassets_nohtml=()
+  webassets_filter_html=()
   assets_or='\.('${asset_extensions//,/|}')'
   assets_or_external='\.('${asset_extensions_external//,/|}')'
   (( num_webasset_steps_nohtml=num_webasset_steps-5 )) # Progress bar: this is most of the processing
+
+  # Special filtering routines for the Wayback Machine
+  if [ "$wayback_url" = "yes" ]; then
+    wayback_filter_domains
+  fi
+
   while IFS='' read -r line; do
     count=$(echo "$line" | awk -F'|' '{print $1}')
     assetline=$(echo "$line" | awk -F'|' '{print $2}')
     if [ "${assetline:0:4}" = "http" ]; then
-      webassets_nohtml+=("$assetline");
+      webassets_filter_html+=("$assetline");
     fi
     (( subcount=webasset_step_count+(num_webasset_steps_nohtml*count/num_webassets_http) ))
     print_progress "$subcount" "$num_webasset_steps" "$col_width"
   done < <(for i in "${!webassets_http[@]}"; do
     opt="${webassets_http[$i]}"
-    if [ "$asset_extensions" != "" ]; then
+    if [ "$wayback_url" = "yes" ]; then # no extension is defined and we assume web pages already filtered
+      echo "$opt" > /dev/null && printf "%s|%s\n" "$i" "$opt";
+    elif [ "$asset_extensions" != "" ]; then
       # Loop over an inclusion list of allowable extensions
       opt_domain=$(printf "%s\n" "$opt" | awk -F/ '{print $3}' | awk -F: '{print $1}')
-      if [[ ' '${page_element_domains_array[*]}' ' =~ ' '$opt_domain' ' ]]; then
+      if [[ ' '${page_element_domains_array[*]}' ' =~ ' '$opt_domain' ' ]]; then # satisfied vacuously for all Wayback URLs
         echo "$opt" | grep -Ei "$assets_or_external$" > /dev/null && printf "%s|%s\n" "$i" "$opt";
       else
         echo "$opt" | grep -Ei "$assets_or$" > /dev/null && printf "%s|%s\n" "$i" "$opt";
@@ -1230,8 +1238,8 @@ wget_extra_urls() {
   done)
   (( webasset_step_count=subcount+1 ))
 
-  [ ${#webassets_nohtml[@]} -eq 0 ] && { echo "None found. " "1"; (( wget_extra_urls_count=wget_extra_urls_depth+1 )); print_progress; echo "Done."; return 0; }
-  echo "webassets_nohtml array has ${#webassets_nohtml[@]} elements" "2"
+  [ ${#webassets_filter_html[@]} -eq 0 ] && { echo "None found. " "1"; (( wget_extra_urls_count=wget_extra_urls_depth+1 )); print_progress; echo "Done."; return 0; }
+  echo "webassets_filter_html array has ${#webassets_filter_html[@]} elements" "2"
   (( webasset_step_count++ ))
   print_progress "$webasset_step_count" "$num_webasset_steps"
   if [ ${#wget_extra_options[@]} -ne 0 ]; then
@@ -1242,13 +1250,13 @@ wget_extra_urls() {
     exclude_dirs=$(printf "%s\n" "$wget_plus_ops"| grep -o "\-X[[:space:]]*[[:alnum:]/,\-]*" | grep -o "/.*"; exit 0)
     temp_IFS=$IFS; IFS=","; read -r -a exclude_arr <<< "$exclude_dirs"; IFS=$temp_IFS
     if [ ${#exclude_arr[@]} -eq 0 ]; then
-      webassets_omissions=("${webassets_nohtml[@]}")
+      webassets_omissions=("${webassets_filter_html[@]}")
     else
       webassets_omissions=()
-      while IFS='' read -r line; do webassets_omissions+=("$line"); done < <(for opt in "${webassets_nohtml[@]}"; do path="${opt/$url_bas/}"; for exclusion in "${exclude_arr[@]}"; do [ "$path" = "$exclusion" ] || [[ $path =~ ^$exclusion/.* ]] && continue 2; done; printf "%s\n" "$opt"; done)
+      while IFS='' read -r line; do webassets_omissions+=("$line"); done < <(for opt in "${webassets_filter_html[@]}"; do path="${opt/$url_bas/}"; for exclusion in "${exclude_arr[@]}"; do [ "$path" = "$exclusion" ] || [[ $path =~ ^$exclusion/.* ]] && continue 2; done; printf "%s\n" "$opt"; done)
     fi
   else
-    webassets_omissions=("${webassets_nohtml[@]}")
+    webassets_omissions=("${webassets_filter_html[@]}")
   fi
   num_webassets_omissions="${#webassets_omissions[@]}"
   echo "webassets_omissions array has $num_webassets_omissions elements" "2"
@@ -1274,7 +1282,7 @@ wget_extra_urls() {
   [ ${#webassets[@]} -eq 0 ] && { echo "None suitable found. " "1"; (( wget_extra_urls_count=wget_extra_urls_depth+1 )); print_progress; echo "Done."; return 0; }
 
   if [ "$wayback_url" = "yes" ]; then
-    get_webassets_wayback
+    wayback_filter_snapshots
   fi
 
   # URL decode for Wget calls: revert &amp; to & 
