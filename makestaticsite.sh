@@ -613,6 +613,11 @@ initialise_variables() {
   # Define a timestamp
   timestamp=$(timestamp "$timezone")
 
+  # Further variable initialisation for Wayback URLs
+  if [ "$wayback_url" = "yes" ]; then
+    wayback_url_paths
+  fi
+
   # Script sign-off message
   msg_signoff="Ending run of MakeStaticSite."
 }
@@ -1046,6 +1051,10 @@ mirror_site() {
     fi
   else
     wget_mirror
+    if [ "$wayback_url" = "yes" ]; then
+      wayback_wget_postprocess
+      cd "$mirror_dir" || { echo; echo "$msg_error: can't access working directory for the mirror ($mirror_dir)" >&2; exit 1; }
+    fi
   fi
 }
 
@@ -1351,6 +1360,9 @@ wget_extra_urls() {
   wget_error_codes "$?"
   error_set -e
   ((wget_extra_urls_count++))
+  if [ "$wayback_url" = "yes" ]; then
+    wayback_wget_postprocess
+  fi
 }
 
 
