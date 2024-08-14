@@ -546,10 +546,10 @@ initialise_variables() {
   else
     wget_plus_ops="$wget_plus_ops $rmatch0,$wget_reject_clause"
   fi
-  IFS=" " read -r -a wget_extra_options <<< "$wget_plus_ops"
+  IFS=" " read -ra wget_extra_options <<< "$wget_plus_ops"
 
   # Hide http basic authentication password
-  IFS=" " read -r -a wget_extra_options_print <<< "$(printf "%s" "$wget_plus_ops" | sed "s/password[[:space:]][^[:space:]]*/password *********/")"
+  IFS=" " read -ra wget_extra_options_print <<< "$(printf "%s" "$wget_plus_ops" | sed "s/password[[:space:]][^[:space:]]*/password *********/")"
 
   # If $wget_plus_ops contains '--spider' then don't deploy, use snippets or postprocess
   [[ "$wget_plus_ops" == *"--spider"* ]] && { use_snippets="no"; wget_extra_urls="no"; site_post_processing="no"; }
@@ -985,6 +985,8 @@ wget_mirror() {
     fi
   fi
 
+  # Main run of Wget #
+  printf "%s\n" "$msg_mirror_start"
   echo "Running Wget with options:" "${wget_core_options[@]}" "${wget_extra_options_print[@]}" "${wget_options[@]}"
 
   # Remove previous zip upload
@@ -992,9 +994,6 @@ wget_mirror() {
   if [ -f "$zip_archive_old" ]; then
     rm "$zip_archive_old" || echo "$msg_warning: Unable to delete existing zip file at $zip_archive_old"
   fi
-
-  # Main run of Wget #
-  printf "%s" "$msg_mirror_start"
 
   error_set +e  # override because error traps set specially for Wget
   if [ "$robots_create" != "yes" ]; then
@@ -1092,7 +1091,7 @@ generate_extra_domains() {
     all_domains+=",$extra_domains"
   fi
 
-  IFS="," read -r -a page_element_domains_array <<< "$page_element_domains"
+  IFS="," read -ra page_element_domains_array <<< "$page_element_domains"
 }
 
 # Augment Wget's snapshot by retrieving missed URLs
@@ -1106,7 +1105,7 @@ wget_extra_urls() {
 
     if [ "$prune_query_strings" != "no" ]; then
       echo "Pruning links to assets that have query strings appended" "1"
-      IFS="," read -r -a prune_list <<< "$query_prune_list"
+      IFS="," read -ra prune_list <<< "$query_prune_list"
       for opt in "${prune_list[@]}"; do
         # Prune file names on disk
         find "$working_mirror_dir" -type f -name "*\.$opt\?*" -exec sh -c 'mv "$0" "${0%%\?*}"' {} \;   
@@ -1145,7 +1144,7 @@ wget_extra_urls() {
   # Generate search URL prefixes combining primary domain and extra domains
   generate_extra_domains
 
-  echo -n "Generating a list of extra asset URLs for Wget (run number $wget_extra_urls_count) ... "
+  echo "Generating a list of extra asset URLs for Wget (run number $wget_extra_urls_count out of $wget_extra_urls_depth max) ... "
   if [ "$extra_assets_allow_query_strings" = "no" ]; then
     url_grep="$(assets_search_string "$all_domains" "[^\?\"'<) ]+")" # ERE notation
   else
@@ -1257,7 +1256,7 @@ wget_extra_urls() {
     echo "Filter out URLs whose paths match an excluded directory (via subloop)" "1"
     # We assume that grep works as expected, but should really trap exit code 2
     exclude_dirs=$(printf "%s\n" "$wget_plus_ops"| grep -o "\-X[[:space:]]*[[:alnum:]/,\-]*" | grep -o "/.*"; exit 0)
-    temp_IFS=$IFS; IFS=","; read -r -a exclude_arr <<< "$exclude_dirs"; IFS=$temp_IFS
+    temp_IFS=$IFS; IFS=","; read -ra exclude_arr <<< "$exclude_dirs"; IFS=$temp_IFS
     if [ ${#exclude_arr[@]} -eq 0 ]; then
       webassets_omissions=("${webassets_filter_html[@]}")
     else
@@ -1475,6 +1474,8 @@ process_assets() {
   # General case: conversion of absolute links to relative links
   if [ ${#webpages[@]} -eq 0 ]; then
     echo "No web pages to process.  Done." "1"
+  elif [ ! -s "$input_file_wayback_extra" ] && [ "$url_wildcard_capture" != "yes" ]; then
+    echo "No URLs to appy in search and replace.  Done." "1"
   elif [ "$cut_dirs" = "0" ]; then
     # Initialise URLs array
     urls_array=()
@@ -1504,9 +1505,9 @@ process_assets() {
         domain_BRE=$(regex_escape "$domain" "BRE")
         domain_BRE=${domain_BRE//\\/\\\\\\} # need to escape \, so replace \ with \\\ .
         if [ "$url_has_path" = "no" ] || [ "$relativise_primarydomain_assets" = "no" ]; then
-          if read -d '' -r -a urls_array; then :; fi < <(grep -v "//$domain_BRE" "$input_file_extra_all_BRE" | sed 's~&~&amp;~g')
+          while IFS= read -r line; do line=${line//&/&amp;}; urls_array+=("$line"); done < <(grep -v "//$domain_BRE" "$input_file_extra_all_BRE")
         else
-          if read -d '' -r -a urls_array; then :; fi < <(< "$input_file_extra_all_BRE" sed 's~&~&amp;~g')
+          while IFS= read -r line; do line=${line//&/&amp;}; urls_array+=("$line"); done < "$input_file_extra_all_BRE"
         fi
       fi
     fi
@@ -1704,7 +1705,7 @@ process_assets() {
       if [ ${#extra_dirs_list[@]} -ne 0 ]; then
         for pd in "${extra_dirs_list[@]}"; do
           for ((j=0;j<depth-1;j++)); do
-            IFS="/" read -r -a pd_array <<< "$pd"
+            IFS="/" read -ra pd_array <<< "$pd"
             (( pathpref_length=${#pathpref}-(j*5) ))
             src_path=$(printf "%s" "$pathpref" | cut -b -"$pathpref_length" | tr -d '\n'; printf "%s" "${pd_array[$j]}")
             (( k=j+1 ))
@@ -1844,7 +1845,7 @@ site_postprocessing() {
   
   printf "Converting feed files and references from index.html to index.xml ... "
   find ./ -depth -type f -path "*feed/index.html" -exec sh -c 'mv "$1" "${1%.html}.xml"' _ '{}' \;
-  IFS=" " read -r -a webpages <<< "$(find_web_pages "." "$feed_html")"
+  IFS=" " read -ra webpages <<< "$(find_web_pages "." "$feed_html")"
   if [ ${#webpages[@]} -ne 0 ]; then
     for opt in "${webpages[@]}"; do
       sed_subs=('s~'"$feed_html"'~'"$feed_xml"'~g' "$opt")
@@ -2001,7 +2002,7 @@ clean_mirror() {
     sitemap_loc_files=()
 
     # Generate find params string based on $sitemap_file_extensions
-    IFS="," read -r -a sitemap_file_exts <<< "$sitemap_file_extensions"
+    IFS="," read -ra sitemap_file_exts <<< "$sitemap_file_extensions"
     for ext in "${sitemap_file_exts[@]}"; do
       while IFS='' read -r line; do sitemap_loc_files+=("$line"); done < <(find . -type f  -name "*.$ext")
     done
@@ -2167,7 +2168,7 @@ process_snippets() {
         [ "$tag" = "$local_sitename" ] && break
       # Read data
       elif [[ "$read_data" = true ]]; then
-        read -r -a strarr <<< "$line"
+        read -ra strarr <<< "$line"
         src_file=${strarr[0]}
         sub_input_file=$sub_files_dir'/'$src_file
         echo -e "input file $sub_input_file" "1"
@@ -2254,7 +2255,7 @@ create_zip() {
   fi
   zip_options="-q -r $zip_archive $mirror_archive_dir"
   [ "$zip_omit_download" = "yes" ] && zip_options+=" -x $mirror_archive_dir$hostport_dir/$zip_download_folder/*" 
-  IFS=" " read -r -a zip_options_all <<< "$zip_options"
+  IFS=" " read -ra zip_options_all <<< "$zip_options"
   zip "${zip_options_all[@]}"
   cd "$script_dir"
   echo "ZIP archive created at $mirror_dir/$zip_archive."
