@@ -111,6 +111,7 @@ initialise_wayback() {
     wget_inputs_wayback_all="$wget_inputs_extra-${myconfig}-wayback-all.txt" # cumulative input file
     wget_inputs_wayback_extra="$wget_inputs_extra-${myconfig}-wayback.txt" # single run input file
     input_file_wayback_extra="$script_dir/$tmp_dir/$wget_inputs_wayback_extra"  # Input file for a single run of Wget extra assets (to be generated)
+    touchmod "$input_file_wayback_extra"
     input_file_wayback_extra_all="$script_dir/$tmp_dir/$wget_inputs_wayback_all"  # Input file for Wget extra assets accumulated over multiple runs (to be generated)
     touchmod "$input_file_wayback_extra_all"
     if (( phase < 3 )); then
@@ -153,7 +154,6 @@ wayback_url_paths() {
     url_path_prefix+="../"
   done
   url_path_sibling="$url_path_prefix$url_path_sibling"
-  src_path_snapshot="$working_mirror_dir/$url_path_snapshot_prefix"
 }
 
 
