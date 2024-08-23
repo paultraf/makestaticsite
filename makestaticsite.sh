@@ -1193,7 +1193,7 @@ wget_extra_urls() {
       else
         grep -Eroha "$item" "$working_mirror_dir" "${asset_grep_includes[@]}"
       fi)
-    print_progress "$count" "$url_grep_array_count" "$col_width";
+    print_progress "$count" "$url_grep_array_count"
     (( count++ ))
   done
   webassets_all_count=${#webassets_all[@]}
@@ -1207,11 +1207,11 @@ wget_extra_urls() {
   echo "Pick out unique items" "1"
   webassets_unique=()
   (( webasset_step_count++ ))
-  print_progress "$webasset_step_count" "$num_webasset_steps" "$col_width"
+  print_progress "$webasset_step_count" "$num_webasset_steps"
   while IFS='' read -r line; do webassets_unique+=("$line"); done < <(for item in "${webassets_all[@]}"; do printf "%s\n" "${item}"; done | sort -u)
   echo "webassets_unique array has ${#webassets_unique[@]} elements" "2"
   (( webasset_step_count++ ))
-  print_progress "$webasset_step_count" "$num_webasset_steps" "$col_width"
+  print_progress "$webasset_step_count" "$num_webasset_steps"
 
   # Filter out all items not starting http
   echo "Filter out all items not starting http" "1"
@@ -1221,7 +1221,7 @@ wget_extra_urls() {
   num_webassets_http="${#webassets_http[@]}"
   echo "webassets_http array has $num_webassets_http elements" "2"
   (( webasset_step_count++ ))
-  print_progress "$webasset_step_count" "$num_webasset_steps" "$col_width"
+  print_progress "$webasset_step_count" "$num_webasset_steps"
 
   # Filter out web pages and newsfeeds; limit to non-HTML assets, such as images and JS files
   # (this filter is the most process-intensive)
@@ -1245,7 +1245,7 @@ wget_extra_urls() {
       webassets_filter_html+=("$assetline");
     fi
     (( subcount=webasset_step_count+(num_webasset_steps_nohtml*count/num_webassets_http) ))
-    print_progress "$subcount" "$num_webasset_steps" "$col_width"
+    print_progress "$subcount" "$num_webasset_steps"
   done < <(for i in "${!webassets_http[@]}"; do
     opt="${webassets_http[$i]}"
     if [ "$wayback_url" = "yes" ]; then # no extension is defined and we assume web pages already filtered
@@ -1446,7 +1446,7 @@ process_assets() {
     echo "Reducing the length of long lines in files (to speed up processing) ... "
     (( count=0 ))
     for item in "${webpages[@]}"; do
-      print_progress "$count" "$num_webpages";
+      print_progress "$count" "$num_webpages"
       if [ "$shorten_longlines" = "auto" ]; then
         item_chars=$(wc -m "$item" | awk '{print $1}')
         item_newlines=$(wc -l "$item" | awk '{print $1}')
@@ -1542,7 +1542,7 @@ process_assets() {
 
     # Convert absolute links to relative links
     count=0
-    print_progress "$count" "$num_webpages";
+    print_progress "$count" "$num_webpages"
     for opt in "${webpages[@]}"; do
 
       # but don't process XML files in guise of HTML files

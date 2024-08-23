@@ -231,8 +231,11 @@ wayback_filter_domains() {
       fi
     done <<<"$(find "." -type f ! -empty -print)"
   done
-  IFS=$'\n' wayback_exceptions=($(sort -u <<<"${wayback_domain_exceptions[*]}")); unset IFS
 
+  temp_IFS="$IFS"
+  IFS=$'\n' wayback_exceptions=($(sort -u <<<"${wayback_domain_exceptions[*]}"))
+  IFS="$temp_IFS"
+  
   ## Apply filter
   webassets_wayback=()
   while IFS= read -r line; do
@@ -247,7 +250,11 @@ wayback_filter_domains() {
     printf "%s\n" "$opt"
   done)
 
-  IFS=$'\n' webassets_http=($(sort -u <<<"${webassets_wayback[*]}")); unset IFS
+  temp_IFS="$IFS"
+  IFS=$'\n' webassets_http=($(sort -u <<<"${webassets_wayback[*]}"))
+  IFS="$temp_IFS"
+  
+  webassets_http=($(sort -u <<<"${webassets_wayback[*]}"))
   cd "$mirror_dir"
 }
 
