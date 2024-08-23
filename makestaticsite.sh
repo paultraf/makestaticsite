@@ -386,7 +386,20 @@ initialise_variables() {
   session_data+=("Wget version|$wget_cmd_version")
 
   # Web server details (to be snapped by Wget, etc.)
-  [[ ${url:length-1:1} != "/" ]] && url="$url/"; # ensure URL ends in trailing slash
+  IFS="," read -ra webpage_file_exts <<< "$webpage_file_extensions"
+
+  url_add_slash=no # Should we add a trailing '/' to URL (yes/no)?  Initially assume no.
+  if [[ ${url:length-1:1} != "/" ]]; then
+    url_add_slash=yes # Now assume yes, unless ...
+    for ext in "${webpage_file_exts[@]}"; do
+      ext_length=${#ext}
+      (( ext_length++ ))
+      if [[ ${url:length-$ext_length:$ext_length} = ".$ext" ]]; then # URL ends in a recognised file extension that can't have slash added.
+        url_add_slash=avoid; break
+      fi
+    done
+  fi
+  [ "$url_add_slash" = "yes" ] && url="$url/"; # ensure URL ends in trailing slash
 
   # Wayback Machine support
   use_wayback_cli=no # Initially assume not using Wayback client
@@ -411,6 +424,7 @@ initialise_variables() {
     fi
     url_slashes=${url_path//[!\/]};
     url_path_depth=$(( ${#url_slashes}+1 ))
+    [ "$url_add_slash" = "avoid" ] && (( url_path_depth-- )) # need to adjust for extra '/' not being added because of valid web file extension
   fi
 
   # Validate additional, supported extensions and domains for stored assets
@@ -422,7 +436,7 @@ initialise_variables() {
       c=1; echo -n $'\n'"$msg_warning: removed invalid asset domain $asset_domain from list."
     }
   done
-  [ "$c" == "1" ] && echo -n $'\n'
+  [ "$c" = "1" ] && echo -n $'\n'
   if [ "$wayback_url" = "yes" ] && [ "$wayback_mementos_only" = "yes" ]; then  
     page_element_domains=
   else
@@ -487,10 +501,17 @@ initialise_variables() {
   # assign URL-related variables
   protocol=$(printf "%s" "$url" | awk -F/ '{print $1}' | awk -F: '{print $1}')
   url_base="$protocol://$hostport"
+  url_base_regex=$(regex_apply "$url_base")
   if [ "$url" != "$url_base/" ]; then
     url_has_path=yes
   else
     url_has_path=no
+  fi
+
+  if [ "$url_add_slash" = "avoid" ]; then
+    url_path_dir="${url_path%\/*}"  # Remove anything after last '/' for URLs not ending in '/'.
+  else
+    url_path_dir="$url_path"
   fi
 
   # Define URL to be used in robots.txt file
@@ -1475,8 +1496,10 @@ process_assets() {
   # General case: conversion of absolute links to relative links
   if [ ${#webpages[@]} -eq 0 ]; then
     echo "No web pages to process.  Done." "1"
-  elif [ ! -s "$input_file_wayback_extra" ] && [ "$url_wildcard_capture" != "yes" ]; then
-    echo "No URLs to appy in search and replace.  Done." "1"
+  elif [ "$waybackurl" = "yes" ] && [ ! -s "$input_file_wayback_extra" ] && [ "$url_wildcard_capture" != "yes" ]; then
+    echo "No URLs to apply in search and replace.  Done." "1"
+  elif [ "$waybackurl" != "yes" ] && [ ! -s "$input_file_extra_all" ] && [ "$url_wildcard_capture" != "yes" ]; then
+    echo "No URLs to apply in search and replace.  Done." "1"
   elif [ "$cut_dirs" = "0" ]; then
     # Initialise URLs array
     urls_array=()
@@ -2236,12 +2259,12 @@ cut_mss_dirs() {
     return 0
   fi
   cd "$working_mirror_dir" || { printf "Unable to enter %s.\nAborting.\n" "$working_mirror_dir"; exit; }
-  dir_path="$working_mirror_dir/$url_path"
+  dir_path="$working_mirror_dir/$url_path_dir"
   mv "$dir_path/"* "$working_mirror_dir/"
   echo "Moved files and folders from $dir_path to $working_mirror_dir/." "1"
 
   # remove top-level folder of $url_path
-  url_root_dir=$(echo "$url_path" | cut -d/ -f1)
+  url_root_dir=$(echo "$url_path_dir" | cut -d/ -f1)
   if [ -d "$url_root_dir" ]; then
     rm -rf "$url_root_dir"
   fi

@@ -23,7 +23,7 @@
 # MakeStaticSite info
 ################################################
 version=0.30.3-beta2
-version_date='13 August 2024'
+version_date='23 August 2024'
 version_header="MakeStaticSite version $version, released on $version_date."
 mss_license="GNU Affero General Public License version 3"
 mss_download="https://makestaticsite.sh/download/makestaticsite_latest.tar.gz"
@@ -116,7 +116,7 @@ rename_wget_tmps=yes            # Remove .tmp.html suffixes from (Wget temp) fil
 #  or, in short form, ‘-r -N -l inf --no-remove-listing’, where -r: recursive; -N: timestamping; -l inf: infinite depth
 wget_mirror_options=(--recursive --timestamping --level=inf --no-remove-listing)
 wget_core_options=("${wget_mirror_options[@]}" --convert-links --adjust-extension --page-requisites --tries=3)
-wget_default_page=index.html    # The Wget -default-page option (index.html by default)
+wget_default_page=index.html    # The Wget --default-page option (index.html by default)
 
 wget_no_parent=auto             # Should capturing URLs with directories include the --no-parent option?
                                 # auto or yes - check and add automatically
@@ -146,7 +146,8 @@ feed_xml=feed/index.xml         # tail of valid feed URLs as replacement
 # Scope of assets to be captured from parent directories and extra domains
 url_asset_capture_level=3       # (0 fewest, 5 most) for URL matching in determining assets to download and localise
 url_wildcard_capture=no         # Use a wildcard for matching URLs in asset processing (y/n)?  If set to 'yes', when capturing asset URLs on pages, a simple regex capture group will be used instead of the input file of itemised URLs generated in phases 2 and 3
-url_separator_chars="[,:(]"      # additional class of separator characters (regular expression capture class) of URLs to be captured: for example, data-src (comma) and JSON (colon).  Leave empty to omit.
+url_separator_chars="[,:(]"     # additional class of separator characters (regular expression capture class) of URLs to be captured: for example, data-src (comma) and JSON (colon).  Leave empty to omit.
+webpage_file_extensions="html,htm,xhtm,xhtml,dhtml,cgi,php,php2,php4,phtml,asp,aspx,jsp" # A list of common web page file extensions, not exhaustive. (Note that any list of file extensions in this document assume a preceding dot '.')
 
 # Specification of assets eligible for downloading by Wget in phase 3.
 web_source_extensions="htm,html,xml,txt" # list of web document file extensions intended for assets search

@@ -82,6 +82,15 @@ process_wayback_url() {
     # Assign the archived URL as URL and validate
     (( url_depth++ ))
     url_original=$(echo "$1" | cut -d/ -f"${url_depth}"-)
+
+    # assign URL-related variables
+    protocol_original=$(printf "%s" "$url_original" | awk -F/ '{print $1}' | awk -F: '{print $1}')
+    hostport_original=$(printf "%s" "$url_original" | awk -F/ '{print $3}')
+    url_original_base="$protocol_original://$hostport_original"
+    url_original_base_singleslash=${url_original_base/:\/\//:\/}  # adjust for Wget directory mapping
+    url_path_original=$(echo "$url_original" | cut -d/ -f4-)
+    url_path_original="${url_path_original%\/*}"  # remove anything after last '/'
+
     if [ "$url_stem_dates" = "" ] || ! validate_url "$url_original"; then
       printf "%s: The extracted URL, %s, is considered invalid.\n" "$msg_error" "$url_original"
       printf "It is recommended that you modify the value of 'url' and re-run\n."
@@ -148,12 +157,10 @@ wayback_url_paths() {
   url_path_snapshot_prefix=$(echo "$url_path_snapshot" | cut -d' ' -f1 | cut -d'/' -f1 )
   url_path_snapshot=$(echo "$url_path_snapshot" | cut -d' ' -f2- )
   url_path_snapshot="$wayback_date_to$url_path_snapshot"
-  url_path_sibling="$url_path_snapshot"
   url_path_prefix=
   for ((i=1;i<url_path_depth;i++)); do
     url_path_prefix+="../"
   done
-  url_path_sibling="$url_path_prefix$url_path_sibling"
 }
 
 
@@ -298,16 +305,47 @@ consolidate_assets() {
 
   # Initialised source and destination paths (trunks)
   dest_path="$working_mirror_dir/$url_path"
+  if [ "$url_path_original" != "" ]; then
+    [ "$url_add_slash" = "avoid" ] && dest_path="${dest_path%\/*}/"  # remove anything after last '/'
+    dest_path="${dest_path%\/$url_path_original\/*}"  # remove $url_path_original from tail
+  fi
 
   # Replace the relative links created by Wget (that point to levels higher up in the directory hierarchy)
   count=0
   for opt in "${webpages[@]}"; do
     print_progress "$count" "$num_webpages";
+    depth=${opt//[!\/]};
+    depth_num=${#depth}
+    (( depth_num-- )) # adjustment of 1 needs to be made 
+    (( depth_num-=url_path_depth )) # whereas url_path_prefix is fixed,
+    pathpref=                       # pathpref denotes the relative path to get from current directory to the snapshot content root 
+    for ((i=1;i<=depth_num;i++)); do
+      pathpref+="../";
+    done
+
+    opt_item="${opt##*$url_original_base_singleslash\/}" # extract only the relevant path and then add this on to snapshot_src_path
+    opt_item="${opt_item%\/*}" # remove everything after trailing slash
     for item in "${snapshot_path_list[@]}"; do
-      snapshot_src_path="$url_path_prefix$item"
+      snapshot_src_path="$pathpref$url_path_prefix$item"      
       snapshot_src_path=$(regex_escape "$snapshot_src_path")
-      sed_subs=('s|'"$snapshot_src_path/"'|'""'|g' "$opt")
-      sed "${sed_options[@]}" "${sed_subs[@]}"
+      snapshot_src_path=$(echo "$snapshot_src_path" | sed 's|'"$wayback_datetime_regex"'|'"$wayback_datetime_regex"'|g') 
+      snapshot_src_path=$(regex_apply "$snapshot_src_path")
+      if [ "$url_path_original" != "" ]; then
+        opt_item_slashes=${opt_item//[!\/]};
+        opt_item_slashes_num=${#opt_item_slashes};
+        this_path="$opt_item"
+        this_path_prefix=
+        this_path_regex=$(regex_apply "$this_path")
+        for ((j=1;j<=opt_item_slashes_num;j++)); do
+          snapshot_src_path0="$snapshot_src_path/$this_path_regex" # this variants targets specifically URLs that contain the URL path
+          sed_subs0=('s|'"$snapshot_src_path0/"'|'"$this_path_prefix"'|g' "$opt")
+          sed "${sed_options[@]}" "${sed_subs0[@]}"
+          this_path="${this_path%\/*}" # delete everything after last /
+          this_path_prefix+="../"
+        done
+      fi
+      sed_subs1=('s|'"$snapshot_src_path/"'|'""'|g' "$opt")
+      sed "${sed_options[@]}" "${sed_subs1[@]}"
     done
     (( count++ ))
   done
@@ -367,7 +405,7 @@ process_asset_anchors() {
   print_progress "0" "100";
 
   # Generate lists of webasset paths
-  cd "$url_path"
+  cd "$url_path_dir"
   webpages_output1=() # to store file paths to web pages only
   webpaths_output1=() # to store file paths to web assets for internal links
   webpaths_output2=() # to store directory paths for internal links
@@ -401,8 +439,8 @@ process_asset_anchors() {
     for ((i=1;i<depth_num;i++)); do
       pathpref+="../";
     done
-      
     for item in "${webpaths_output1[@]}"; do
+      item="${item##*$domain_original\/}"
       item=$(regex_escape "$item")
       sed_subs1=('s|\('"$url_timeless"'\)\('"$item"'\)|'"$pathpref\2"'|g' "$opt")
       sed_subs2=('s|\([\"'\'']\)\('"$url_timeless_nodomain"'\)\('"$item"'\)|'"\1$pathpref\3"'|g' "$opt")
