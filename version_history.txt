@@ -19,6 +19,59 @@
 ##########################################################################
 
 
+0.30.3 (released on 2024-08-)
+       * Extended Wayback Machine crawls to URLs with arbitrary timestamps.
+        [lib/constants.sh]
+         New constants: webpage_file_extensions - a list of common web page
+         file extensions; wayback_datetime_regex - regex for Wayback (Memento)
+         datetime directory; wget_default_page - Wget -default-page option;
+         wayback_snapshot_path_depth - the number of directories to traverse
+         to get to the original domain directory (default based on Internet
+         Archive).
+        [lib/mod_wayback.sh]
+         process_wayback_url(): new variable, url_path_original, to ensure
+         valid directory path corresponding to url_path.
+         get_webassets_wayback() renamed to wayback_filter_snapshots().
+         Added function wayback_url_paths() to define a few commonly used
+         URL-related constants.
+         Added function wayback_wget_postprocess() for postprocessing of Wget
+         output, initially to insert Wayback Machine domain for relative links
+         to the root directory. 
+         Added function wayback_filter_domains() to apply filters on
+         candidate Wayback URLs based on domains and paths, consistent with
+         what has been downloaded so far; and to remove URLs originally served
+         from external domains.
+         Wget options inserted to further constrain ongoing crawls.
+         consolidate_assets(): some refactoring of variable initialisation;
+         added maxdepth flag to limit generation of snapshot_path_list array,
+         removing somme redundant folders and files and improving performance.
+         Overhauled the replacement of relative links created by Wget, taking
+         account of links to content in same and different branches
+         respectively.        
+         process_asset_anchors(): overhauled to make coverage of relevant
+         assets more complete, fixing issues in link conversion.
+         Trimmed dest_path to ensure a valid path; inserted url_path_original
+         into search pattern to support URLs with paths. 
+         wayback_output_clean(): added error trap for awk statements.
+         Removed superfluous output echoed to log file.
+        [makestaticsite.sh]
+         initialise_variables(): inserted call to wayback_url_paths().
+         mirror_site(): appended call to wayback_wget_postprocess() for
+         Wayback URLs.
+         Ensured that a trailing '/' is not added to URLs that end in any
+         extensions that are in webpage_file_extensions list; similarly,
+         defined url_path_dir to ensure URL path directory is valid.
+         wget_extra_urls(): inserted call to wayback_filter_domains() for
+         special filtering of Wayback Machine URLs.
+         Renamed webassets_nohtml to webassets_filter_html to make allowance
+         for certain web pages remaining after filtering; in the generation
+         of webassets_filter_html, exemption to filtering made for Wayback
+         Machine URLs, already filtered.
+         Appended call to wayback_wget_postprocess() for Wayback URLs.
+         cut_mss_dirs(): Replaced occurrences of url_path with url_path_dir.
+         process_assets(): adjusted asset_depth to be a function of
+         url_path_depth, to ensure that asset_rel_path is cut accordingly.
+
 0.30.2 (released on 2024-08-07)
        * Maintenance with improved performance for processing assets. *
         [lib/constants.sh]
