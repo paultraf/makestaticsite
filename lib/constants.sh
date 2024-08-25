@@ -22,8 +22,8 @@
 ################################################
 # MakeStaticSite info
 ################################################
-version=0.30.3-beta2
-version_date='23 August 2024'
+version=0.30.3-beta3
+version_date='25 August 2024'
 version_header="MakeStaticSite version $version, released on $version_date."
 mss_license="GNU Affero General Public License version 3"
 mss_download="https://makestaticsite.sh/download/makestaticsite_latest.tar.gz"

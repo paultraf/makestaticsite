@@ -1441,9 +1441,9 @@ process_assets() {
   printf "\n"
 
   num_webpages=${#webpages[@]}
-  # Break apart long lines to reduce processing time
+  # Split long lines to reduce processing time
   if [ "$shorten_longlines" != "off" ] && (( num_webpages != 0 )); then
-    echo "Reducing the length of long lines in files (to speed up processing) ... "
+    echo "Splitting long lines in files to speed up processing ... "
     (( count=0 ))
     for item in "${webpages[@]}"; do
       print_progress "$count" "$num_webpages"
@@ -1625,7 +1625,9 @@ process_assets() {
               if [ "$wayback_url" = "yes" ]; then
                 asset_rel_path=$(env echo "$asset_rel_path" | cut -d/ -f2-)
                 if [ "$wayback_assets_mode" = "original" ]; then
-                  asset_rel_path=$(env echo "$asset_rel_path" | cut -d/ -f6-)
+(( asset_depth=url_path_depth+2 ))
+
+                  asset_rel_path=$(env echo "$asset_rel_path" | cut -d/ -f$asset_depth-)
                   asset_rel_path="$pathpref$asset_rel_path"
                 else
                   asset_rel_path="$pathpref$assets_directory$assets_dir_suffix$asset_rel_path"

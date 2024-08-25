@@ -64,10 +64,10 @@ process_wayback_url() {
     local url_stem_dates=${1%http*}
     local url_slashes=${url_stem_dates//[!\/]};
     local url_depth=$(( ${#url_slashes} ))
-    wayback_date_from_to=$(echo "$1" | cut -d/ -f${url_depth})
-    wayback_date_to_cut=$(echo "$wayback_date_from_to" | cut -d- -f2)
+    wayback_date_from_to=$(env echo "$1" | cut -d/ -f${url_depth})
+    wayback_date_to_cut=$(env echo "$wayback_date_from_to" | cut -d- -f2)
     if [ "$wayback_date_to_cut" != "$wayback_date_from_to" ]; then
-      wayback_date_from=$(echo "$wayback_date_from_to" | cut -d- -f1)
+      wayback_date_from=$(env echo "$wayback_date_from_to" | cut -d- -f1)
       wayback_date_to="$wayback_date_to_cut"
       if ! validate_timestamp "$wayback_date_from"; then
         echo "$msg_error: The 'from' date, $wayback_date_from, in the range $wayback_date_from_to, is invalid. It needs to be a string of digits in the format: YYYYMMDDhhmmss (substrings starting with YYYY are allowed)." 
@@ -81,14 +81,14 @@ process_wayback_url() {
 
     # Assign the archived URL as URL and validate
     (( url_depth++ ))
-    url_original=$(echo "$1" | cut -d/ -f"${url_depth}"-)
+    url_original=$(env echo "$1" | cut -d/ -f"${url_depth}"-)
 
     # assign URL-related variables
     protocol_original=$(printf "%s" "$url_original" | awk -F/ '{print $1}' | awk -F: '{print $1}')
     hostport_original=$(printf "%s" "$url_original" | awk -F/ '{print $3}')
     url_original_base="$protocol_original://$hostport_original"
     url_original_base_singleslash=${url_original_base/:\/\//:\/}  # adjust for Wget directory mapping
-    url_path_original=$(echo "$url_original" | cut -d/ -f4-)
+    url_path_original=$(env echo "$url_original" | cut -d/ -f4-)
     url_path_original="${url_path_original%\/*}"  # remove anything after last '/'
 
     if [ "$url_stem_dates" = "" ] || ! validate_url "$url_original"; then
@@ -149,13 +149,19 @@ wayback_url_paths() {
   url_timeless=$(regex_escape "$url_timeless")
   url_timeless=$(regex_apply "$url_timeless")
   url_timeless=${url_timeless//\\[/[} # final adjustment to remove '\' in front of '['
+  url_base_timeless=${url_base/${wayback_date_from_to}/[0-9]+[a-z]\{0,2\}_\?}
+  url_base_timeless=$(regex_escape "$url_base_timeless")
+  url_base_timeless=$(regex_apply "$url_base_timeless")
+  url_base_timeless=${url_base_timeless//\\[/[} # final adjustment to remove '\' in front of '['
+  
   url_base_regex=$(regex_escape "$url_base")
   url_timeless_nodomain=${url_timeless/"$url_base_regex"/}   # Truncated version
+  url_base_timeless_nodomain=${url_base_timeless/"$url_base_regex"/}   # Truncated version
   
   # Locate source directories to copy
   url_path_snapshot="${url_path/$wayback_date_to/ }"
-  url_path_snapshot_prefix=$(echo "$url_path_snapshot" | cut -d' ' -f1 | cut -d'/' -f1 )
-  url_path_snapshot=$(echo "$url_path_snapshot" | cut -d' ' -f2- )
+  url_path_snapshot_prefix=$(env echo "$url_path_snapshot" | cut -d' ' -f1 | cut -d'/' -f1 )
+  url_path_snapshot=$(env echo "$url_path_snapshot" | cut -d' ' -f2- )
   url_path_snapshot="$wayback_date_to$url_path_snapshot"
   url_path_prefix=
   for ((i=1;i<url_path_depth;i++)); do
@@ -169,7 +175,7 @@ wayback_url_paths() {
 # (Currently, there is no filtering based on wayback_timestamp_policy.)
 wayback_filter_domains() {
   webassets_wayback=()
-  url_regex=$(echo "$url"|sed 's|\(/\)'"$wayback_datetime_regex"'|\1'"$wayback_datetime_regex"'|') # turn original URL into wildcard expression
+  url_regex=$(env echo "$url"|sed 's|\(/\)'"$wayback_datetime_regex"'|\1'"$wayback_datetime_regex"'|') # turn original URL into wildcard expression
   url_regex=${url_regex/"$url_base"/} # trim the URL base to support relative links
 
   # Add a constraint on Wget searches
@@ -181,7 +187,7 @@ wayback_filter_domains() {
   # Constrain further Wget runs to Wayback URLs involving the primary domain
   # and not got a valid asset extension
   for opt in "${webassets_http[@]}"; do
-    opt_regex=$(echo "$opt"|sed 's|\(/\)'"$wayback_datetime_regex"'|\1'"$wayback_datetime_regex"'|') # turn original URL into wildcard expression
+    opt_regex=$(env echo "$opt"|sed 's|\(/\)'"$wayback_datetime_regex"'|\1'"$wayback_datetime_regex"'|') # turn original URL into wildcard expression
     # Add a further condition to check whether asset already in list modulo timestamps
     if [[ $opt =~ $url_regex ]] && [[ ! ${webassets_wayback0[@]} =~ $opt_regex ]]; then
       opt=$(env echo $opt | sed 's/#[[:alnum:]]*$//') # remove internal anchors
@@ -214,7 +220,7 @@ wayback_filter_domains() {
       item="${item/\/https:\//\/https:\/\/}"
 
       # Now generate wildcard version
-      item_regex=$(echo "$item"|sed 's|\(/\)'"$wayback_datetime_regex"'|\1'"$wayback_datetime_regex"'|')
+      item_regex=$(env echo "$item"|sed 's|\(/\)'"$wayback_datetime_regex"'|\1'"$wayback_datetime_regex"'|')
 
       # If the candidate item is not already in the list of Wayback domain-based exceptions, then add it
       if [[ ! ${wayback_domain_exceptions[@]} =~ $item_regex ]]; then
@@ -315,6 +321,7 @@ consolidate_assets() {
   if [ "$url_path_original" != "" ]; then
     [ "$url_add_slash" = "avoid" ] && dest_path="${dest_path%\/*}/"  # remove anything after last '/'
     dest_path="${dest_path%\/$url_path_original\/*}"  # remove $url_path_original from tail
+    dest_path="${dest_path%\/$url_path_original*}"  # remove $url_path_original from tail
   fi
 
   # Replace the relative links created by Wget (that point to levels higher up in the directory hierarchy)
@@ -335,7 +342,7 @@ consolidate_assets() {
     for item in "${snapshot_path_list[@]}"; do
       snapshot_src_path="$pathpref$url_path_prefix$item"      
       snapshot_src_path=$(regex_escape "$snapshot_src_path")
-      snapshot_src_path=$(echo "$snapshot_src_path" | sed 's|'"$wayback_datetime_regex"'|'"$wayback_datetime_regex"'|g') 
+      snapshot_src_path=$(env echo "$snapshot_src_path" | sed 's|'"$wayback_datetime_regex"'|'"$wayback_datetime_regex"'|g') 
       snapshot_src_path=$(regex_apply "$snapshot_src_path")
       if [ "$url_path_original" != "" ]; then
         opt_item_slashes=${opt_item//[!\/]};
@@ -441,9 +448,11 @@ process_asset_anchors() {
   for opt in "${webpages_output1[@]}"; do
     print_progress "$count" "$num_webpages1";  
     pathpref=
-    depth=${opt//[!\/]};
-    depth_num=${#depth}
-    for ((i=1;i<depth_num;i++)); do
+    opt_path_stem=${opt:2}
+    [ "$url_path_original" != "" ] && opt_path_stem=${opt_path_stem##*$url_path_original}  # Path (directory hierarchy) relative to the original URL
+    opt_rel_depth=${opt_path_stem//[!\/]};
+    opt_rel_depth_num=${#opt_rel_depth} # measure the relative depth of opt_path_stem
+    for ((i=1;i<=opt_rel_depth_num;i++)); do
       pathpref+="../";
     done
     for item in "${webpaths_output1[@]}"; do
@@ -455,6 +464,12 @@ process_asset_anchors() {
       sed "${sed_options[@]}" "${sed_subs2[@]}"
     done
     # Conversion of anchors make implicit index pages explicit, to assist in internal navigation
+    # (1) Empty case
+    sed_subs1=('s|\('"$url_timeless"'\)\([\"'\'']\)|'"${pathpref}index.html\2"'|g' "$opt")
+    sed_subs2=('s|\([\"'\'']\)\('"$url_timeless_nodomain"'\)\([\"'\'']\)|'"\1${pathpref}index.html\3"'|g' "$opt")
+    sed "${sed_options[@]}" "${sed_subs1[@]}"
+    sed "${sed_options[@]}" "${sed_subs2[@]}"
+    # (2) Non-empty case
     for item in "${webpaths_output2[@]}"; do
       item=${item:2}
       item=$(regex_escape "$item")
