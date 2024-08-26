@@ -21,7 +21,7 @@
 if [ "$trap_errors" = "yes" ]; then
 # Stop the script if any command [in a pipeline] fails, variable unset; 
 # then report 'system error'.  Also disable globbing
-  trap 'if [ "$?" != "0" ]; then env echo "An unexpected system error occurred in function ${FUNCNAME} called from line $BASH_LINENO.  Aborting."; fi' EXIT
+  trap 'if [ "$?" != "0" ]; then printf "%s\n" "An unexpected system error occurred in function ${FUNCNAME} called from line $BASH_LINENO.  Aborting."; fi' EXIT
   set -euf -o pipefail
 fi
 
@@ -38,7 +38,7 @@ error_set() {
 # or if second (optional) parameter is not set.
 # Otherwise, return original value.
 yesno() {
-  a=$(env echo "$1" | tr '[:upper:]' '[:lower:]')
+  a=$(printf "%s" "$1" | tr '[:upper:]' '[:lower:]')
   if [ "${a:0:1}" = "n" ] || [ "${a:0:3}" = "off" ]; then
     printf "no"
   elif [ -z ${2+x} ] || [ "${a:0:1}" = "y" ] || [ "${a:0:2}" = "on" ]; then
@@ -162,7 +162,7 @@ confirm_continue() {
   local msg_abort="OK, aborting. Please review the settings."
   local opt
   if [ -n "${1+x}" ]; then
-    opt=$(echo "$1" | tr '[:lower:]' '[:upper:]')
+    opt=$(printf "%s" "$1" | tr '[:lower:]' '[:upper:]')
     if [ "$opt" != "Y" ] && [ "$opt" != "N" ]; then
       opt="Y" # trap the case where first parameter is set incorrectly 
     fi
@@ -172,7 +172,7 @@ confirm_continue() {
   else
     opt="Y"
   fi
-  opt_lc=$(echo "$opt" | tr '[:upper:]' '[:lower:]')
+  opt_lc=$(printf "%s" "$opt" | tr '[:upper:]' '[:lower:]')
   if [ "$opt" = "Y" ]; then
     choose="Y/n"
   else
@@ -245,7 +245,7 @@ wget_canonical_options() {
 # reject files
   wget_options=${wget_options/--reject/-R}
 
-  env echo "$wget_options"
+  printf "%s" "$wget_options"
 }
 
 wget_level_comment() {
@@ -327,13 +327,13 @@ comment_uncomment() {
   if [ "$comment_status" = "1" ]; then
     # Assume $mystring= starts with zero or more whitespace chars followed by '#'; 
     # what follows becomes the replacement string (whitespace trimmed at tail)
-    replacement_string=$(env echo "$mystring"|tr -s '#'|xargs)
+    replacement_string=$(printf "%s" "$mystring"|tr -s '#'|xargs)
     replacement_string="${replacement_string:1}"
     echo "enable entry in $myfile for $mystring"
   else
     # Trim $mystring of leading and trailing whitespace;
     # the replacement string is this preceded by '#'
-    replacement_string=$(env echo "$mystring"|xargs)
+    replacement_string=$(printf "%s" "$mystring"|xargs)
     replacement_string="#$replacement_string"
     echo "disable entry in $myfile for $mystring"
   fi
@@ -372,7 +372,7 @@ hosts_toggle() {
   local entry
   entry="$(grep -e "$ip4re$domain" -e "$ip6re$domain" "$etc_hosts")"
   if [ "$entry" != "" ]; then
-    entry_count=$(env echo "$entry"| wc -l | xargs)
+    entry_count=$(printf "%s" "$entry"| wc -l | xargs)
     if [ "$entry_count" = "1" ]; then
       echo "You have the following entry for the domain in $etc_hosts:"
     else
@@ -380,7 +380,7 @@ hosts_toggle() {
     fi
     env echo "$entry"
     entry_backup=$entry
-    entry=$(env echo "${entry}"| head -1)
+    entry=$(printf "%s" "${entry}"| head -1)
 
     # Determine whether or not the entry is commented out
     comment_prefix="^[[:space:]]*#.*$domain"
@@ -567,8 +567,8 @@ url_percent_encode() {
   local charlist
   charlist=('?|%3F')
   for char in "${charlist[@]}"; do
-    search=$(env echo "$char" | cut -d'|' -f1 )
-    replace=$(env echo "$char" | cut -d'|' -f2 )
+    search=$(printf "%s" "$char" | cut -d'|' -f1 )
+    replace=$(printf "%s" "$char" | cut -d'|' -f2 )
     string=${string//"$search"/"$replace"}
   done
   printf "%s" "$string"

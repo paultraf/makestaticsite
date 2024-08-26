@@ -59,7 +59,7 @@ cmd_check() {
 }
 
 version() {
-  env echo "$@" | awk -F. '{ printf("%d%03d%03d%03d\n", $1,$2,$3,$4); }';
+  printf "%s" "$@" | awk -F. '{ printf("%d%03d%03d%03d\n", $1,$2,$3,$4); }';
 }
 
 version_check() {
@@ -281,7 +281,7 @@ check_wayback_url(){
   host=$(printf "%s" "$url" | awk -F/ '{print $3}' | awk -F: '{print $1}')
 
   # Check list of known Wayback Machine hosts
-  if env echo ",$wayback_list," | grep -q ",$host,"; then
+  if printf "%s" ",$wayback_list," | grep -q ",$host,"; then
     return 0
   fi
 

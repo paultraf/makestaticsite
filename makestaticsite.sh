@@ -428,11 +428,11 @@ initialise_variables() {
   fi
 
   # Validate additional, supported extensions and domains for stored assets
-  asset_domains="$(echo "$asset_domains" | tr -d '[:space:]')"
+  asset_domains="$(printf "%s" "$asset_domains" | tr -d '[:space:]')"
   IFS=',' read -ra list <<< "$asset_domains"
   c=0; for asset_domain in "${list[@]}"; do
     validate_domain "$asset_domain" || {
-      asset_domains=$(echo "$asset_domains" | sed 's~'"$asset_domain"',~~' | sed 's~',"$asset_domain"'~~' )
+      asset_domains=$(printf "%s" "$asset_domains" | sed 's~'"$asset_domain"',~~' | sed 's~',"$asset_domain"'~~' )
       c=1; echo -n $'\n'"$msg_warning: removed invalid asset domain $asset_domain from list."
     }
   done
@@ -440,14 +440,14 @@ initialise_variables() {
   if [ "$wayback_url" = "yes" ] && [ "$wayback_mementos_only" = "yes" ]; then  
     page_element_domains=
   else
-    page_element_domains="$(echo "$page_element_domains" | tr -d '[:space:]')"
+    page_element_domains="$(printf "%s" "$page_element_domains" | tr -d '[:space:]')"
   fi
   IFS=',' read -ra list <<< "$page_element_domains"
   if [ "$page_element_domains" != "auto" ]; then
     c=0; for page_element_domain in "${list[@]}"; do
       validate_domain "$page_element_domain" || {
         c=1; echo -n $'\n'"$msg_warning: removing invalid page element domain $page_element_domain from list."
-        page_element_domains=$(echo "$page_element_domains" | sed 's~'"$page_element_domain"',~~' | sed 's~',"$page_element_domain"'~~' )
+        page_element_domains=$(printf "%s" "$page_element_domains" | sed 's~'"$page_element_domain"',~~' | sed 's~',"$page_element_domain"'~~' )
       }
     done
     [ "$c" = "1" ] && echo -n $'\n'
@@ -494,9 +494,9 @@ initialise_variables() {
     fi
   fi
   # strip out any whitespace from domain lists
-  page_element_domains=$(echo "$page_element_domains" | tr -d '[:space:]')
-  extra_domains=$(echo "$extra_domains" | tr -d '[:space:]')
-  all_domains=$(echo "$all_domains" | tr -d '[:space:]')
+  page_element_domains=$(printf "%s" "$page_element_domains" | tr -d '[:space:]')
+  extra_domains=$(printf "%s" "$extra_domains" | tr -d '[:space:]')
+  all_domains=$(printf "%s" "$all_domains" | tr -d '[:space:]')
   
   # assign URL-related variables
   protocol=$(printf "%s" "$url" | awk -F/ '{print $1}' | awk -F: '{print $1}')
@@ -604,7 +604,7 @@ initialise_variables() {
   mss_cut_dirs=$(yesno "$mss_cut_dirs" "1")
   cut_dirs=0
   if [[ $wget_extra_options_tmp =~ "--cut-dirs" ]]; then
-    cut_dirs=$(echo "$wget_extra_options_tmp" | grep -o "cut-dirs=[0-9]*" | cut -d '=' -f2)
+    cut_dirs=$(printf "%s" "$wget_extra_options_tmp" | grep -o "cut-dirs=[0-9]*" | cut -d '=' -f2)
   fi
 
   # For deployment on a remote server
@@ -786,7 +786,7 @@ wget_process_credentials() {
       touchmod "$rc_file"
     fi
     if [ "$rc_process" = "Y" ]; then
-      env echo "machine $domain login $wget_http_user password $wget_http_password" >> "$rc_file"
+      printf "%s\n" "machine $domain login $wget_http_user password $wget_http_password" >> "$rc_file"
       chmod 0600 "$rc_file"
     fi
   elif [ "$credentials_rc_file" = ".wgetrc" ]; then
@@ -1239,8 +1239,8 @@ wget_extra_urls() {
   fi
 
   while IFS='' read -r line; do
-    count=$(echo "$line" | awk -F'|' '{print $1}')
-    assetline=$(echo "$line" | awk -F'|' '{print $2}')
+    count=$(printf "%s" "$line" | awk -F'|' '{print $1}')
+    assetline=$(printf "%s" "$line" | awk -F'|' '{print $2}')
     if [ "${assetline:0:4}" = "http" ]; then
       webassets_filter_html+=("$assetline");
     fi
@@ -1357,7 +1357,7 @@ wget_extra_urls() {
       wget_longfilename_options=("$wget_ssl" --spider "$line")
       report_dest_name_length=$($wget_cmd "${wget_extra_options[@]}" "${wget_longfilename_options[@]}" 2>&1 | grep -m 1 "destination name is too long")
       if [ "$report_dest_name_length" != "" ]; then
-        shortername_length=$(echo "$report_dest_name_length" | grep -o "reducing to [0-9]*" | grep -o "[0-9]*")
+        shortername_length=$(printf "%s" "$report_dest_name_length" | grep -o "reducing to [0-9]*" | grep -o "[0-9]*")
         full_filename=$(basename "$line")
         # truncate string accordingly
         shorter_name=${full_filename:0:shortername_length}
@@ -1400,7 +1400,7 @@ process_assets() {
     fi
   done <<<"$(find "$mirror_dir/$mirror_archive_dir/" -maxdepth 1 -type d -name "*.*" -exec basename {} \; )"
 # shellcheck disable=SC2001
-  extra_domains=$(echo "$extra_domains" | sed 's/.$//') # remove final character
+  extra_domains=$(printf "%s" "$extra_domains" | sed 's/.$//') # remove final character
   if (( phase > 3 )); then
     # Ensure variables are assigned when starting run at postprocessing phase
     # - that $all_domains includes the extra domains
@@ -1593,13 +1593,13 @@ process_assets() {
           url_nameref="$url_type"
           url_type_array="${url_nameref}[@]"
           for url_extra in "${!url_type_array}"; do
-            asset_rel_path=$(env echo "${url_extra#*//}")
+            asset_rel_path=$(printf "%s" "${url_extra#*//}")
             if [ "$url_wildcard_capture" = "yes" ]; then
-              asset_rel_path=$(env echo "${asset_rel_path%%/*}")
+              asset_rel_path=$(printf "%s" "${asset_rel_path%%/*}")
               if [ "$wayback_url" = "yes" ]; then
-                asset_rel_path=$(env echo "$asset_rel_path" | cut -d/ -f2-)
+                asset_rel_path=$(printf "%s" "$asset_rel_path" | cut -d/ -f2-)
                 if [ "$wayback_assets_mode" = "original" ]; then
-                  asset_rel_path=$(env echo "$asset_rel_path" | cut -d/ -f5-)
+                  asset_rel_path=$(printf "%s" "$asset_rel_path" | cut -d/ -f5-)
                   asset_rel_path="$pathpref$asset_rel_path"
                 else
                   asset_rel_path="$pathpref$assets_directory$assets_dir_suffix$asset_rel_path"
@@ -1623,11 +1623,11 @@ process_assets() {
               fi
             else
               if [ "$wayback_url" = "yes" ]; then
-                asset_rel_path=$(env echo "$asset_rel_path" | cut -d/ -f2-)
+                asset_rel_path=$(printf "%s" "$asset_rel_path" | cut -d/ -f2-)
                 if [ "$wayback_assets_mode" = "original" ]; then
 (( asset_depth=url_path_depth+2 ))
 
-                  asset_rel_path=$(env echo "$asset_rel_path" | cut -d/ -f$asset_depth-)
+                  asset_rel_path=$(printf "%s" "$asset_rel_path" | cut -d/ -f$asset_depth-)
                   asset_rel_path="$pathpref$asset_rel_path"
                 else
                   asset_rel_path="$pathpref$assets_directory$assets_dir_suffix$asset_rel_path"
@@ -1686,7 +1686,7 @@ process_assets() {
   if [ ${#webpages[@]} -ne 0 ] && [ -s "$input_long_filenames" ]; then
     while IFS= read -r line; do
       if [ "$line" != "" ]; then
-        full_URL="$(echo "$line" | awk -F'\t' '{print $1}')"
+        full_URL="$(printf "%s" "$line" | awk -F'\t' '{print $1}')"
         full_filename=$(basename "$full_URL")
         shorter_name=$(printf "%s\n" "$line" | awk -F'\t' '{print $2}')
         # search and replace
@@ -1735,7 +1735,7 @@ process_assets() {
             (( pathpref_length=${#pathpref}-(j*5) ))
             src_path=$(printf "%s" "$pathpref" | cut -b -"$pathpref_length" | tr -d '\n'; printf "%s" "${pd_array[$j]}")
             (( k=j+1 ))
-            asset_path=$(env echo "$pd" | cut -d/ -f 1-$k)
+            asset_path=$(printf "%s" "$pd" | cut -d/ -f 1-$k)
             rep_path="$assetpref$assets_directory$assets_dir_suffix$asset_path/"
             if [ "$pd" != "" ] && [[ "$src_path" != */ ]]; then    # ensure the search is relative to a named directory
               sed_subs=('s|'"$src_path/"'|'"$rep_path"'|g' "$opt")
@@ -2039,9 +2039,9 @@ clean_mirror() {
         continue;
       fi
       sitemap_content+="$tab<url>"$'\n'
-      loc=$(echo "$loc" | sed "s/index.html//" | sed "s/.\///") # remove any trailing filename from $loc
+      loc=$(printf "%s" "$loc" | sed "s/index.html//" | sed "s/.\///") # remove any trailing filename from $loc
       if [ "$wayback_url" = "yes" ] && [ "$wayback_domain_original_sitemap" = "yes" ]; then
-        loc_full=$(echo "$loc" | cut -d':' -f2-)
+        loc_full=$(printf "%s" "$loc" | cut -d':' -f2-)
         if [[ $url_path == *"http:"* ]]; then
           http_prefix="http:/"
         else
@@ -2266,7 +2266,7 @@ cut_mss_dirs() {
   echo "Moved files and folders from $dir_path to $working_mirror_dir/." "1"
 
   # remove top-level folder of $url_path
-  url_root_dir=$(echo "$url_path_dir" | cut -d/ -f1)
+  url_root_dir=$(printf "%s" "$url_path_dir" | cut -d/ -f1)
   if [ -d "$url_root_dir" ]; then
     rm -rf "$url_root_dir"
   fi

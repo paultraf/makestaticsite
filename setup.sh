@@ -189,7 +189,7 @@ read_credentials() {
     printf "%s: %s\n\n" "$(msg_ink "info" "$3")" "$input_line"
     confirm=Y
     if [ -f "$credentials_path.$credentials_extension" ]; then
-      read -r -e -p "An entry already exists for $credentials_path. Overwrite it? [y/N]? " confirm
+      read -r -e -p "An entry already exists for $credentials_path. Overwrite it? [y/N] " confirm
       confirm=${confirm:0:1}
       if [ "$confirm" = "y" ] || [ "$confirm" = "Y" ]; then
         rm "$credentials_path.$credentials_extension" || echo "$msg_error: unable to remove the existing file at $credentials_path.$credentials_extension."
@@ -338,13 +338,13 @@ read_option() {
       if [ "$optvar" = "url" ]; then
         host=$(printf "%s" "$input_value" | awk -F/ '{print $3}' | awk -F: '{print $1}')
         # Check for Wayback Machine
-        if [ "$wayback_enable" = "yes" ] && check_wayback_url "$input_value" "$wayback_hosts"; then
-          archived_domain_path=$(echo "${input_value//:\/\//|}" | cut -d\| -f3)
+        if check_wayback_url "$input_value" "$wayback_hosts"; then
+          archived_domain_path=$(printf "%s" "${input_value//:\/\//|}" | cut -d\| -f3)
           if [ "$archived_domain_path" = "" ]; then
             echo "$msg_error: Sorry, no archive URL found at the Wayback Machine!  For guidance on acceptable URLs, please consult https://help.archive.org/help/using-the-wayback-machine/ and then try again."; exit
           else
             echo "Wayback Machine URL detected with archive having domain and path: $archived_domain_path."
-            host=$(echo "$archived_domain_path" | cut -d/ -f1)
+            host=$(printf "%s" "$archived_domain_path" | cut -d/ -f1)
             process_wayback_url "$input_value"
           fi
         fi

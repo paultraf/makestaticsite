@@ -64,10 +64,10 @@ process_wayback_url() {
     local url_stem_dates=${1%http*}
     local url_slashes=${url_stem_dates//[!\/]};
     local url_depth=$(( ${#url_slashes} ))
-    wayback_date_from_to=$(env echo "$1" | cut -d/ -f${url_depth})
-    wayback_date_to_cut=$(env echo "$wayback_date_from_to" | cut -d- -f2)
+    wayback_date_from_to=$(printf "%s" "$1" | cut -d/ -f${url_depth})
+    wayback_date_to_cut=$(printf "%s" "$wayback_date_from_to" | cut -d- -f2)
     if [ "$wayback_date_to_cut" != "$wayback_date_from_to" ]; then
-      wayback_date_from=$(env echo "$wayback_date_from_to" | cut -d- -f1)
+      wayback_date_from=$(printf "%s" "$wayback_date_from_to" | cut -d- -f1)
       wayback_date_to="$wayback_date_to_cut"
       if ! validate_timestamp "$wayback_date_from"; then
         echo "$msg_error: The 'from' date, $wayback_date_from, in the range $wayback_date_from_to, is invalid. It needs to be a string of digits in the format: YYYYMMDDhhmmss (substrings starting with YYYY are allowed)." 
@@ -81,14 +81,14 @@ process_wayback_url() {
 
     # Assign the archived URL as URL and validate
     (( url_depth++ ))
-    url_original=$(env echo "$1" | cut -d/ -f"${url_depth}"-)
+    url_original=$(printf "%s" "$1" | cut -d/ -f"${url_depth}"-)
 
     # assign URL-related variables
     protocol_original=$(printf "%s" "$url_original" | awk -F/ '{print $1}' | awk -F: '{print $1}')
     hostport_original=$(printf "%s" "$url_original" | awk -F/ '{print $3}')
     url_original_base="$protocol_original://$hostport_original"
     url_original_base_singleslash=${url_original_base/:\/\//:\/}  # adjust for Wget directory mapping
-    url_path_original=$(env echo "$url_original" | cut -d/ -f4-)
+    url_path_original=$(printf "%s" "$url_original" | cut -d/ -f4-)
     url_path_original="${url_path_original%\/*}"  # remove anything after last '/'
 
     if [ "$url_stem_dates" = "" ] || ! validate_url "$url_original"; then
@@ -160,8 +160,8 @@ wayback_url_paths() {
   
   # Locate source directories to copy
   url_path_snapshot="${url_path/$wayback_date_to/ }"
-  url_path_snapshot_prefix=$(env echo "$url_path_snapshot" | cut -d' ' -f1 | cut -d'/' -f1 )
-  url_path_snapshot=$(env echo "$url_path_snapshot" | cut -d' ' -f2- )
+  url_path_snapshot_prefix=$(printf "%s" "$url_path_snapshot" | cut -d' ' -f1 | cut -d'/' -f1 )
+  url_path_snapshot=$(printf "%s" "$url_path_snapshot" | cut -d' ' -f2- )
   url_path_snapshot="$wayback_date_to$url_path_snapshot"
   url_path_prefix=
   for ((i=1;i<url_path_depth;i++)); do
@@ -175,7 +175,7 @@ wayback_url_paths() {
 # (Currently, there is no filtering based on wayback_timestamp_policy.)
 wayback_filter_domains() {
   webassets_wayback=()
-  url_regex=$(env echo "$url"|sed 's|\(/\)'"$wayback_datetime_regex"'|\1'"$wayback_datetime_regex"'|') # turn original URL into wildcard expression
+  url_regex=$(printf "%s" "$url"|sed 's|\(/\)'"$wayback_datetime_regex"'|\1'"$wayback_datetime_regex"'|') # turn original URL into wildcard expression
   url_regex=${url_regex/"$url_base"/} # trim the URL base to support relative links
 
   # Add a constraint on Wget searches
@@ -187,10 +187,10 @@ wayback_filter_domains() {
   # Constrain further Wget runs to Wayback URLs involving the primary domain
   # and not got a valid asset extension
   for opt in "${webassets_http[@]}"; do
-    opt_regex=$(env echo "$opt"|sed 's|\(/\)'"$wayback_datetime_regex"'|\1'"$wayback_datetime_regex"'|') # turn original URL into wildcard expression
+    opt_regex=$(printf "%s" "$opt"|sed 's|\(/\)'"$wayback_datetime_regex"'|\1'"$wayback_datetime_regex"'|') # turn original URL into wildcard expression
     # Add a further condition to check whether asset already in list modulo timestamps
     if [[ $opt =~ $url_regex ]] && [[ ! ${webassets_wayback0[@]} =~ $opt_regex ]]; then
-      opt=$(env echo $opt | sed 's/#[[:alnum:]]*$//') # remove internal anchors
+      opt=$(printf "%s" $opt | sed 's/#[[:alnum:]]*$//') # remove internal anchors
       webassets_wayback0+=("$opt") 
     else
       continue                  # URL is not allowed, so drop
@@ -220,7 +220,7 @@ wayback_filter_domains() {
       item="${item/\/https:\//\/https:\/\/}"
 
       # Now generate wildcard version
-      item_regex=$(env echo "$item"|sed 's|\(/\)'"$wayback_datetime_regex"'|\1'"$wayback_datetime_regex"'|')
+      item_regex=$(printf "%s" "$item"|sed 's|\(/\)'"$wayback_datetime_regex"'|\1'"$wayback_datetime_regex"'|')
 
       # If the candidate item is not already in the list of Wayback domain-based exceptions, then add it
       if [[ ! ${wayback_domain_exceptions[@]} =~ $item_regex ]]; then
@@ -342,7 +342,7 @@ consolidate_assets() {
     for item in "${snapshot_path_list[@]}"; do
       snapshot_src_path="$pathpref$url_path_prefix$item"      
       snapshot_src_path=$(regex_escape "$snapshot_src_path")
-      snapshot_src_path=$(env echo "$snapshot_src_path" | sed 's|'"$wayback_datetime_regex"'|'"$wayback_datetime_regex"'|g') 
+      snapshot_src_path=$(printf "%s" "$snapshot_src_path" | sed 's|'"$wayback_datetime_regex"'|'"$wayback_datetime_regex"'|g') 
       snapshot_src_path=$(regex_apply "$snapshot_src_path")
       if [ "$url_path_original" != "" ]; then
         opt_item_slashes=${opt_item//[!\/]};
