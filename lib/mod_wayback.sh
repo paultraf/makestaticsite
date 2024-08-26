@@ -163,6 +163,11 @@ wayback_url_paths() {
   url_path_snapshot_prefix=$(printf "%s" "$url_path_snapshot" | cut -d' ' -f1 | cut -d'/' -f1 )
   url_path_snapshot=$(printf "%s" "$url_path_snapshot" | cut -d' ' -f2- )
   url_path_snapshot="$wayback_date_to$url_path_snapshot"
+  if [ "$url_path_original" = "" ]; then
+    url_path_snapshot_root="$url_path_snapshot"
+  else
+    url_path_snapshot_root="${url_path_snapshot/$url_path_original/}"
+  fi
   url_path_prefix=
   for ((i=1;i<url_path_depth;i++)); do
     url_path_prefix+="../"
@@ -409,8 +414,14 @@ consolidate_assets() {
     done <<<"$(find "." -type d ! -empty -not -path "." -not -path "" -print)"
     cd "$src_path_snapshot" || { echo "Unable to cd back to $src_path_snapshot"; exit; }
   done
+  folder_exclude="$url_path_original/"
+  folder_exclude="${folder_exclude%\/*}"
+  cd "$url_path_snapshot_root" || echo "Unable to enter $url_path_snapshot_root" 
+  while IFS= read -r line; do
+   line="${line#./}"
+    mv "$line" "$url_path_original/"
+  done <<<"$(find . -maxdepth 1 -type d ! -empty -not -path "." -not -path "./$folder_exclude" -print)"
   print_progress
-  cd "$working_mirror_dir" || echo "Unable to enter $working_mirror_dir"
 }
 
 # Convert absolute URLs to relative URLs for internal anchors
