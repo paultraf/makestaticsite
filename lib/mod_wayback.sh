@@ -156,7 +156,6 @@ wayback_url_paths() {
   
   url_base_regex=$(regex_escape "$url_base")
   url_timeless_nodomain=${url_timeless/"$url_base_regex"/}   # Truncated version
-  url_base_timeless_nodomain=${url_base_timeless/"$url_base_regex"/}   # Truncated version
   
   # Locate source directories to copy
   url_path_snapshot="${url_path/$wayback_date_to/ }"
@@ -166,7 +165,8 @@ wayback_url_paths() {
   if [ "$url_path_original" = "" ]; then
     url_path_snapshot_root="$url_path_snapshot"
   else
-    url_path_snapshot_root="${url_path_snapshot/$url_path_original/}"
+    url_path_snapshot_root="${url_path_snapshot%\/*}"  # Remove anything after last '/' for URLs not ending in '/'.
+    url_path_snapshot_root="${url_path_snapshot_root/$url_path_original/}"
   fi
   url_path_prefix=
   for ((i=1;i<url_path_depth;i++)); do
@@ -194,8 +194,8 @@ wayback_filter_domains() {
   for opt in "${webassets_http[@]}"; do
     opt_regex=$(printf "%s" "$opt"|sed 's|\(/\)'"$wayback_datetime_regex"'|\1'"$wayback_datetime_regex"'|') # turn original URL into wildcard expression
     # Add a further condition to check whether asset already in list modulo timestamps
-    if [[ $opt =~ $url_regex ]] && [[ ! ${webassets_wayback0[@]} =~ $opt_regex ]]; then
-      opt=$(printf "%s" $opt | sed 's/#[[:alnum:]]*$//') # remove internal anchors
+    if [[ $opt =~ $url_regex ]] && [[ ! ${webassets_wayback0[*]} =~ $opt_regex ]]; then
+      opt=$(printf "%s" "$opt" | sed 's/#[[:alnum:]]*$//') # remove internal anchors
       webassets_wayback0+=("$opt") 
     else
       continue                  # URL is not allowed, so drop
@@ -228,7 +228,7 @@ wayback_filter_domains() {
       item_regex=$(printf "%s" "$item"|sed 's|\(/\)'"$wayback_datetime_regex"'|\1'"$wayback_datetime_regex"'|')
 
       # If the candidate item is not already in the list of Wayback domain-based exceptions, then add it
-      if [[ ! ${wayback_domain_exceptions[@]} =~ $item_regex ]]; then
+      if [[ ! ${wayback_domain_exceptions[*]} =~ $item_regex ]]; then
         wayback_domain_exceptions+=("$item_regex")
       fi
 
@@ -314,10 +314,17 @@ consolidate_assets() {
   done <<<"$(find "." -maxdepth 1 -type d ! -empty "${snapshot_exclude_dirs[@]}" -print)"
 
   snapshot_path_list=()
+  if [ "$wayback_to" != "" ]; then
+    wb_date_to_not_path="-not -path ./$wayback_date_to"
+    wb_date_to_not_path2="-not -path ./$wb_date_to_path/"\*
+  else
+    wb_date_to_not_path=
+    wb_date_to_not_path2=
+  fi
   while IFS= read -r line; do
     line="${line#./}"
     snapshot_path_list+=("$line")
-  done <<<"$(find . -mindepth $wayback_snapshot_path_depth -maxdepth $wayback_snapshot_path_depth -type d -not -path "./$wayback_date_to" -not -path "./$wayback_date_to/"\* -print)"
+  done <<<"$(find . -mindepth $wayback_snapshot_path_depth -maxdepth $wayback_snapshot_path_depth -type d $wb_date_to_not_path $wb_date_to_not_path2 -print)"
 
   cd "$working_mirror_dir" || { echo "msg_error: Unable to return to $working_mirror_dir. Aborting."; exit; } 
 
@@ -325,8 +332,8 @@ consolidate_assets() {
   dest_path="$working_mirror_dir/$url_path"
   if [ "$url_path_original" != "" ]; then
     [ "$url_add_slash" = "avoid" ] && dest_path="${dest_path%\/*}/"  # remove anything after last '/'
-    dest_path="${dest_path%\/$url_path_original\/*}"  # remove $url_path_original from tail
-    dest_path="${dest_path%\/$url_path_original*}"  # remove $url_path_original from tail
+    dest_path="${dest_path%\/"$url_path_original"\/*}"  # remove $url_path_original from tail
+    dest_path="${dest_path%\/"$url_path_original"*}"  # remove $url_path_original from tail
   fi
 
   # Replace the relative links created by Wget (that point to levels higher up in the directory hierarchy)
@@ -342,7 +349,7 @@ consolidate_assets() {
       pathpref+="../";
     done
 
-    opt_item="${opt##*$url_original_base_singleslash\/}" # extract only the relevant path and then add this on to snapshot_src_path
+    opt_item="${opt##*"$url_original_base_singleslash"\/}" # extract only the relevant path and then add this on to snapshot_src_path
     opt_item="${opt_item%\/*}" # remove everything after trailing slash
     for item in "${snapshot_path_list[@]}"; do
       snapshot_src_path="$pathpref$url_path_prefix$item"      
@@ -414,14 +421,32 @@ consolidate_assets() {
     done <<<"$(find "." -type d ! -empty -not -path "." -not -path "" -print)"
     cd "$src_path_snapshot" || { echo "Unable to cd back to $src_path_snapshot"; exit; }
   done
-  folder_exclude="$url_path_original/"
-  folder_exclude="${folder_exclude%\/*}"
-  cd "$url_path_snapshot_root" || echo "Unable to enter $url_path_snapshot_root" 
-  while IFS= read -r line; do
-   line="${line#./}"
-    mv "$line" "$url_path_original/"
-  done <<<"$(find . -maxdepth 1 -type d ! -empty -not -path "." -not -path "./$folder_exclude" -print)"
+
+  cd "$working_mirror_dir" || echo "$msg_warning: Unable to enter $working_mirror_dir"
+  cd "$url_path_dir" || echo "$msg_warning: Unable to enter $working_mirror_dir"
+  webpaths_output2=() # to store directory paths for internal links, creating array before moving supporting assets here
+  while IFS='' read -r line; do
+    webpaths_output2+=("$line")
+    line=${line:2}
+  done < <(find "." -type d "${asset_exclude_dirs[@]}" -print)
+  cd "$src_path_snapshot" || { echo "Unable to cd back to $src_path_snapshot"; exit; }
+  if [ "$url_path_original" != "" ]; then
+    folder_exclude="$url_path_original/"
+    folder_exclude="${folder_exclude%\/*}"
+    folder_exclude_not_path="-not -path ./$folder_exclude"
+  else
+    folder_exclude_not_path=
+  fi
+
+  cd "$url_path_snapshot_root" || echo "Unable to enter $url_path_snapshot_root"
+  if [ "$url_path_original" != "" ]; then
+    while IFS= read -r line; do
+      line="${line#./}"
+      [ "$line" != "" ] && [[ ! $url_path_original == $line/* ]] && mv "$line" "$url_path_original/"
+    done <<<"$(find . -maxdepth 1 -type d ! -empty -not -path "." $folder_exclude_not_path -print)"
+  fi
   print_progress
+  cd "$working_mirror_dir" || echo "$msg_warning: Unable to enter $working_mirror_dir"
 }
 
 # Convert absolute URLs to relative URLs for internal anchors
@@ -430,10 +455,9 @@ process_asset_anchors() {
   print_progress "0" "100";
 
   # Generate lists of webasset paths
-  cd "$url_path_dir"
+  cd "$url_path_dir" || echo "$msg_warning: Unable to enter $working_mirror_dir"
   webpages_output1=() # to store file paths to web pages only
   webpaths_output1=() # to store file paths to web assets for internal links
-  webpaths_output2=() # to store directory paths for internal links
 
   while IFS='' read -r line; do
     webpages_output1+=("$line")
@@ -449,28 +473,30 @@ process_asset_anchors() {
     webpaths_output1+=("$line")
   done < <(find "." -type f "${asset_exclude_dirs[@]}" -print)
 
-  while IFS='' read -r line; do
-    webpaths_output2+=("$line")
-    line=${line:2}
-  done < <(find "." -type d "${asset_exclude_dirs[@]}" -print)
-
   # Carry out substitutions in web pages
   count=0
   for opt in "${webpages_output1[@]}"; do
     print_progress "$count" "$num_webpages1";  
     pathpref=
     opt_path_stem=${opt:2}
-    [ "$url_path_original" != "" ] && opt_path_stem=${opt_path_stem##*$url_path_original}  # Path (directory hierarchy) relative to the original URL
+    [ "$url_path_original" != "" ] && opt_path_stem=${opt_path_stem##*"$url_path_original"}  # Path (directory hierarchy) relative to the original URL
     opt_rel_depth=${opt_path_stem//[!\/]};
     opt_rel_depth_num=${#opt_rel_depth} # measure the relative depth of opt_path_stem
     for ((i=1;i<=opt_rel_depth_num;i++)); do
       pathpref+="../";
     done
     for item in "${webpaths_output1[@]}"; do
-      item="${item##*$domain_original\/}"
+      item="${item##*"$domain_original"\/}"
       item=$(regex_escape "$item")
-      sed_subs1=('s|\('"$url_timeless"'\)\('"$item"'\)|'"$pathpref\2"'|g' "$opt")
-      sed_subs2=('s|\([\"'\'']\)\('"$url_timeless_nodomain"'\)\('"$item"'\)|'"\1$pathpref\3"'|g' "$opt")
+      if [[ ! $opt =~ $url_path_original ]]; then
+        url_timeless0="${url_timeless%\/"$url_path_original"*}/"
+        url_timeless_nodomain0="${url_timeless_nodomain%\/"$url_path_original"*}/"
+      else
+        url_timeless0="$url_timeless"
+        url_timeless_nodomain0="$url_timeless_nodomain"
+      fi
+      sed_subs1=('s|\('"$url_timeless0"'\)\('"$item"'\)|'"$pathpref\2"'|g' "$opt")
+      sed_subs2=('s|\([\"'\'']\)\('"$url_timeless_nodomain0"'\)\('"$item"'\)|'"\1$pathpref\3"'|g' "$opt")
       sed "${sed_options[@]}" "${sed_subs1[@]}"
       sed "${sed_options[@]}" "${sed_subs2[@]}"
     done
@@ -484,6 +510,7 @@ process_asset_anchors() {
     for item in "${webpaths_output2[@]}"; do
       item=${item:2}
       item=$(regex_escape "$item")
+      [[ ${item:length-1:1} != "/" ]] && item+="/"
       sed_subs1=('s|\('"$url_timeless"'\)\('"$item"'\)\([\"'\'']\)|'"$pathpref\2index.html\3"'|g' "$opt")
       sed_subs2=('s|\([\"'\'']\)\('"$url_timeless_nodomain"'\)\('"$item"'\)\([\"'\'']\)|'"\1$pathpref\3index.html\4"'|g' "$opt")
       sed "${sed_options[@]}" "${sed_subs1[@]}"
