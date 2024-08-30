@@ -314,26 +314,17 @@ consolidate_assets() {
   done <<<"$(find "." -maxdepth 1 -type d ! -empty "${snapshot_exclude_dirs[@]}" -print)"
 
   snapshot_path_list=()
-  if [ "$wayback_to" != "" ]; then
-    wb_date_to_not_path="-not -path ./$wayback_date_to"
-    wb_date_to_not_path2="-not -path ./$wb_date_to_path/"\*
-  else
-    wb_date_to_not_path=
-    wb_date_to_not_path2=
-  fi
   while IFS= read -r line; do
     line="${line#./}"
-    snapshot_path_list+=("$line")
-  done <<<"$(find . -mindepth $wayback_snapshot_path_depth -maxdepth $wayback_snapshot_path_depth -type d $wb_date_to_not_path $wb_date_to_not_path2 -print)"
+    [ "${line%%\/*}" != "$wayback_date_to" ] &&  snapshot_path_list+=("$line")
+  done <<<"$(find . -mindepth $wayback_snapshot_path_depth -maxdepth $wayback_snapshot_path_depth -type d -print)"
 
   cd "$working_mirror_dir" || { echo "msg_error: Unable to return to $working_mirror_dir. Aborting."; exit; } 
 
   # Initialised source and destination paths (trunks)
   dest_path="$working_mirror_dir/$url_path"
   if [ "$url_path_original" != "" ]; then
-    [ "$url_add_slash" = "avoid" ] && dest_path="${dest_path%\/*}/"  # remove anything after last '/'
-    dest_path="${dest_path%\/"$url_path_original"\/*}"  # remove $url_path_original from tail
-    dest_path="${dest_path%\/"$url_path_original"*}"  # remove $url_path_original from tail
+    [ "$url_add_slash" = "avoid" ] && dest_path="${dest_path%\/*}"  # remove anything after last '/'
   fi
 
   # Replace the relative links created by Wget (that point to levels higher up in the directory hierarchy)
@@ -352,7 +343,7 @@ consolidate_assets() {
     opt_item="${opt##*"$url_original_base_singleslash"\/}" # extract only the relevant path and then add this on to snapshot_src_path
     opt_item="${opt_item%\/*}" # remove everything after trailing slash
     for item in "${snapshot_path_list[@]}"; do
-      snapshot_src_path="$pathpref$url_path_prefix$item"      
+      snapshot_src_path="$pathpref$url_path_prefix$item"
       snapshot_src_path=$(regex_escape "$snapshot_src_path")
       snapshot_src_path=$(printf "%s" "$snapshot_src_path" | sed 's|'"$wayback_datetime_regex"'|'"$wayback_datetime_regex"'|g') 
       snapshot_src_path=$(regex_apply "$snapshot_src_path")
@@ -378,6 +369,7 @@ consolidate_assets() {
 
   cd "$src_path_snapshot" || { echo "$msg_error: Unable to enter $src_path_snapshot.  Aborting"; exit; }
 
+  ## Copy over directories and folders to URL Path.
   for snapshot_dir in "${snapshot_path_list[@]}"; do
     echo "Entering $snapshot_dir" "1"
     if [ -d "$snapshot_dir" ]; then
@@ -388,14 +380,18 @@ consolidate_assets() {
 
     while IFS= read -r copy_dir; do
       copy_dir="${copy_dir#./}"
-      if [ "$copy_dir" != "" ]; then
+      if [ "$copy_dir" != "" ] && { [[ ! $url_path_original == $copy_dir/* ]] || [ "$url_path_original" = "" ]; }; then
         echo "mkdir -p $dest_path/$copy_dir" "1"
         mkdir -p "$dest_path/$copy_dir"
 
         # loop over files in subdirectory
         while IFS= read -r item; do
-          # check if file already exists in destination
+          # check for internal URL path copying and adjust accordingly
           file_dest="$dest_path/$item"
+          if [[ $item == $url_path_original* ]]; then
+            file_dest="${file_dest%\/"$url_path_original"\/*}" 
+          fi          
+          # check if file already exists in destination
           if [ -f "$file_dest" ]; then
             echo "File exists at $file_dest" "2"
           elif [ "$item" != "" ]; then
