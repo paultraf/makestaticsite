@@ -2113,7 +2113,7 @@ clean_mirror() {
   if [ "$wayback_url" = "yes" ] && [ "$wayback_domain_original" = "yes" ]; then
     cd "$mirror_dir/$mirror_archive_dir/" || { echo "$msg_error: Unable to enter $mirror_dir/$mirror_archive_dir/"; exit; }
     mv "$domain" "$domain_original" || echo "$msg_warning: Unable to rename working_mirror_dir $mirror_dir/$mirror_archive_dir/$domain_original"
-    echo "Renamed $working_mirror_dir to $mirror_dir$mirror_archive_dir/$domain_original."
+    echo "Renamed $working_mirror_dir to $mirror_dir/$mirror_archive_dir/$domain_original."
     # Update mirror variable
     working_mirror_dir="$mirror_dir/$mirror_archive_dir/$domain_original"
   fi

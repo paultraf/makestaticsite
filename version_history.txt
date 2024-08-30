@@ -19,7 +19,26 @@
 ##########################################################################
 
 
-0.30.3 (released on 2024-08-)
+0.30.4 (released on 2024-08-30)
+       * Maintenance: bug fixes in processing Wayback Machine output. *
+        General replacement of 'env echo' with printf; some echo statements
+        used solely for processing also replaced by printf.
+        [lib/mod_wayback.sh]
+         Code tidy to address most Shellcheck issues (others can be ignored
+         because data doesn't contain spaces, asterisks, etc.).
+         wayback_url_paths(): refined definition of url_path_snapshot_root to
+         remove anything after last '/' (case URLs end with file extension).
+         consolidate_assets(): added routine to move top-level directories
+         created by Wget into the URL path.
+         Moved the definition of webpaths_output2() here to ensure that it
+         excludes the URL path directory before being used in file moves. 
+         Bug fixes: modified parameters in 'find' command for -not -path
+         parameters.
+         process_asset_anchors(): modified sed substitution clauses to
+         properly take account of full URL paths and hence enable correct
+         relative links. 
+         
+0.30.3 (released on 2024-08-25)
        * Extended Wayback Machine crawls to URLs with arbitrary timestamps.
         [lib/constants.sh]
          New constants: webpage_file_extensions - a list of common web page
