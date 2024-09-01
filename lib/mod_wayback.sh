@@ -301,6 +301,11 @@ consolidate_assets() {
   echo "Consolidating snapshot assets in a single location, reflecting original layout ... "
   print_progress "0" "100";
 
+  webpages=()
+  while IFS= read -r line; do webpages+=("$line"); done <<<"$(for file_ext in "${asset_find_names[@]}"; do find . -type f -name "$file_ext" "${asset_exclude_dirs[@]}" -print; done)"
+  [ "${webpages[*]}" = "" ] && echo "$msg_warning: no web pages found for processing."
+  num_webpages="${#webpages[@]}"
+  
   cd "$src_path_snapshot" || echo "Unable to enter $src_path_snapshot"
   snapshot_exclude_dirs=()
   snapshot_list=("$wayback_date_to")
@@ -329,6 +334,9 @@ consolidate_assets() {
 
   # Replace the relative links created by Wget (that point to levels higher up in the directory hierarchy)
   count=0
+  if (( "${#snapshot_path_list[@]}" > 0 )); then
+    mkdir "$dest_path/$imports_directory"
+  fi
   for opt in "${webpages[@]}"; do
     print_progress "$count" "$num_webpages";
     depth=${opt//[!\/]};
@@ -343,25 +351,37 @@ consolidate_assets() {
     opt_item="${opt##*"$url_original_base_singleslash"\/}" # extract only the relevant path and then add this on to snapshot_src_path
     opt_item="${opt_item%\/*}" # remove everything after trailing slash
     for item in "${snapshot_path_list[@]}"; do
+      this_domain="${item##*/}" # remove everything before trailing slash
+      this_domain_regex=$(regex_apply "$this_domain")
       snapshot_src_path="$pathpref$url_path_prefix$item"
       snapshot_src_path=$(regex_escape "$snapshot_src_path")
       snapshot_src_path=$(printf "%s" "$snapshot_src_path" | sed 's|'"$wayback_datetime_regex"'|'"$wayback_datetime_regex"'|g') 
       snapshot_src_path=$(regex_apply "$snapshot_src_path")
       if [ "$url_path_original" != "" ]; then
+        # this variants targets specifically URLs that contain the URL path
         opt_item_slashes=${opt_item//[!\/]};
         opt_item_slashes_num=${#opt_item_slashes};
         this_path="$opt_item"
-        this_path_prefix=
+        if [ "$this_domain" != "$domain_original" ]; then
+          this_path_prefix="$imports_directory/$this_domain"
+        else
+          this_path_prefix=
+        fi
         this_path_regex=$(regex_apply "$this_path")
         for ((j=1;j<=opt_item_slashes_num;j++)); do
-          snapshot_src_path0="$snapshot_src_path/$this_path_regex" # this variants targets specifically URLs that contain the URL path
+          snapshot_src_path0="$snapshot_src_path/$this_path_regex"
           sed_subs0=('s|'"$snapshot_src_path0/"'|'"$this_path_prefix"'|g' "$opt")
           sed "${sed_options[@]}" "${sed_subs0[@]}"
           this_path="${this_path%\/*}" # delete everything after last /
-          this_path_prefix+="../"
+          this_path_prefix="../$this_path_prefix"
         done
       fi
-      sed_subs1=('s|'"$snapshot_src_path/"'|'""'|g' "$opt")
+      if [ "$this_domain" != "$domain_original" ]; then
+        this_folder_path="$imports_directory/$this_domain/"
+      else
+        this_folder_path=
+      fi
+      sed_subs1=('s|'"$snapshot_src_path/"'|'"$this_folder_path"'|g' "$opt")
       sed "${sed_options[@]}" "${sed_subs1[@]}"
     done
     (( count++ ))
@@ -371,6 +391,7 @@ consolidate_assets() {
 
   ## Copy over directories and folders to URL Path.
   for snapshot_dir in "${snapshot_path_list[@]}"; do
+    this_domain="${snapshot_dir##*/}" # remove everything before trailing slash
     echo "Entering $snapshot_dir" "1"
     if [ -d "$snapshot_dir" ]; then
       cd "$snapshot_dir"
@@ -381,13 +402,22 @@ consolidate_assets() {
     while IFS= read -r copy_dir; do
       copy_dir="${copy_dir#./}"
       if [ "$copy_dir" != "" ] && { [[ ! $url_path_original == $copy_dir/* ]] || [ "$url_path_original" = "" ]; }; then
-        echo "mkdir -p $dest_path/$copy_dir" "1"
-        mkdir -p "$dest_path/$copy_dir"
+        if [ "$this_domain" != "$domain_original" ]; then ####
+        this_dest_path="$dest_path/$imports_directory/$this_domain/$copy_dir"
+        else
+          this_dest_path="$dest_path/$copy_dir"
+        fi
+        echo "mkdir -p $this_dest_path" "1"
+        mkdir -p "$this_dest_path"
 
         # loop over files in subdirectory
         while IFS= read -r item; do
           # check for internal URL path copying and adjust accordingly
-          file_dest="$dest_path/$item"
+          if [ "$this_domain" != "$domain_original" ]; then ####
+            file_dest="$dest_path/$imports_directory/$this_domain/$item"
+          else
+            file_dest="$dest_path/$item"
+          fi
           if [[ $item == $url_path_original* ]]; then
             file_dest="${file_dest%\/"$url_path_original"\/*}" 
           fi          
@@ -396,7 +426,7 @@ consolidate_assets() {
             echo "File exists at $file_dest" "2"
           elif [ "$item" != "" ]; then
             echo "Move file $item to $file_dest" "1"
-            mv "$item" "$file_dest" || echo "Unable to move $item to $file_dest!"  
+            mv "$item" "$file_dest" || echo "Unable to move $item to $file_dest!"
           fi
         done <<<"$(find "$copy_dir/" -maxdepth 1 -type f ! -empty -print)"
       fi
@@ -405,12 +435,16 @@ consolidate_assets() {
         if [ "$item" != "" ]; then
           # check if file already exists in destination
           item="${item#./}"
-          file_dest="$dest_path/$item"
+          if [ "$this_domain" != "$domain_original" ]; then
+            file_dest="$dest_path/$imports_directory/$this_domain/$item"
+          else
+            file_dest="$dest_path/$item"
+          fi
           if [ -f "$file_dest" ]; then
             echo "File exists at $file_dest" "2"
           else
             echo "Move file $item to $file_dest" "1"
-            mv "$item" "$file_dest" || echo "Unable to move $item to $file_dest!"  
+            mv "$item" "$file_dest" || echo "Unable to move $item to $file_dest!"
           fi
         fi
       done <<<"$(find "." -maxdepth 1 -type f ! -empty -print)"
@@ -438,7 +472,8 @@ consolidate_assets() {
   if [ "$url_path_original" != "" ]; then
     while IFS= read -r line; do
       line="${line#./}"
-      [ "$line" != "" ] && [[ ! $url_path_original == $line/* ]] && mv "$line" "$url_path_original/"
+      [ "$line" != "" ] && [[ ! $url_path_original == $line/* ]] &&
+      {  mv "$line" "$url_path_original/" || echo "Unable to move $line to $url_path_original/"; }
     done <<<"$(find . -maxdepth 1 -type d ! -empty -not -path "." $folder_exclude_not_path -print)"
   fi
   print_progress

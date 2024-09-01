@@ -1795,12 +1795,6 @@ process_assets() {
     fi
   fi
 
-  if [ "$wayback_url" = "yes" ] && [ "$use_wayback_cli" != "yes" ] && [ "$wayback_assets_mode" = "original" ]; then
-    src_path_snapshot="$working_mirror_dir/$url_path_snapshot_prefix"
-    consolidate_assets
-    process_asset_anchors
-    wayback_output_clean
-  fi
   echo "Done."
 }
 
@@ -1816,7 +1810,12 @@ site_postprocessing() {
   echo "Carrying out site postprocessing in $working_mirror_dir ... "
 
   # Adjust storage locations of assets, where applicable
-  if [ -s "$input_file_extra_all" ] || [ "$url_has_path" = "yes" ]; then
+  if [ "$wayback_url" = "yes" ] && [ "$use_wayback_cli" != "yes" ] && [ "$wayback_assets_mode" = "original" ]; then
+    src_path_snapshot="$working_mirror_dir/$url_path_snapshot_prefix"
+    consolidate_assets
+    process_asset_anchors
+    wayback_output_clean 
+  elif [ -s "$input_file_extra_all" ] || [ "$url_has_path" = "yes" ]; then
     process_assets
   fi
 
