@@ -399,6 +399,10 @@ consolidate_assets() {
   ## Copy over directories and folders to URL Path.
   for snapshot_dir in "${snapshot_path_list[@]}"; do
     this_domain="${snapshot_dir##*/}" # remove everything before trailing slash
+    # Create a directory for $this_domain inside the 'imports' directory under the 'destination' path.
+    if [ "$this_domain" != "$domain_original" ]; then
+      mkdir "$dest_path/$imports_directory/$this_domain" || echo "$msg_error: Unable to create the external domain directory $this_domain inside $dest_path/$imports_directory."
+    fi
     echo "Entering $snapshot_dir" "1"
     if [ -d "$snapshot_dir" ]; then
       cd "$snapshot_dir"
@@ -458,7 +462,7 @@ consolidate_assets() {
             echo "File exists at $file_dest" "2"
           else
             echo "Move file $item to $file_dest" "1"
-            mv "$item" "$file_dest" || echo "Unable to move $item to $file_dest!"
+            mv "$item" "$file_dest" || echo "$msg_warning: Unable to move $item to $file_dest."
           fi
         fi
       done <<<"$(find "." -maxdepth 1 -type f ! -empty -print)"
