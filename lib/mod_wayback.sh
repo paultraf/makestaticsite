@@ -158,16 +158,14 @@ wayback_url_paths() {
   url_timeless_nodomain=${url_timeless/"$url_base_regex"/}   # Truncated version
   
   # Locate source directories to copy
-  url_path_snapshot="${url_path/$wayback_date_to/ }"
-  url_path_snapshot_prefix=$(printf "%s" "$url_path_snapshot" | cut -d' ' -f1 | cut -d'/' -f1 )
-  url_path_snapshot=$(printf "%s" "$url_path_snapshot" | cut -d' ' -f2- )
-  url_path_snapshot="$wayback_date_to$url_path_snapshot"
-  if [ "$url_path_original" = "" ]; then
-    url_path_snapshot_root="$url_path_snapshot"
-  else
-    url_path_snapshot_root="${url_path_snapshot%\/*}"  # Remove anything after last '/' for URLs not ending in '/'.
-    url_path_snapshot_root="${url_path_snapshot_root/$url_path_original/}"
+  url_path_root="$url_path"
+  if [ "$url_path_original" != "" ]; then
+    [ "$url_add_slash" = "avoid" ] && url_path_root="${url_path_root%\/*}"  # Remove anything after last '/' for URLs not ending in '/'.
+    url_path_root="${url_path_root/$url_path_original/}" 
   fi
+  [ "${url_path_root: -1}" = "/" ] && url_path_root="${url_path_root:O:-1}" # Remove any trailing '/'
+  url_path_snapshot_root=$(printf "%s" "$url_path_root" | cut -d'/' -f2- )
+  url_path_snapshot_prefix=$(printf "%s" "${url_path/$wayback_date_to/ }" | cut -d' ' -f1 | cut -d'/' -f1 )
   url_path_prefix=
   for ((i=1;i<url_path_depth;i++)); do
     url_path_prefix+="../"
@@ -328,14 +326,20 @@ consolidate_assets() {
 
   # Initialised source and destination paths (trunks)
   dest_path="$working_mirror_dir/$url_path"
+  dest_path_root="$working_mirror_dir/$url_path_root"
   if [ "$url_path_original" != "" ]; then
     [ "$url_add_slash" = "avoid" ] && dest_path="${dest_path%\/*}"  # remove anything after last '/'
+    if [ "$(find . -name "$assets_directory" -type d -print)" != "" ]; then
+      echo -n "$msg_warning: website already contains a directory, $assets_directory.  To avoid confusion (and errors), a timestamp is being appended to the MakeStaticSite-generated assets directory, but it is recommended that you modify the assets_directory constant and re-run. ... "
+      assets_directory="$assets_directory$timestamp"
+    fi
+    mkdir "$dest_path/$assets_directory" || echo "Unable to created directory"
   fi
 
   # Replace the relative links created by Wget (that point to levels higher up in the directory hierarchy)
   count=0
   if (( "${#snapshot_path_list[@]}" > 0 )); then
-    mkdir "$dest_path/$imports_directory"
+    mkdir "$dest_path/$imports_directory" || echo "$msg_error: Unable to create the 'imports' directory."
   fi
   for opt in "${webpages[@]}"; do
     print_progress "$count" "$num_webpages";
@@ -352,7 +356,6 @@ consolidate_assets() {
     opt_item="${opt_item%\/*}" # remove everything after trailing slash
     for item in "${snapshot_path_list[@]}"; do
       this_domain="${item##*/}" # remove everything before trailing slash
-      this_domain_regex=$(regex_apply "$this_domain")
       snapshot_src_path="$pathpref$url_path_prefix$item"
       snapshot_src_path=$(regex_escape "$snapshot_src_path")
       snapshot_src_path=$(printf "%s" "$snapshot_src_path" | sed 's|'"$wayback_datetime_regex"'|'"$wayback_datetime_regex"'|g') 
@@ -364,6 +367,8 @@ consolidate_assets() {
         this_path="$opt_item"
         if [ "$this_domain" != "$domain_original" ]; then
           this_path_prefix="$imports_directory/$this_domain"
+        elif [[ ! $url_path_original == $opt_item* ]]; then
+          this_path_prefix="$assets_directory"
         else
           this_path_prefix=
         fi
@@ -378,6 +383,8 @@ consolidate_assets() {
       fi
       if [ "$this_domain" != "$domain_original" ]; then
         this_folder_path="$imports_directory/$this_domain/"
+      elif [ "$url_path_original" != "" ]; then
+        this_folder_path="$assets_directory/"
       else
         this_folder_path=
       fi
@@ -402,31 +409,38 @@ consolidate_assets() {
     while IFS= read -r copy_dir; do
       copy_dir="${copy_dir#./}"
       if [ "$copy_dir" != "" ] && { [[ ! $url_path_original == $copy_dir/* ]] || [ "$url_path_original" = "" ]; }; then
-        if [ "$this_domain" != "$domain_original" ]; then ####
-        this_dest_path="$dest_path/$imports_directory/$this_domain/$copy_dir"
+        if [ "$this_domain" != "$domain_original" ]; then
+          this_dest_path="$dest_path/$imports_directory/$this_domain/$copy_dir"
+        elif [[ ! $copy_dir == $url_path_original* ]]; then
+          this_dest_path="$dest_path/$assets_directory/$copy_dir"
         else
           this_dest_path="$dest_path/$copy_dir"
         fi
         echo "mkdir -p $this_dest_path" "1"
-        mkdir -p "$this_dest_path"
+        if [[ $copy_dir == $url_path_original* ]]; then
+          this_dest_path="$dest_path_root/$copy_dir"
+        fi
+        mkdir -p "$this_dest_path" || echo "$msg_error: Unable to create directory $this_dest_path."
 
         # loop over files in subdirectory
         while IFS= read -r item; do
+          [ "$item" = "" ] && continue
+          if [[ $item == $url_path_original* ]]; then
+            file_dest="$dest_path_root/$item"
           # check for internal URL path copying and adjust accordingly
-          if [ "$this_domain" != "$domain_original" ]; then ####
+          elif [ "$this_domain" != "$domain_original" ]; then
             file_dest="$dest_path/$imports_directory/$this_domain/$item"
+          elif [[ ! $copy_dir == $url_path_original* ]]; then
+            file_dest="$dest_path/$assets_directory/$item"
           else
             file_dest="$dest_path/$item"
           fi
-          if [[ $item == $url_path_original* ]]; then
-            file_dest="${file_dest%\/"$url_path_original"\/*}" 
-          fi          
           # check if file already exists in destination
           if [ -f "$file_dest" ]; then
             echo "File exists at $file_dest" "2"
-          elif [ "$item" != "" ]; then
+          else
             echo "Move file $item to $file_dest" "1"
-            mv "$item" "$file_dest" || echo "Unable to move $item to $file_dest!"
+            mv "$item" "$file_dest" || echo "$msg_warning: Unable to move $item to $file_dest."
           fi
         done <<<"$(find "$copy_dir/" -maxdepth 1 -type f ! -empty -print)"
       fi
@@ -472,8 +486,16 @@ consolidate_assets() {
   if [ "$url_path_original" != "" ]; then
     while IFS= read -r line; do
       line="${line#./}"
-      [ "$line" != "" ] && [[ ! $url_path_original == $line/* ]] &&
-      {  mv "$line" "$url_path_original/" || echo "Unable to move $line to $url_path_original/"; }
+      parent_assets_path="$url_path_original"
+      [[ ! $url_path_original == $line* ]] && parent_assets_path+="/$assets_directory"
+      if [ "$line" != "" ] && [[ ! $url_path_original == $line/* ]]; then
+        if [ -d "$parent_assets_path/$line" ]; then
+          echo "$msg_info: the directory $parent_assets_path/$line already exists." "1"
+          cp -n -r "$line/"* "$parent_assets_path/$line/" || true; echo "$msg_warning: An error occurred in copying files/directories under $line to $parent_assets_path/" "1"
+        else
+          cp -n -r "$line" "$parent_assets_path/" || true; echo "$msg_warning: Unable to copy $line to $parent_assets_path/" "1"
+        fi
+      fi
     done <<<"$(find . -maxdepth 1 -type d ! -empty -not -path "." $folder_exclude_not_path -print)"
   fi
   print_progress
