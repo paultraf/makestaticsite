@@ -375,6 +375,9 @@ initialise_variables() {
     rvol=; wvol=-nv; wpvol=
   fi
 
+  # Check HTTP connectivity ahead of using Internet utilities
+  ! validate_http "$url" "url" "quiet" && { echo "Aborting."; exit; }
+
   # Check system requirements for cURL, Wget and SSL
   msg_checking="Checking your system for Wget and other essential components ... "
   cmd_check "curl" || { printf "%s%s: Unable to find binary: curl ("'$'"PATH contains %s).\nThis command is essential for checking connectivity.  It may be downloaded from https://curl.se/.\nAborting.\n" "$msg_checking" "$msg_error" "$PATH"; exit; }
@@ -845,7 +848,6 @@ wget_mirror() {
   wget_test_options+=(--spider --tries 3 "$url_base")
   if ! $wget_cmd "${wget_extra_options[@]}" "${wget_test_options[@]}"; then
     msg_error="Unable to connect to $url_base.  Please check: the spelling of the domain, the web server status (is it running?) and access restrictions, particularly if any http authentication credentials are required. "
-    printf "GET http://google.com HTTP/1.0\n\n" | nc google.com 80 > /dev/null 2>&1 || msg_error+="Actually, there appears to be no Internet connectivity (tested with http://google.com). "
     msg_error+="Aborting."
     echo "$msg_error"
     exit

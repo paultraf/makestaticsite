@@ -154,16 +154,22 @@ validate_internet() {
 
 
 # Receives one required parameter (URL)
-# and one optional parameter (variable name)
+# and two optional parameters:
+# - variable name for dynamically updating URLs following redirection
+# - mode ('quiet' to suppress output to terminal)
 # Uses cURL with following options:
 #  -A (--user-agent): specify user agent
 #  -s (--silent): no download progress bar
 #  -k (--insecure): don't verify security of connection
 #  -w (--write-out): on completion, display HTTP code (variable) on stdout
 #  -o: send output to null device
-
 validate_http() {
-  echo "Checking connection to $1 ..."
+  local e msg_status="Checking connection to $1 ..."
+  if [ "$3" = "quiet" ]; then
+    e="1"
+  else
+    echo "$msg_status"
+  fi
   curl_options=(-s -k)
   if [ "$wget_user_agent" != "" ];then
     curl_options+=(-A "$wget_user_agent") # note that we don't need to insert extra quotes
@@ -171,23 +177,25 @@ validate_http() {
   curl_options+=(--head -w "%{http_code}" "$1" -o /dev/null)
   status="$(curl "${curl_options[@]}")"
   if [ "$status" = "200" ]; then
-    echo "Connection established OK."
+    echo "Connection established OK." "$e"
     return
   elif [ "$status" = "301" ] || [ "$status" = "302" ] || [ "$status" = "307" ] || [ "$status" = "308" ]; then
-    echo -n "$msg_warning: redirect detected (HTTP code $status). "
+    echo -n $'\n'"$msg_warning: redirect detected (HTTP code $status). "
     # Following should require user to confirm (y/n):
     url_effective=$(curl -s -k -L --max-redirs "$max_redirects" -o /dev/null -w "%{url_effective}" "$1") || { echo "$msg_error: Unable to follow the redirection"; return 1; } # -L: follow redirects up to the value of max_redirects
     echo "URL effectively redirected to: $url_effective."
     status_redirect="$(curl -s -k  --max-redirs "$max_redirects" --head -w "%{http_code}" "$url_effective" -o /dev/null)"
     if [ -n "${2+x}" ]; then
-      if check_wayback_url "$1" "$wayback_hosts"; then
-        echo "$msg_info: $1 is a Wayback Machine URL."
-      fi
       printf -v "$2" '%s' "$url_effective"
-      echo "Following redirection, value of $2 changed to $url_effective."
+      echo "Following redirection, value of '$2' changed to $url_effective."
+      if check_wayback_url "$1" "$wayback_hosts"; then
+        msg_wayback=
+        [ "${BASH_SOURCE[1]}" = './makestaticsite.sh' ] && msg_wayback="It is recommended that you update the value of 'url' in the configuration file to avoid potential issues in generating the mirror."
+        echo "$msg_info: $1 is a Wayback Machine URL. $msg_wayback"
+      fi
     fi
     if [ "$status_redirect" = "200" ]; then
-      echo "Connection established OK."
+      echo "Connection established OK." "$e"
       return 
     elif [ "$status_redirect" = "401" ]; then
       echo "$msg_warning: unauthorised (HTTP code $status). This means that you will need to enter a username and password as wget parameters for wget_extra_options (which you can set a bit later)."
@@ -200,7 +208,9 @@ validate_http() {
   elif [ "$run_unattended" = "yes" ]; then
     echo "$msg_error: failed to connect; the response code was $status (exit code: $?). Aborting.  Please check the URL and your network connectivity."; exit
   else
-    echo "$msg_error: failed to connect; the response code was $status (exit code: $?). Please try again."
+    echo " "; echo "$msg_status"
+    echo -n "$msg_error: Unable to connect to $1. The response code was $status (exit code: $?). "
+    ! validate_internet && echo -n "There doesn't appear to be any Internet connectivity. Is the server up and running? Perhaps you are offline? "
     return 1
   fi
 }
