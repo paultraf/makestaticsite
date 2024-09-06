@@ -187,12 +187,9 @@ validate_http() {
     status_redirect="$(curl -s -k  --max-redirs "$max_redirects" --head -w "%{http_code}" "$url_effective" -o /dev/null)"
     if [ -n "${2+x}" ]; then
       printf -v "$2" '%s' "$url_effective"
-      echo "Following redirection, value of '$2' changed to $url_effective."
-      if check_wayback_url "$1" "$wayback_hosts"; then
-        msg_wayback=
-        [ "${BASH_SOURCE[1]}" = './makestaticsite.sh' ] && msg_wayback="It is recommended that you update the value of 'url' in the configuration file to avoid potential issues in generating the mirror."
-        echo "$msg_info: $1 is a Wayback Machine URL. $msg_wayback"
-      fi
+      msg_redirect="Following redirection, value of '$2' changed to $url_effective."
+      [ "${BASH_SOURCE[1]}" = './makestaticsite.sh' ] && msg_redirect+=" Please ensure that this value is stored in the configuration file to avoid potential issues in generating the mirror."
+      echo "msg_redirect"
     fi
     if [ "$status_redirect" = "200" ]; then
       echo "Connection established OK." "$e"
