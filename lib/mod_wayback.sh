@@ -98,7 +98,7 @@ process_wayback_url() {
       exit
     fi
     domain_original=$(printf "%s\n" "$url_original" | awk -F/ '{print $3}' | awk -F: '{print $1}')
-  fi  
+  fi
 }
 
 # Determine runtime configuration for Wayback URL.
@@ -148,10 +148,8 @@ wayback_url_paths() {
   url_timeless=$(regex_escape "$url_timeless")
   url_timeless=$(regex_apply "$url_timeless")
   url_timeless=${url_timeless//\\[/[} # final adjustment to remove '\' in front of '['
-  url_base_timeless=${url_base/${wayback_date_from_to}/[0-9]+[a-z]\{0,2\}_\?}
-  url_base_timeless=$(regex_escape "$url_base_timeless")
-  url_base_timeless=$(regex_apply "$url_base_timeless")
-  url_base_timeless=${url_base_timeless//\\[/[} # final adjustment to remove '\' in front of '['
+  url_path_original_regex=$(regex_escape "$url_path_original")
+  url_base_timeless=${url_timeless/$url_path_original_regex\/}
   
   url_base_regex=$(regex_escape "$url_base")
   url_timeless_nodomain=${url_timeless/"$url_base_regex"/}   # Truncated version

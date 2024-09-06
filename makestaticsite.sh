@@ -1857,6 +1857,13 @@ site_postprocessing() {
 
   # Global search and replace across web pages
   webpages=()
+  feed_html_regex=$(regex_escape "$feed_html")
+  feed_xml_regex=$(regex_escape "$feed_xml")
+  if [ "$wayback_newsfeed_clean" = "yes" ]; then
+    newsfeed_domain="$url_original_base/"
+  else
+    newsfeed_domain=
+  fi
   while IFS='' read -r line; do webpages+=("$line"); done < <(find . -type f -name "*.html")
   for opt in "${webpages[@]}"; do
     # Provisionally append index.html to internal anchors ending with trailing slash
@@ -1869,14 +1876,23 @@ site_postprocessing() {
       sed_subs=('s/[[:space:]][[:space:]]*crossorigin[^[:space:]]*[[:space:]]/ /gi' "$opt")
       sed "${sed_options[@]}" "${sed_subs[@]}"
     fi
+
+    # Adjust links to newsfeeds
+    if [ "$wayback_url" = "yes" ] && [ "$wayback_newsfeed_clean" != "no" ]; then
+      sed_subs1=('s~'"$url_base_timeless\([^[:space:]\'\"]*\)$feed_xml_regex"'~'"$newsfeed_domain\1$feed_xml"'~g' "$opt")
+      sed_subs2=('s~'"$url_base_timeless\([^[:space:]\'\"]*\)$feed_html_regex"'~'"$newsfeed_domain\1$feed_html"'~g' "$opt")
+      sed "${sed_options[@]}" "${sed_subs1[@]}"
+      sed "${sed_options[@]}" "${sed_subs2[@]}"
+    fi
+    
   done
-  
+
   printf "Converting feed files and references from index.html to index.xml ... "
   find ./ -depth -type f -path "*feed/index.html" -exec sh -c 'mv "$1" "${1%.html}.xml"' _ '{}' \;
   IFS=" " read -ra webpages <<< "$(find_web_pages "." "$feed_html")"
   if [ ${#webpages[@]} -ne 0 ]; then
     for opt in "${webpages[@]}"; do
-      sed_subs=('s~'"$feed_html"'~'"$feed_xml"'~g' "$opt")
+      sed_subs=('s~'"$feed_html_regex"'~'"$feed_xml"'~g' "$opt")
       sed "${sed_options[@]}" "${sed_subs[@]}"
     done
   fi

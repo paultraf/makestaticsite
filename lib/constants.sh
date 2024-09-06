@@ -22,8 +22,8 @@
 ################################################
 # MakeStaticSite info
 ################################################
-version=0.30.5-alpha2
-version_date='3 September 2024'
+version=0.30.5-beta1
+version_date='6 September 2024'
 version_header="MakeStaticSite version $version, released on $version_date."
 mss_license="GNU Affero General Public License version 3"
 mss_download="https://makestaticsite.sh/download/makestaticsite_latest.tar.gz"
@@ -239,13 +239,19 @@ wayback_timestamp_policy=any  # Timestamp policy
 wayback_anchors_original_domain=no # When partially capturing a site on the Wayback Machine, restore all anchors (links) to original domain (or make relative) rather that link to archive on Wayback Machine (y/n)?
 wayback_date_from=              # Earliest date timestamp for Wayback Machine snapshot files
 wayback_date_to=                # Latest date timestamp for Wayback Machine snapshot files
+wayback_snapshot_path_depth=3   # The number of directories to traverse to get to the original domain directory (a magic number, default set for Internet Archive, until a suitable algorithm is determined).
+
+# Tidy up of Wayback Machine output
 wayback_domain_original=yes     # Restore original domain folder when generating a mirror of site archived by the Wayback Machine (y/n)?
 wayback_domain_original_sitemap=yes  # Restore original URLs when generating the sitemap for a site archived by the Wayback Machine (y/n)?
+wayback_newsfeed_clean=yes      # Delete references to Wayback Machine host for newsfeeds (y/n)?
+                                #  - 'no' to keep as is
+                                #  - 'yes' to restore the original link
+                                #  - otherwise convert to a relative link
 wayback_code_clean=yes          # Delete (JavaScript) Playback code inserted by Wayback Machine (y/n)?
 wayback_code_re='<head>[ \n]*<script type="text\/javascript".*bundle-playback\.js.*<!-- End Wayback Rewrite JS Include -->' # Code inserted by the Wayback Machine (regular expression)
 wayback_comments_clean=yes      # Delete HTML comments inserted by Wayback Machine (y/n)?
 wayback_comments_re='<\/html>.*JAVASCRIPT APPENDED BY WAYBACK MACHINE.*load_resource.*-->' # Comments appended by the Wayback Machine (regular expression)
-wayback_snapshot_path_depth=3   # The number of directories to traverse to get to the original domain directory (a magic number, default set for Internet Archive, until a suitable algorithm is determined).
 
 # Settings specifically for Wayback Machine downloader coded in Ruby
 # https://github.com/hartator/wayback-machine-downloader
