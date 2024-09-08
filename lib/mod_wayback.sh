@@ -187,8 +187,12 @@ wayback_filter_domains() {
   # and not got a valid asset extension
   for opt in "${webassets_http[@]}"; do
     opt_regex=$(printf "%s" "$opt"|sed 's|\(/\)'"$wayback_datetime_regex"'|\1'"$wayback_datetime_regex"'|') # turn original URL into wildcard expression
-    # Add a further condition to check whether asset already in list modulo timestamps
-    if [[ $opt =~ $url_regex ]] && [[ ! ${webassets_wayback0[*]} =~ $opt_regex ]]; then
+    # First check if we are fetching a page requisite
+    wayback_ext="$(printf "%s" ".${opt##*.}" | grep -Ei "$assets_or$")"
+    if [ "$wayback_ext" != "" ]; then
+      webassets_wayback0+=("$opt")
+    # Or if the asset is in the list modulo timestamps
+    elif [[ $opt =~ $url_regex ]] && [[ ! ${webassets_wayback0[*]} =~ $opt_regex ]]; then
       opt=$(printf "%s" "$opt" | sed 's/#[[:alnum:]]*$//') # remove internal anchors
       webassets_wayback0+=("$opt") 
     else
@@ -259,7 +263,6 @@ wayback_filter_domains() {
   IFS=$'\n' webassets_http=($(sort -u <<<"${webassets_wayback[*]}"))
   IFS="$temp_IFS"
   
-  webassets_http=($(sort -u <<<"${webassets_wayback[*]}"))
   cd "$mirror_dir"
 }
 
@@ -380,6 +383,10 @@ consolidate_assets() {
       if [ "$this_domain" != "$domain_original" ]; then
         this_folder_path="$imports_directory/$this_domain/"
       elif [ "$url_path_original" != "" ]; then
+        # First substitute on any match under url_path_original
+        sed_subs1=('s|'"$snapshot_src_path/$url_path_original/"'|'""'|g' "$opt") # first convert assets that are underneath the trunk
+        sed "${sed_options[@]}" "${sed_subs1[@]}"
+        # We should now be left with assets from higher up the tree
         this_folder_path="$assets_directory/"
       else
         this_folder_path=
