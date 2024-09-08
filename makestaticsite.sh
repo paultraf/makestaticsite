@@ -1186,9 +1186,13 @@ wget_extra_urls() {
 
   # In generating list of asset URLs, strip out initial characters 
   # such as a quote or '=' arising from url_grep match condition.
+  # Also remove internal anchors at end of URL.
   # Remove lines with primary domain if not relativising such assets URLs.
   for item in "${url_grep_array[@]}"; do
-    while IFS='' read -r line; do trimmed_line="${line#"${line%%[![:space:],:\'\"=]*}"}"; webassets_all+=("$trimmed_line");
+    while IFS='' read -r line; do
+      trimmed_line="${line#"${line%%[![:space:],:\'\"=]*}"}"
+      trimmed_line="${trimmed_line%#*}"
+      webassets_all+=("$trimmed_line")
     done < <(
       if [ "$relativise_primarydomain_assets" = "no" ]; then
         grep -Eroha "$item" "$working_mirror_dir" "${asset_grep_includes[@]}" | grep -v "//$domain"
@@ -1340,6 +1344,10 @@ wget_extra_urls() {
   print_progress "$webasset_step_count" "$num_webasset_steps"
   wget_asset_options=("$wget_ssl" --directory-prefix "$mirror_archive_dir")
 
+  if [ "$wayback_url" = "yes" ] && (( wget_extra_urls_count == 1 )); then
+    wget_extra_core_options+=("${wget_wayback_core_options[@]}")
+  fi
+  
   if [ "$wvol" != "-q" ] || [ "$output_level" = "silent" ]; then
     wget_progress_indicator=()
   fi
