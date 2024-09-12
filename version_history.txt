@@ -19,6 +19,62 @@
 ##########################################################################
 
 
+0.30.5 (released on 2024-09-12)
+       * Refactored with speed improvements and more robust layout *
+        [lib/constants.sh]
+         New constants: wget_wayback_core_options - for Wget runs in phase 3;
+         wayback_newsfeed_clean - what to do with links to newsfeeds such as
+         RSS ('no, to maintain as-is, linking to Wayback Machine host; 'yes'
+         to restore the original link, otherwise convert to a relative link).
+         New constant wayback_search_regex to support search for additional
+         Wayback Machine URLs.
+         Added new subsection 'Tidy up of Wayback Machine output' and moved
+         respective constants there.
+         wget_inputs_main renamed wget_inputs_main_stem, wget_inputs_extra
+         renamed wget_inputs_extra_stem for greater clarity.
+         wget_wayback_core_options set as empty pending further investigation
+        [lib/general.sh]
+         find_web_pages() renamed grep_web_pages() and ad hoc file extension
+         pattern replaced by asset_grep_includes. 
+         Added function find_web_pages() to find web pages within current
+         directory
+        [lib/validate.sh]
+         validate_http(): added another parameter to allow for output to log
+         only. Refined handling of Wayback Machine URLs, inserting a
+         recommendation to update config file when encountering redirection.  
+        [lib/mod_wayback.sh]
+         Added function wayback_augment_urls() to generate additional
+         candidate URLs based on href relative links.
+         wayback_url_paths(): reworked to remove a bit of redundancy, with 
+         more concise assignment of url_base_timeless.
+         wayback_filter_domains(): in the generation of webassets_wayback0,
+         added the case for page requisites based on a comparison with
+         asset_extensions constant.
+         consolidate_assets(): restructured directory layout for consistency
+         with rest of system: distinguish local assets from those from
+         external domains, which are placed in imports_directory; and assets
+         from original domain moved out of the domain-specific folder created
+         by the Wayback Machine. Copy operations and link conversions
+         adjusted accordingly.
+         process_assets(): bug fix: refined conversion of absolute URLs to
+         relative URLs to properly take account of 'assets' and 'imports'
+         directories. 
+        [makestaticsite.sh]
+         initialise_variables(): inserted call to validate_http();
+         updated variable names to wget_inputs_main_stem and
+         wget_inputs_extra_stem.
+         wget_extra_urls(): inserted call to wayback_augment_urls() to
+         generate extra Wayback Machine candidate URLs; relaxed the
+         condition for augmenting wget_extra_core_options with
+         wget_wayback_core_options.
+         site_postprocessing(): added a conditional on wayback_url that
+         either calls process_assets() or the series of mod_wayback.sh
+         functions, that was previously placed in process_assets().
+         Added conversion of newsfeed links according to the value of
+         wayback_newsfeed_clean.
+         site_postprocessing(): changed call from find_web_pages() to
+         grep_web_pages().
+
 0.30.4 (released on 2024-08-30)
        * Maintenance: bug fixes in processing Wayback Machine output. *
         General replacement of 'env echo' with printf; some echo statements
@@ -47,6 +103,11 @@
          wayback_snapshot_path_depth - the number of directories to traverse
          to get to the original domain directory (default based on Internet
          Archive).
+        [lib/general.sh]
+         find_web_pages() renamed grep_web_pages();
+         new function find_web_pages() to simply find web pages within given
+         directory subject to asset_find_names and asset_exclude_dirs.
+         print_progress(): added trap for max_count to avoid division by zero
         [lib/mod_wayback.sh]
          process_wayback_url(): new variable, url_path_original, to ensure
          valid directory path corresponding to url_path.
