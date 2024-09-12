@@ -360,9 +360,9 @@ initialise_variables() {
   assign_option_variables "options_nodeps_load"
 
   # now augment Wget input files with .cfg label
-  wget_inputs_main="$wget_inputs_main-$myconfig.txt"
-  wget_inputs_extra_all="$wget_inputs_extra-${myconfig}-all.txt" # cumulative input file
-  wget_inputs_extra="$wget_inputs_extra-$myconfig.txt" # single run input file
+  wget_inputs_main="$wget_inputs_main_stem-$myconfig.txt"
+  wget_inputs_extra_all="$wget_inputs_extra_stem-${myconfig}-all.txt" # cumulative input file
+  wget_inputs_extra="$wget_inputs_extra_stem-$myconfig.txt" # single run input file
   wget_long_filenames="$wget_long_filenames-$myconfig.txt"
   wget_extra_urls_count=1 # Initialise recursive calls to wget_extra_urls()
 
@@ -425,7 +425,7 @@ initialise_variables() {
       # Replace double slashes in URL paths with single slashes
       url_path=${url_path//\/\//\/}
     fi
-    url_slashes=${url_path//[!\/]};
+    url_slashes=${url_path//[!\/]}
     url_path_depth=$(( ${#url_slashes}+1 ))
     [ "$url_add_slash" = "avoid" ] && (( url_path_depth-- )) # need to adjust for extra '/' not being added because of valid web file extension
   fi
@@ -1202,6 +1202,12 @@ wget_extra_urls() {
     print_progress "$count" "$url_grep_array_count"
     (( count++ ))
   done
+
+  # Call routines specific to Wayback Machine to augment list of candidate URLs
+  if [ "$wayback_url" = "yes" ]; then
+    wayback_augment_urls
+  fi
+
   webassets_all_count=${#webassets_all[@]}
   echo "webassets_all array has $webassets_all_count elements" "1"
 
@@ -1344,7 +1350,7 @@ wget_extra_urls() {
   print_progress "$webasset_step_count" "$num_webasset_steps"
   wget_asset_options=("$wget_ssl" --directory-prefix "$mirror_archive_dir")
 
-  if [ "$wayback_url" = "yes" ] && (( wget_extra_urls_count == 1 )); then
+  if [ "$wayback_url" = "yes" ] && [ ${#wget_extra_core_options[@]} -ne 0 ]; then
     wget_extra_core_options+=("${wget_wayback_core_options[@]}")
   fi
   
@@ -1713,10 +1719,7 @@ process_assets() {
     extra_dirs_list=()
     while IFS= read -r line; do extra_dirs_list+=("$line"); done <<<"$(find "." -name "*" -type d -print | grep -v "$url_path" | grep -vx "." | sed s'/^..//')"
     # Determine which web pages to search and replace
-    webpages=()
-    while IFS= read -r line; do webpages+=("$line"); done <<<"$(for file_ext in "${asset_find_names[@]}"; do find . -type f -name "$file_ext" "${asset_exclude_dirs[@]}" -print; done)"
-    num_webpages=${#webpages[@]}
-    [ "${webpages[*]}" = "" ] && echo "$msg_warning: no web pages found for processing."
+    find_web_pages
     count=1
     echo "Additional processing for mirroring a directory, not a domain ... "
     for opt in "${webpages[@]}"; do
@@ -1897,7 +1900,7 @@ site_postprocessing() {
 
   printf "Converting feed files and references from index.html to index.xml ... "
   find ./ -depth -type f -path "*feed/index.html" -exec sh -c 'mv "$1" "${1%.html}.xml"' _ '{}' \;
-  IFS=" " read -ra webpages <<< "$(find_web_pages "." "$feed_html")"
+  IFS=" " read -ra webpages <<< "$(grep_web_pages "." "$feed_html")"
   if [ ${#webpages[@]} -ne 0 ]; then
     for opt in "${webpages[@]}"; do
       sed_subs=('s~'"$feed_html_regex"'~'"$feed_xml"'~g' "$opt")

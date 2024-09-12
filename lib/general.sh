@@ -297,13 +297,24 @@ assets_search_string() {
   echo "$url_path"
 }
 
-# Generate a list of web pages according to given criteria
-# Expects two parameters: directory, search query
-# returns a string with a space-separated list of pages
-find_web_pages() {
+# Generate a list of web pages matching grep criteria
+# Expects two parameters: directory, grep search pattern
+# Returns a string with a space-separated list of pages.
+grep_web_pages() {
   local webpages=()
-  while IFS='' read -r line; do webpages+=("$line"); done < <(grep -Erl "$2" "$1" --include "*\.html")
+  while IFS='' read -r line; do webpages+=("$line"); done < <(grep -Erl "$2" "$1" "${asset_grep_includes[@]}")
   echo "${webpages[@]}"
+}
+
+# Find web pages within given directory
+# Expects one parameter: directory
+find_web_pages() {
+  local dir="$1"
+  [ -z "${1+x}" ] && dir="." # defaults to current working directory if no parameter supplied
+  webpages=()
+  while IFS= read -r line; do webpages+=("$line"); done <<<"$(for file_ext in "${asset_find_names[@]}"; do find "$dir" -type f -name "$file_ext" "${asset_exclude_dirs[@]}" -print; done)"
+  num_webpages="${#webpages[@]}"
+  [ "$num_webpages" = "0" ] && echo "$msg_warning: no web pages found for processing."
 }
 
 # Write contents of a string to a given file
@@ -443,6 +454,7 @@ print_progress() {
   hash_string_length=${#hash_string}
   nohash_string=$(printf ' %.0s' $(seq 1 $col_width))
   counter="$1"; max_count="$2"
+  (( max_count == 0 )) && { max_count=1; echo "$msg_warning: max_count was set to 0, changed to 1 to avoid division by zero."; }
   (( hash_substring_length = hash_string_length * counter / max_count ))
   (( nohash_substring_length = hash_string_length - hash_substring_length ))
   hash_substring=${hash_string:0:hash_substring_length}

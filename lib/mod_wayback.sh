@@ -117,8 +117,10 @@ initialise_wayback() {
   fi
   if [ "$wayback_assets_mode" = "original" ]; then
     # Prepare to save a copy
-    wget_inputs_wayback_all="$wget_inputs_extra-${myconfig}-wayback-all.txt" # cumulative input file
-    wget_inputs_wayback_extra="$wget_inputs_extra-${myconfig}-wayback.txt" # single run input file
+    wget_inputs_wayback_all="$wget_inputs_extra_stem-$myconfig"'-wayback-all.txt' # cumulative input file
+
+    wget_inputs_wayback_extra="$wget_inputs_extra_stem-${myconfig}-wayback.txt" # single run input file
+
     input_file_wayback_extra="$script_dir/$tmp_dir/$wget_inputs_wayback_extra"  # Input file for a single run of Wget extra assets (to be generated)
     touchmod "$input_file_wayback_extra"
     input_file_wayback_extra_all="$script_dir/$tmp_dir/$wget_inputs_wayback_all"  # Input file for Wget extra assets accumulated over multiple runs (to be generated)
@@ -144,16 +146,18 @@ initialise_wayback() {
 # Various Wayback-related URLs and paths
 wayback_url_paths() {
   # Wayback-related URLs
+  url_base_regex=$(regex_escape "$url_base")
+  url_path_original_regex=$(regex_escape "$url_path_original")
   url_timeless=${url/${wayback_date_from_to}/[0-9]+[a-z]\{0,2\}_\?} # This could be tightened - use $wayback_datetime_regex
   url_timeless=$(regex_escape "$url_timeless")
   url_timeless=$(regex_apply "$url_timeless")
   url_timeless=${url_timeless//\\[/[} # final adjustment to remove '\' in front of '['
-  url_path_original_regex=$(regex_escape "$url_path_original")
-  url_base_timeless=${url_timeless/$url_path_original_regex\/}
-  
-  url_base_regex=$(regex_escape "$url_base")
-  url_timeless_nodomain=${url_timeless/"$url_base_regex"/}   # Truncated version
-  
+  url_timeless_slash="$url_timeless"
+  [ "$url_add_slash" = "avoid" ] && url_timeless_slash="${url_timeless_slash%\/*}/" # Remove anything after last '/' for URLs not ending in '/'
+  url_timeless_nodomain=${url_timeless_slash/"$url_base_regex"/}   # Truncated version
+  url_base_timeless=${url_timeless_slash/"$url_path_original_regex/"/}
+  url_base_timeless_nodomain=${url_timeless_nodomain/"$url_path_original_regex/"/}
+
   # Locate source directories to copy
   url_path_root="$url_path"
   if [ "$url_path_original" != "" ]; then
@@ -166,6 +170,61 @@ wayback_url_paths() {
   url_path_prefix=
   for ((i=1;i<url_path_depth;i++)); do
     url_path_prefix+="../"
+  done
+}
+
+# Augment list of candidate URLs
+wayback_augment_urls(){
+  src_path_snapshot="$working_mirror_dir/$url_path_snapshot_prefix"
+  cd "$src_path_snapshot" || { echo "$msg_error: Unable to enter $src_path_snapshot.  Aborting"; exit; }
+  snapshot_path_list=()
+  while IFS= read -r line; do
+    line="${line#./}"
+    snapshot_path_list+=("$line")
+  done <<<"$(find . -mindepth $wayback_snapshot_path_depth -maxdepth $wayback_snapshot_path_depth -print)"
+
+  find_web_pages
+  href_matches=()
+  for opt in "${webpages[@]}"; do
+    opt_item=${opt:2}
+    opt_filename="${opt##*\/}"
+    depth=${opt//[!\/]};
+    depth_num=${#depth}
+    (( depth_num-- )) # adjustment of 1 needs to be made 
+    (( depth_num-=url_path_depth )) # whereas url_path_prefix is fixed,
+    pathpref=                       # pathpref denotes the relative path to get from current directory to the snapshot content root 
+    for ((i=1;i<=depth_num;i++)); do
+      pathpref+="../";
+    done
+
+    opt_item2=${opt_item//:\//:\/\/}
+    url_stem="$url_base/$url_path_snapshot_prefix/$opt_item2"
+    url_stem="${url_stem%\/*}/"  # Remove anything after last '/', then add '/'
+    url_stem_slashes=${url_stem//[!\/]}
+    url_stem_depth=${#url_stem_slashes}
+    while IFS= read -r line; do
+      line=${line//[ >\'\"]/}
+      line=${line//href=/}
+      line="${line%#*}" # remove internal anchors
+      [ "$line" = "$opt_filename" ] && continue;
+      # count number of ../ prefix cuts
+      dir_prefix_slash="../"
+      dir_prefix_slashes=${line//..\/}
+      dir_prefix_depth="$(((${#line} - ${#dir_prefix_slashes}) / ${#dir_prefix_slash} ))"
+      this_url="$url_stem"
+      if (( dir_prefix_depth != 0 )); then
+        # trim URL
+        (( trim_depth = url_stem_depth - dir_prefix_depth + 1))
+        this_url=$(printf "%s" "$this_url" | cut -d/ -f"$trim_depth"- --complement )
+        line="$this_url/$dir_prefix_slashes"
+      else
+        line="$this_url$line"
+      fi
+      # remove any trailing slashes
+      [ ${line: -1} = "/" ] && line=${line::-1}
+      href_matches+=("$line")
+    done < <(grep -o "$wayback_search_regex" "$opt")
+    webassets_all=(${webassets_all[@]} ${href_matches[@]}) 
   done
 }
 
@@ -380,16 +439,14 @@ consolidate_assets() {
           this_path_prefix="../$this_path_prefix"
         done
       fi
+      this_folder_path=
       if [ "$this_domain" != "$domain_original" ]; then
         this_folder_path="$imports_directory/$this_domain/"
       elif [ "$url_path_original" != "" ]; then
         # First substitute on any match under url_path_original
         sed_subs1=('s|'"$snapshot_src_path/$url_path_original/"'|'""'|g' "$opt") # first convert assets that are underneath the trunk
         sed "${sed_options[@]}" "${sed_subs1[@]}"
-        # We should now be left with assets from higher up the tree
         this_folder_path="$assets_directory/"
-      else
-        this_folder_path=
       fi
       sed_subs1=('s|'"$snapshot_src_path/"'|'"$this_folder_path"'|g' "$opt")
       sed "${sed_options[@]}" "${sed_subs1[@]}"
@@ -423,10 +480,10 @@ consolidate_assets() {
         else
           this_dest_path="$dest_path/$copy_dir"
         fi
-        echo "mkdir -p $this_dest_path" "1"
         if [[ $copy_dir == $url_path_original* ]]; then
           this_dest_path="$dest_path_root/$copy_dir"
         fi
+        echo "mkdir -p $this_dest_path" "1"
         mkdir -p "$this_dest_path" || echo "$msg_error: Unable to create directory $this_dest_path."
 
         # loop over files in subdirectory
@@ -458,6 +515,8 @@ consolidate_assets() {
           item="${item#./}"
           if [ "$this_domain" != "$domain_original" ]; then
             file_dest="$dest_path/$imports_directory/$this_domain/$item"
+          elif [[ ! $copy_dir == $url_path_original* ]]; then
+            file_dest="$dest_path/$assets_directory/$item"
           else
             file_dest="$dest_path/$item"
           fi
@@ -546,10 +605,14 @@ process_asset_anchors() {
       pathpref+="../";
     done
     for item in "${webpaths_output1[@]}"; do
+      url_stem_timeless="$url_timeless_slash"
+      url_stem_timeless_nodomain="$url_timeless_nodomain"
       if [[ $item == $imports_directory* ]]; then
         prefix_replace="$imports_directory/"
         item="${item#"$imports_directory"\/*}"    # remove initial imports directory
       elif [[ $item == $assets_directory* ]]; then
+        url_stem_timeless="$url_base_timeless"
+        url_stem_timeless_nodomain="$url_base_timeless_nodomain"
         prefix_replace="$assets_directory/"
         item="${item#"$assets_directory"\/*}"    # remove initial assets directory
       else
@@ -557,15 +620,8 @@ process_asset_anchors() {
       fi
       item="${item##*"$domain_original"\/}"
       item=$(regex_escape "$item")
-      if [[ ! $opt =~ $url_path_original ]]; then
-        url_timeless0="${url_timeless%\/"$url_path_original"*}/"
-        url_timeless_nodomain0="${url_timeless_nodomain%\/"$url_path_original"*}/"
-      else
-        url_timeless0="$url_timeless"
-        url_timeless_nodomain0="$url_timeless_nodomain"
-      fi
-      sed_subs1=('s|\('"$url_timeless0"'\)\('"$item"'\)|'"$pathpref$prefix_replace\2"'|g' "$opt")
-      sed_subs2=('s|\([\"'\'']\)\('"$url_timeless_nodomain0"'\)\('"$item"'\)|'"\1$pathpref$prefix_replace\3"'|g' "$opt")
+      sed_subs1=('s|\('"$url_stem_timeless"'\)\('"$item"'\)|'"$pathpref$prefix_replace\2"'|g' "$opt")
+      sed_subs2=('s|\([\"'\'']\)\('"$url_stem_timeless_nodomain"'\)\('"$item"'\)|'"\1$pathpref$prefix_replace\3"'|g' "$opt")
       sed "${sed_options[@]}" "${sed_subs1[@]}"
       sed "${sed_options[@]}" "${sed_subs2[@]}"
     done

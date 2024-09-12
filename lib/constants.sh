@@ -22,8 +22,8 @@
 ################################################
 # MakeStaticSite info
 ################################################
-version=0.30.5-beta2
-version_date='8 September 2024'
+version=0.30.5-beta3
+version_date='12 September 2024'
 version_header="MakeStaticSite version $version, released on $version_date."
 mss_license="GNU Affero General Public License version 3"
 mss_download="https://makestaticsite.sh/download/makestaticsite_latest.tar.gz"
@@ -106,8 +106,8 @@ wget_cookies_nullify_user_agent=no # When wget_user_agent is defined above as a 
 wget_post=wget_post             # Wget POST data file name stem
 
 # Input file names for Wget
-wget_inputs_main=wget_inputs_main # input file name stem for web content to be retrieved in main run of Wget in phase 2
-wget_inputs_extra=wget_inputs_extra # input file name stem for additional assets to be retrieved by Wget in phase 3
+wget_inputs_main_stem=wget_inputs_main # input file name stem for web content to be retrieved in main run of Wget in phase 2
+wget_inputs_extra_stem=wget_inputs_extra # input file name stem for additional assets to be retrieved by Wget in phase 3
 wget_long_filenames=wget_long_filenames # input file name stem for URLs with very long filenames for assets already retrieved by Wget
 rename_wget_tmps=yes            # Remove .tmp.html suffixes from (Wget temp) file names
 
@@ -116,7 +116,7 @@ rename_wget_tmps=yes            # Remove .tmp.html suffixes from (Wget temp) fil
 #  or, in short form, ‘-r -N -l inf --no-remove-listing’, where -r: recursive; -N: timestamping; -l inf: infinite depth
 wget_mirror_options=(--recursive --timestamping --level=inf --no-remove-listing)
 wget_core_options=("${wget_mirror_options[@]}" --convert-links --adjust-extension --page-requisites --tries=3)
-wget_wayback_core_options=(--recursive --level=2)
+wget_wayback_core_options=() # Specify additional recursion options in () brackets, e.g. (--recursive --level=2)
 wget_default_page=index.html    # The Wget --default-page option (index.html by default)
 
 wget_no_parent=auto             # Should capturing URLs with directories include the --no-parent option?
@@ -241,6 +241,7 @@ wayback_anchors_original_domain=no # When partially capturing a site on the Wayb
 wayback_date_from=              # Earliest date timestamp for Wayback Machine snapshot files
 wayback_date_to=                # Latest date timestamp for Wayback Machine snapshot files
 wayback_snapshot_path_depth=3   # The number of directories to traverse to get to the original domain directory (a magic number, default set for Internet Archive, until a suitable algorithm is determined).
+wayback_search_regex="href[[:space:]]*=[[:space:]]*[\'\"]\?[^#:>\'\"/][^:>]\+[[:space:]]*[\'\"]\?[[:space:]]*>" # Basic regular expression for matching the href attribute in an anchor
 
 # Tidy up of Wayback Machine output
 wayback_domain_original=yes     # Restore original domain folder when generating a mirror of site archived by the Wayback Machine (y/n)?
