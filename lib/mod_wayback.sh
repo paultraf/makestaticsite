@@ -568,7 +568,7 @@ consolidate_assets() {
   cd "$working_mirror_dir" || echo "$msg_warning: Unable to enter $working_mirror_dir"
 }
 
-# Convert absolute URLs to relative URLs for internal anchors
+# Convert absolute URLs or paths to relative URLs for internal anchors
 process_asset_anchors() {
   echo "Converting absolute URLs to relative URLs for Wayback internal anchors ... "
   print_progress "0" "100";
@@ -624,6 +624,22 @@ process_asset_anchors() {
       sed_subs2=('s|\([\"'\'']\)\('"$url_stem_timeless_nodomain"'\)\('"$item"'\)|'"\1$pathpref$prefix_replace\3"'|g' "$opt")
       sed "${sed_options[@]}" "${sed_subs1[@]}"
       sed "${sed_options[@]}" "${sed_subs2[@]}"
+
+      # Refine search pattern further to handle items that are missing .html extension whilst preserving items that have the extension 
+      item2=${item/%\\.html/}
+      item2=${item2//&/\\&amp;} # sed escape and convert to entity reference
+      # Only add \.html to the replacement if the file extension of $item is .html
+      if [[ ${item:length-6:6} = "\.html" ]]; then
+        item2a="${item2/\?/%3F}\.html"
+      else
+        item2a="${item2/\?/%3F}"
+      fi
+      sed_subs1=('s|\('"$url_stem_timeless"'\)\('"$item2\)\([\'\"[:space:]]\)"'|'"$pathpref$prefix_replace$item2a\3"'|g' "$opt")
+      sed_subs2=('s|\([\"'\'']\)\('"$url_stem_timeless_nodomain"'\)\('"$item2"'\)\('"[\'\"[:space:]]"'\)|'"\1$pathpref$prefix_replace$item2a\4"'|g' "$opt")
+      sed_subs3=('s|\([\"'\'']\)\('"$item2"'\)\('"[\'\"[:space:]]"'\)|'"\1$pathpref$prefix_replace$item2a\3"'|g' "$opt")
+      sed "${sed_options[@]}" "${sed_subs1[@]}"
+      sed "${sed_options[@]}" "${sed_subs2[@]}"
+      sed "${sed_options[@]}" "${sed_subs3[@]}"
     done
     # Conversion of anchors make implicit index pages explicit, to assist in internal navigation
     # (1) Empty case
