@@ -297,13 +297,13 @@ check_wayback_url(){
     return 1
   # cURL check (-I : header, -s: silent, -k: don't check SSL certs)
   elif curl -skI "$url" | grep -Fiq "$wayback_header"; then
-    nhost_wayback=yes
+    host_wayback=yes
   fi
 
   if [ "$host_wayback" = "yes" ]; then 
     # Make URL adjustment when target site missing http protocol
     wayback_date_from_to=$(printf "%s" "$url" | grep -o "/$wayback_datetime_regex/" | grep -o "$wayback_datetime_regex")
-    doubleslashes_count=$(echo "$input_value" | grep -o '//' | wc -l)
+    doubleslashes_count=$(echo "$url" | grep -o '//' | wc -l)
 
     if (( $doubleslashes_count < 2 )); then
       url=${url/"$wayback_date_from_to/"/"$wayback_date_from_to"/http://}
@@ -313,6 +313,7 @@ check_wayback_url(){
         printf -v "$3" '%s' "$url"      
       fi 
     fi
+    return 0
   fi
 
   # Failed both checks, so return error status
