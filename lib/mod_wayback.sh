@@ -61,10 +61,10 @@ process_wayback_url() {
     echo "Aborting."
     exit
   else
+    wayback_date_from_to=$(printf "%s" "$1" | grep -o "/$wayback_datetime_regex/" | grep -o "$wayback_datetime_regex")
     local url_stem_dates=${1%http*}
     local url_slashes=${url_stem_dates//[!\/]};
     local url_depth=$(( ${#url_slashes} ))
-    wayback_date_from_to=$(printf "%s" "$1" | cut -d/ -f${url_depth})
     wayback_date_to_cut=$(printf "%s" "$wayback_date_from_to" | cut -d- -f2)
     if [ "$wayback_date_to_cut" != "$wayback_date_from_to" ]; then
       wayback_date_from=$(printf "%s" "$wayback_date_from_to" | cut -d- -f1)

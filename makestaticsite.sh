@@ -406,7 +406,7 @@ initialise_variables() {
 
   # Wayback Machine support
   use_wayback_cli=no # Initially assume not using Wayback client
-  if check_wayback_url "$url" "$wayback_hosts"; then
+  if check_wayback_url "$url" "$wayback_hosts" "url"; then
 # shellcheck source=lib/mod_wayback.sh
     source "lib/$mod_wayback";
     initialise_wayback
@@ -1719,7 +1719,7 @@ process_assets() {
     extra_dirs_list=()
     while IFS= read -r line; do extra_dirs_list+=("$line"); done <<<"$(find "." -name "*" -type d -print | grep -v "$url_path" | grep -vx "." | sed s'/^..//')"
     # Determine which web pages to search and replace
-    find_web_pages
+    find_web_pages '.'
     count=1
     echo "Additional processing for mirroring a directory, not a domain ... "
     for opt in "${webpages[@]}"; do

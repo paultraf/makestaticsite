@@ -328,17 +328,10 @@ read_option() {
       if [ "$opt_limits" = "n" ]; then
         echo
       fi
-      # Print tidy output - should be able to put most # in a column
-      printf -v CONFIGLINE "%-38s %s %s\n" "$optvar=$input_value" '#' "$opt_desc"
-
-      # Assign value to variable for use elsewhere in the script
-      printf -v "${optvar}" '%s' "${input_value}"
-      
-      content+="$CONFIGLINE"
       if [ "$optvar" = "url" ]; then
         host=$(printf "%s" "$input_value" | awk -F/ '{print $3}' | awk -F: '{print $1}')
         # Check for Wayback Machine
-        if check_wayback_url "$input_value" "$wayback_hosts"; then
+        if check_wayback_url "$input_value" "$wayback_hosts" "input_value"; then
           archived_domain_path=$(printf "%s" "${input_value//:\/\//|}" | cut -d\| -f3)
           if [ "$archived_domain_path" = "" ]; then
             echo "$msg_error: Sorry, no archive URL found at the Wayback Machine!  For guidance on acceptable URLs, please consult https://help.archive.org/help/using-the-wayback-machine/ and then try again."; exit
@@ -349,6 +342,13 @@ read_option() {
           fi
         fi
       fi
+      # Print tidy output - should be able to put most # in a column
+      printf -v CONFIGLINE "%-38s %s %s\n" "$optvar=$input_value" '#' "$opt_desc"
+
+      # Assign value to variable for use elsewhere in the script
+      printf -v "${optvar}" '%s' "${input_value}"
+      
+      content+="$CONFIGLINE"
       ;;
     *)
       optvar="$var"

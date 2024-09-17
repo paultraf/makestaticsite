@@ -280,23 +280,39 @@ validate_range() {
 # Expects two parameters:
 # - URL being tested
 # - Wayback list
+# Optional parameter:
+# - URL variable name (to allow updates)
 check_wayback_url(){
   # Read parameters and assign to variables
   local url="$1"
   local wayback_list="$2"
   local host
   host=$(printf "%s" "$url" | awk -F/ '{print $3}' | awk -F: '{print $1}')
-
+  host_wayback=no
+  
   # Check list of known Wayback Machine hosts
   if printf "%s" ",$wayback_list," | grep -q ",$host,"; then
-    return 0
+    host_wayback=yes
+  elif [ "$wayback_memento_check" != "yes" ]; then
+    return 1
+  # cURL check (-I : header, -s: silent, -k: don't check SSL certs)
+  elif curl -skI "$url" | grep -Fiq "$wayback_header"; then
+    nhost_wayback=yes
   fi
 
-  [ "$wayback_memento_check" != "yes" ] && return 1
+  if [ "$host_wayback" = "yes" ]; then 
+    # Make URL adjustment when target site missing http protocol
+    wayback_date_from_to=$(printf "%s" "$url" | grep -o "/$wayback_datetime_regex/" | grep -o "$wayback_datetime_regex")
+    doubleslashes_count=$(echo "$input_value" | grep -o '//' | wc -l)
 
-  # cURL check (-I : header, -s: silent, -k: don't check SSL certs)
-  if curl -skI "$url" | grep -Fiq "$wayback_header"; then
-    return 0
+    if (( $doubleslashes_count < 2 )); then
+      url=${url/"$wayback_date_from_to/"/"$wayback_date_from_to"/http://}
+      if [ -n "${3+x}" ]; then
+        echo "$msg_warning: updating value of URL variable ($3) from $1 to $url..."
+        confirm_continue
+        printf -v "$3" '%s' "$url"      
+      fi 
+    fi
   fi
 
   # Failed both checks, so return error status
