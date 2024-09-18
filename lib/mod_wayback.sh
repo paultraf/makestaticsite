@@ -589,6 +589,8 @@ process_asset_anchors() {
 
   while IFS='' read -r line; do
     line=${line:2}
+    # Percent encode spaces
+    line=${line// /%20}
     webpaths_output1+=("$line")
   done < <(find "." -type f "${asset_exclude_dirs[@]}" -print)
 
@@ -596,6 +598,14 @@ process_asset_anchors() {
   count=0
   for opt in "${webpages_output1[@]}"; do
     print_progress "$count" "$num_webpages1";  
+
+    # Convert character entities to percent-encoded equivalents
+    for ((i=32;i<126;i++)); do
+      j=$(printf '%x\n' $i)
+      sed_subs=('s|&#'"$i"';|%'"$j"'|g' "$opt")
+      sed "${sed_options[@]}" "${sed_subs[@]}"
+    done
+
     pathpref=
     opt_path_stem=${opt:2}
     [ "$url_path_original" != "" ] && opt_path_stem=${opt_path_stem##*"$url_path_original"}  # Path (directory hierarchy) relative to the original URL
