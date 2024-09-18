@@ -1186,12 +1186,14 @@ wget_extra_urls() {
 
   # In generating list of asset URLs, strip out initial characters 
   # such as a quote or '=' arising from url_grep match condition.
-  # Also remove internal anchors at end of URL.
+  # Also remove internal anchors at end of URL (with '#' appended)
   # Remove lines with primary domain if not relativising such assets URLs.
   for item in "${url_grep_array[@]}"; do
     while IFS='' read -r line; do
+      line=${line//&#/123456789|} # retain entity references that begin '&#'
       trimmed_line="${line#"${line%%[![:space:],:\'\"=]*}"}"
       trimmed_line="${trimmed_line%#*}"
+      trimmed_line=${trimmed_line//123456789|/&#}
       webassets_all+=("$trimmed_line")
     done < <(
       if [ "$relativise_primarydomain_assets" = "no" ]; then
@@ -1329,6 +1331,14 @@ wget_extra_urls() {
 
   # URL decode for Wget calls: revert &amp; to & 
   webassets_filtered=("${webassets[@]//&amp;/&}")
+
+  if [[ ${webassets_filtered[@]} =~ '&#' ]]; then
+    echo "Converting ISO 8859-1 character entities to percent encoding." "1" # Entities cannot be used in Wget input file because of hash '#'
+    for ((i=32;i<126;i++)); do
+      j=$(printf '%x\n' $i)
+      webassets_filtered=("${webassets_filtered[@]//&#"$i";/%"$j"}")
+    done
+  fi
 
   printf "%s\n" "${webassets_filtered[@]}" > "$input_file_extra"
   if (( wget_extra_urls_count == 1 )); then
