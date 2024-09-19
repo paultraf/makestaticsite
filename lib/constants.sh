@@ -22,8 +22,8 @@
 ################################################
 # MakeStaticSite info
 ################################################
-version=0.30.6-alpha2
-version_date='18 September 2024'
+version=0.30.6-beta1
+version_date='19 September 2024'
 version_header="MakeStaticSite version $version, released on $version_date."
 mss_license="GNU Affero General Public License version 3"
 mss_download="https://makestaticsite.sh/download/makestaticsite_latest.tar.gz"
@@ -238,8 +238,8 @@ wayback_timestamp_policy=any  # Timestamp policy
                                 #  - 'any' to download assets with any date
                                 #  - 'range' to download subject to specified date range (see below)
 wayback_anchors_original_domain=no # When partially capturing a site on the Wayback Machine, restore all anchors (links) to original domain (or make relative) rather that link to archive on Wayback Machine (y/n)?
-wayback_date_from=              # Earliest date timestamp for Wayback Machine snapshot files
-wayback_date_to=                # Latest date timestamp for Wayback Machine snapshot files
+wayback_date_from_earliest=     # Earliest date timestamp for Wayback Machine snapshot files
+wayback_date_to_latest=         # Latest date timestamp for Wayback Machine snapshot files
 wayback_snapshot_path_depth=3   # The number of directories to traverse to get to the original domain directory (a magic number, default set for Internet Archive, until a suitable algorithm is determined).
 wayback_search_regex="href[[:space:]]*=[[:space:]]*[\'\"]\?[^#:>\'\"/][^:>]\+[[:space:]]*[\'\"]\?[[:space:]]*>" # Basic regular expression for matching the href attribute in an anchor
 

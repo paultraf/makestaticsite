@@ -51,6 +51,49 @@ wmd_get_wayback_site() {
   $wayback_machine_downloader_cmd "${wmd_get_options[@]}"
 }
 
+# Validate Wayback dates
+# Expects one parameter: timestamp or a
+# two timestamps separated by hyphen
+validate_wayback_dates() {
+  wayback_date_from_to="$1"
+  wayback_date_from_cut=$(printf "%s" "$wayback_date_from_to" | cut -d- -f1)
+
+  if [ "$wayback_date_from_cut" != "$wayback_date_from_to" ]; then
+    wayback_date_to=$(printf "%s" "$wayback_date_from_to" | cut -d- -f2)
+    wayback_date_from="$wayback_date_from_cut"
+    if ! validate_timestamp "$wayback_date_to"; then
+      if [ "$wayback_date_to" = "" ]; then
+        error_notice="The 'to' date cannot be empty. "
+      else
+        error_notice="The 'to' date, $wayback_date_to, in the range $wayback_date_from_to, is invalid. "
+      fi
+      echo $'\n'"$msg_error: $error_notice It needs to be a string of digits in the format: YYYYMMDDhhmmss (substrings starting with YYYY are allowed). Aborting."; exit
+    fi
+  else
+    wayback_date_from="$wayback_date_from_to"
+  fi
+
+  if ! validate_timestamp "$wayback_date_from"; then
+    if [ "$wayback_date_from" = "" ]; then
+      error_notice="The 'from' date cannot be empty. "
+    else
+      error_notice="The 'from' date, $wayback_date_from, in the range $wayback_date_from_to, is invalid."
+    fi
+    echo $'\n'"$msg_error: $error_notice It needs to be a string of digits in the format: YYYYMMDDhhmmss (substrings starting with YYYY are allowed). Aborting."; exit
+  fi
+
+  if [ "$wayback_timestamp_policy" = "range" ] && (( $wayback_date_from_earliest > $wayback_date_from )); then
+    echo $'\n'"$msg_error: the 'from' date specified by wayback_date_from_earliest, $wayback_date_from_earliest, in constants.sh, should not be later than the 'from' date, $wayback_date_from, in the URL range entered!  Aborting."; exit
+  fi
+
+  if [ "$wayback_date_to" != "" ]; then
+    (( $wayback_date_to_latest > $wayback_date_to )) && wayback_date_to_latest="$wayback_date_to"
+    if (( $wayback_date_from > $wayback_date_to )); then
+      echo $'\n'"$msg_error: the 'from' date, $wayback_date_from, should not be later than the 'to' date, $wayback_date_to!  Aborting."; exit
+    fi
+  fi
+}
+
 # For Wayback URLs containing a date or date range
 # extract the ('from' and) 'to' timestamps 
 # and validate them. It also extracts the archived URL
@@ -61,29 +104,20 @@ process_wayback_url() {
     echo "Aborting."
     exit
   else
-    wayback_date_from_to=$(printf "%s" "$1" | grep -o "/$wayback_datetime_regex/" | grep -o "$wayback_datetime_regex")
     local url_stem_dates=${1%http*}
     local url_slashes=${url_stem_dates//[!\/]};
     local url_depth=$(( ${#url_slashes} ))
-    wayback_date_to_cut=$(printf "%s" "$wayback_date_from_to" | cut -d- -f2)
-    if [ "$wayback_date_to_cut" != "$wayback_date_from_to" ]; then
-      wayback_date_from=$(printf "%s" "$wayback_date_from_to" | cut -d- -f1)
-      wayback_date_to="$wayback_date_to_cut"
-      if ! validate_timestamp "$wayback_date_from"; then
-        echo "$msg_error: The 'from' date, $wayback_date_from, in the range $wayback_date_from_to, is invalid. It needs to be a string of digits in the format: YYYYMMDDhhmmss (substrings starting with YYYY are allowed)." 
-      fi
-    else
-      wayback_date_to="$wayback_date_from_to"
-    fi
-    if ! validate_timestamp "$wayback_date_to"; then
-      echo "$msg_error: The 'to' date, $wayback_date_to, in the range $wayback_date_from_to, is invalid.  It needs to be a string of digits in the format: YYYYMMDDhhmmss (substrings starting with YYYY are allowed)." 
-    fi
+    wayback_date_from_to=$(env echo "$1" | cut -d/ -f${url_depth})
+    validate_wayback_dates "$wayback_date_from_to"
 
-    # Assign the archived URL as URL and validate
+    # Remove any 'to' timestamp from url (having extracted from/to dates) 
+    url=${url/$wayback_date_from_to/$wayback_date_from}
+
+    # Assign the archived URL as url_original
     (( url_depth++ ))
     url_original=$(printf "%s" "$1" | cut -d/ -f"${url_depth}"-)
 
-    # assign URL-related variables
+    # Assign other variables related to url_original
     protocol_original=$(printf "%s" "$url_original" | awk -F/ '{print $1}' | awk -F: '{print $1}')
     hostport_original=$(printf "%s" "$url_original" | awk -F/ '{print $3}')
     url_original_base="$protocol_original://$hostport_original"
@@ -108,12 +142,20 @@ initialise_wayback() {
   domain_wayback_machine=$(printf "%s" "$url" | awk -F/ '{print $3}' | awk -F: '{print $1}')
   process_wayback_url "$url" # will set the value of $url_original to be that of the archived site
   printf "\nWayback Machine detected at %s, hosted on %s.\n" "$url" "$domain_wayback_machine"
-  if [ "$wayback_timestamp_policy" = "exact" ] && [ "$wayback_date_from" != "" ]; then
+  if [ "$wayback_timestamp_policy" = "exact" ] && [ "$wayback_date_to" != "" ]; then
     echo "$msg_warning: you have specified a date range for the Wayback Machine, but the constant wayback_timestamp_policy is set to 'exact'."
-    echo "To resolve this conflict, MakeStaticSite will only download assets for the most recent timestamp, $wayback_date_to. But you may like to set wayback_timestamp_policy=range."
+    echo "To resolve this conflict, MakeStaticSite will only download assets for the earliest timestamp, $wayback_date_from. But you may like to set wayback_timestamp_policy=range."
     confirm_continue "Y" "OK. Please change the URL or review the Wayback settings in constants.sh."
-    url=${url/$waybackdatefrom-/}
-    wayback_date_from="$wayback_date_to"
+    url=${url/-$waybackdatefrom/}
+    wayback_date_to="$wayback_date_from"
+  elif [ "$wayback_timestamp_policy" = "range" ] && { (( wayback_date_from < wayback_date_from_earliest)) || (( wayback_date_to > wayback_date_to_latest)); }; then
+    msg_wayback_notice="the URL supplied contains a date that is outside of the allowable range specified by the values you have specified for wayback_date_from_earliest and/or wayback_date_to_latest in constants.sh."
+    if (( $phase < 4 )); then
+      echo "$msg_warning: $msg_wayback_notice  If you proceed, the resulting mirror may likewise contain content captured on a date outside this range."
+      confirm_continue
+    else
+      echo "$msg_error: $msg_wayback_notice  Please review.  Aborting"; exit
+    fi
   fi
   if [ "$wayback_assets_mode" = "original" ]; then
     # Prepare to save a copy
@@ -166,7 +208,7 @@ wayback_url_paths() {
   fi
   [ "${url_path_root: -1}" = "/" ] && url_path_root="${url_path_root:O:-1}" # Remove any trailing '/'
   url_path_snapshot_root=$(printf "%s" "$url_path_root" | cut -d'/' -f2- )
-  url_path_snapshot_prefix=$(printf "%s" "${url_path/$wayback_date_to/ }" | cut -d' ' -f1 | cut -d'/' -f1 )
+  url_path_snapshot_prefix=$(printf "%s" "${url_path/$wayback_date_from/ }" | cut -d' ' -f1 | cut -d'/' -f1 )
   url_path_prefix=
   for ((i=1;i<url_path_depth;i++)); do
     url_path_prefix+="../"
@@ -341,7 +383,7 @@ wayback_filter_snapshots() {
   while IFS='' read -r line; do webassets_wayback+=("$line"); done < <(for item in "${webassets[@]}"; do printf "%s\n" "${item}"; done |
     if [ "$wayback_timestamp_policy" = "exact" ]; then
       # Only match (and hence download) assets with given timestamp
-      grep "$wayback_date_to" | sort -u | sed 's/\/http/ /g' | sort -u -t ' ' -k 2 | sed 's/ /\/http/g'; # Remove duplicate asset captures, select only those from given timestamp, and ignore any non-Memento URLs
+      grep "$wayback_date_from" | sort -u | sed 's/\/http/ /g' | sort -u -t ' ' -k 2 | sed 's/ /\/http/g'; # Remove duplicate asset captures, select only those from given timestamp, and ignore any non-Memento URLs
     elif [ "$wayback_assets_mode" = "original" ]; then
       sort -u | sed 's/\/http/ /g' | sort -u -t ' ' -k 2 | sed 's/ /\/http/g'; # remove duplicate asset captures, selecting first according to timestamp, and ignore any non-Memento URLs
     else 
@@ -364,7 +406,7 @@ consolidate_assets() {
   
   cd "$src_path_snapshot" || echo "Unable to enter $src_path_snapshot"
   snapshot_exclude_dirs=()
-  snapshot_list=("$wayback_date_to")
+  snapshot_list=("$wayback_date_from")
   for item in "${snapshot_list[@]}"; do
     snapshot_exclude_dirs+=(-not -path "." -not -path "./$item" -not -path "./$item/"\* ) # this needs to be a full path
   done
@@ -377,7 +419,7 @@ consolidate_assets() {
   snapshot_path_list=()
   while IFS= read -r line; do
     line="${line#./}"
-    [ "${line%%\/*}" != "$wayback_date_to" ] &&  snapshot_path_list+=("$line")
+    [ "${line%%\/*}" != "$wayback_date_from" ] &&  snapshot_path_list+=("$line")
   done <<<"$(find . -mindepth $wayback_snapshot_path_depth -maxdepth $wayback_snapshot_path_depth -type d -print)"
 
   cd "$working_mirror_dir" || { echo "msg_error: Unable to return to $working_mirror_dir. Aborting."; exit; } 
@@ -599,13 +641,15 @@ process_asset_anchors() {
   for opt in "${webpages_output1[@]}"; do
     print_progress "$count" "$num_webpages1";  
 
-    # Convert character entities to percent-encoded equivalents
-    for ((i=32;i<126;i++)); do
-      j=$(printf '%x\n' $i)
-      sed_subs=('s|&#'"$i"';|%'"$j"'|g' "$opt")
-      sed "${sed_options[@]}" "${sed_subs[@]}"
-    done
-
+    if grep -q '&#' "$opt"; then 
+      # Convert character entities to percent-encoded equivalents
+      for ((i=32;i<126;i++)); do
+        j=$(printf '%x\n' $i)
+        sed_subs=('s|&#'"$i"';|%'"$j"'|g' "$opt")
+        sed "${sed_options[@]}" "${sed_subs[@]}"
+      done
+    fi
+    
     pathpref=
     opt_path_stem=${opt:2}
     [ "$url_path_original" != "" ] && opt_path_stem=${opt_path_stem##*"$url_path_original"}  # Path (directory hierarchy) relative to the original URL

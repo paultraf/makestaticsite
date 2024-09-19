@@ -1332,13 +1332,26 @@ wget_extra_urls() {
   # URL decode for Wget calls: revert &amp; to & 
   webassets_filtered=("${webassets[@]//&amp;/&}")
 
-  if [[ ${webassets_filtered[@]} =~ '&#' ]]; then
+  if [[ ${webassets_filtered[*]} =~ '&#' ]]; then
     echo "Converting ISO 8859-1 character entities to percent encoding." "1" # Entities cannot be used in Wget input file because of hash '#'
     for ((i=32;i<126;i++)); do
-      j=$(printf '%x\n' $i)
+      j=$(printf '%x\n' "$i")
       webassets_filtered=("${webassets_filtered[@]//&#"$i";/%"$j"}")
     done
   fi
+
+  if [ "$wayback_url" = "yes" ] && [ "$wayback_timestamp_policy" = "range" ]; then
+    webassets_date_filtered=()
+    for line in "${webassets_filtered[@]}"; do
+      wayback_date_check=$(printf "%s" "$line" | grep -o "/$wayback_datetime_regex/" | grep -o "[0-9]\+")
+      if (( wayback_date_check >= wayback_date_from_earliest )) && (( wayback_date_check <= wayback_date_to_latest )); then
+        webassets_date_filtered+=("$line")
+      fi
+    done
+    webassets_filtered=("${webassets_date_filtered[@]}")
+  fi
+
+  [ "${#webassets_filtered[@]}" -eq 0 ] && { echo "None found (webassets_filtered). " "1"; (( wget_extra_urls_count=wget_extra_urls_depth+1 )); print_progress; echo "Done."; return 0; }
 
   printf "%s\n" "${webassets_filtered[@]}" > "$input_file_extra"
   if (( wget_extra_urls_count == 1 )); then
