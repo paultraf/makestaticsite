@@ -264,6 +264,8 @@ wayback_augment_urls(){
       fi
       # remove any trailing slashes
       [ ${line: -1} = "/" ] && line=${line::-1}
+      # percent encode whitespace
+      line=${line//[[:space:]]/%20}
       href_matches+=("$line")
     done < <(grep -o "$wayback_search_regex" "$opt")
     webassets_all=(${webassets_all[@]} ${href_matches[@]}) 

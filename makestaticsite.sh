@@ -1169,9 +1169,10 @@ wget_extra_urls() {
 
   echo "Generating a list of extra asset URLs for Wget (run number $wget_extra_urls_count out of $wget_extra_urls_depth max) ... "
   if [ "$extra_assets_allow_query_strings" = "no" ]; then
-    url_grep="$(assets_search_string "$all_domains" "[^\?\"'<) ]+")" # ERE notation
+    url_grep_search_pattern_qy=${url_grep_search_pattern//[^/[^\?}
+    url_grep="$(assets_search_string "$all_domains" "${url_grep_search_pattern_qy}+")" # ERE notation
   else
-    url_grep="$(assets_search_string "$all_domains" "[^\"'<) ]+")" # ERE notation
+    url_grep="$(assets_search_string "$all_domains" "${url_grep_search_pattern}+")" # ERE notation
   fi
 
   (( num_webasset_steps=9*10 )) # 9 phases with multiplier of 10 for granularity
@@ -1262,9 +1263,7 @@ wget_extra_urls() {
     print_progress "$subcount" "$num_webasset_steps"
   done < <(for i in "${!webassets_http[@]}"; do
     opt="${webassets_http[$i]}"
-    if [ "$wayback_url" = "yes" ]; then # no extension is defined and we assume web pages already filtered
-      echo "$opt" > /dev/null && printf "%s|%s\n" "$i" "$opt";
-    elif [ "$asset_extensions" != "" ]; then
+    if [ "$asset_extensions" != "" ]; then
       # Loop over an inclusion list of allowable extensions
       opt_domain=$(printf "%s\n" "$opt" | awk -F/ '{print $3}' | awk -F: '{print $1}')
       if [[ ' '${page_element_domains_array[*]}' ' =~ ' '$opt_domain' ' ]]; then # satisfied vacuously for all Wayback URLs
@@ -1272,12 +1271,15 @@ wget_extra_urls() {
       else
         echo "$opt" | grep -Ei "$assets_or$" > /dev/null && printf "%s|%s\n" "$i" "$opt";
       fi
-    else
-      # Remove HTML assets
+    elif [ "$wayback_url" != "yes" ]; then
+      # Remove HTML assets unless a Wayback URL
       type=$(curl -skI "$opt" -o/dev/null -w '%{content_type}\n')
       if [[ "$type" != *"text/html"* ]] && [[ "$type" != *"application/rss+xml"* ]] && [[ "$type" != *"application/atom+xml"* ]]; then
         printf "%s|%s\n" "$i" "$opt"
       fi
+    else
+      # For the Wayback URLs, if no asset_extensions list is defined, then we assume all such URLs are valid candidates for mirroring.
+      echo "$opt" > /dev/null && printf "%s|%s\n" "$i" "$opt";
     fi
   done)
   (( webasset_step_count=subcount+1 ))
