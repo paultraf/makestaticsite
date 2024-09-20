@@ -1246,9 +1246,12 @@ wget_extra_urls() {
   assets_or='\.('${asset_extensions//,/|}')'
   assets_or_external='\.('${asset_extensions_external//,/|}')'
   (( num_webasset_steps_nohtml=num_webasset_steps-5 )) # Progress bar: this is most of the processing
-
-  # Special filtering routines for the Wayback Machine
+  
+  # But for Wayback URLs, consider web pages as allowable assets
+  # and carry out special filtering
   if [ "$wayback_url" = "yes" ]; then
+    assets_or=${assets_or/)/|htm|html)}
+    assets_or_external=${assets_or_external/)/|htm|html)}
     src_path_snapshot="$working_mirror_dir/$url_path_snapshot_prefix"
     wayback_filter_domains
   fi
