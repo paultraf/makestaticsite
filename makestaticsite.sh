@@ -375,9 +375,6 @@ initialise_variables() {
     rvol=; wvol=-nv; wpvol=
   fi
 
-  # Check HTTP connectivity ahead of using Internet utilities
-  ! validate_http "$url" "url" "quiet" && { echo "Aborting."; exit; }
-
   # Check system requirements for cURL, Wget and SSL
   msg_checking="Checking your system for Wget and other essential components ... "
   cmd_check "curl" || { printf "%s%s: Unable to find binary: curl ("'$'"PATH contains %s).\nThis command is essential for checking connectivity.  It may be downloaded from https://curl.se/.\nAborting.\n" "$msg_checking" "$msg_error" "$PATH"; exit; }
@@ -403,6 +400,23 @@ initialise_variables() {
     done
   fi
   [ "$url_add_slash" = "yes" ] && url="$url/"; # ensure URL ends in trailing slash
+
+  # Check HTTP connectivity ahead of using Internet utilities
+  # For Wayback URLs with ranges, use (and update) the 'from' date
+  datetime_range_check=$(echo "$url" | grep "/$datetime_regex-")
+  if [ "$datetime_range_check" != "" ]; then
+    echo $'\n'"$msg_info: Date range detected in URL."
+    wayback_timestamp_policy=range
+# shellcheck disable=SC2001
+    url_from=$(echo "$url" | sed 's~\('/"$datetime_regex"'\)-'"$datetime_regex"/'~\1/~')
+    wayback_date_from=$(echo "$url" | grep -o "/${datetime_regex}-${datetime_regex}/" | grep -o "$datetime_regex\-" | grep -o "$datetime_regex")
+    wayback_date_to=$(echo "$url" | grep -o "/${datetime_regex}-${datetime_regex}/" | grep -o "\-$datetime_regex" | grep -o "$datetime_regex")
+    ! validate_http "$url_from" "url_from" "quiet" && { echo "Aborting."; exit; }
+# shellcheck disable=SC2001
+    url=$(echo "$url_from" | sed 's~\('/"$datetime_regex"'\)/~\1'"-$wayback_date_to"'/~')
+  else
+    ! validate_http "$url" "url" "quiet" && { echo "Aborting."; exit; }
+  fi
 
   # Wayback Machine support
   use_wayback_cli=no # Initially assume not using Wayback client
@@ -629,7 +643,7 @@ initialise_variables() {
   fi
   deploy_path="$(config_get deploy_path "$myconfig")"
   deploy_domain="$(config_get deploy_domain "$myconfig")"
-  echo "Done."
+  [ "$wayback_url" != "yes" ] && echo "Done."
   if [ "$cut_dirs" != "0" ]; then
     echo "$msg_warning: You have specified Wget --cut-dirs option. Ignoring mss_cut_dirs."
   fi
@@ -1065,7 +1079,12 @@ mirror_site() {
         echo "$msg_error: The Wayback Machine Downloader only supports web.archive.org.  You might be able to retrieve some files by setting wayback_cli=no in constants.sh (to treat like any other site) and then re-running, though file retrieval is currently limited to the specified Wayback Machine timestamp. Aborting."
         exit
       else
-        wmd_get_wayback_site "$url"
+        wmd_args=("$url")
+        if [ "$wayback_date_from" != "" ]; then
+          wmd_args+=("$wayback_date_from")
+          [ "$wayback_date_to" != "" ] && wmd_args+=("$wayback_date_to")
+        fi
+        wmd_get_wayback_site "${wmd_args[@]}"
       fi
     else
       echo "$msg_error: Wayback Machine Downloader not found (wayback_machine_downloader_cmd is set to $wayback_machine_downloader_cmd) - please check that it is installed according to instructions at $wayback_machine_downloader_url. Aborting."

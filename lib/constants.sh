@@ -22,7 +22,7 @@
 ################################################
 # MakeStaticSite info
 ################################################
-version=0.30.6-beta2
+version=0.30.6-beta3
 version_date='20 September 2024'
 version_header="MakeStaticSite version $version, released on $version_date."
 mss_license="GNU Affero General Public License version 3"
@@ -51,6 +51,7 @@ ip6re="^[[:space:]]*#*[[:space:]]*\([0-9a-fA-F]\{1,4\}::\{0,1\}\)\{1,7\}[0-9a-fA
 domain_re0="[[:alnum:]][-[:alnum:]+\.]*\.[-[:alnum:]+]*[[:alnum:]]"
 domain_re="^$domain_re0"'$'     # Anchored domain match (add first and last characters)
 url_re='^(https?|ftp|file)://[-[:alnum:]\+&@#/%?=~_|!:,.;]+$'
+datetime_regex='[1-2][0-9]\{3\}[0-1][0-9][0-3][0-9][0-2][0-9][0-5][0-9][0-5][0-9]'
 wayback_datetime_regex='[1-2][0-9]\{3\}[0-1][0-9][0-3][0-9][0-2][0-9][0-5][0-9][0-5][0-9][a-z]\{0,2\}_\?' # regex for Wayback datetime folder (with support for suffix indicating asset types)
 etc_hosts=/etc/hosts            # Location of hosts file
 

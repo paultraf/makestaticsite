@@ -182,23 +182,33 @@ validate_http() {
   elif [ "$status" = "301" ] || [ "$status" = "302" ] || [ "$status" = "307" ] || [ "$status" = "308" ]; then
     echo -n $'\n'"$msg_warning: redirect detected (HTTP code $status). "
     # Following should require user to confirm (y/n):
-    url_effective=$(curl -s -k -L --max-redirs "$max_redirects" -o /dev/null -w "%{url_effective}" "$1") || { echo "$msg_error: Unable to follow the redirection"; return 1; } # -L: follow redirects up to the value of max_redirects
-    echo "URL effectively redirected to: $url_effective."
-    status_redirect="$(curl -s -k  --max-redirs "$max_redirects" --head -w "%{http_code}" "$url_effective" -o /dev/null)"
-    if [ -n "${2+x}" ]; then
-      printf -v "$2" '%s' "$url_effective"
-      msg_redirect="Following redirection, value of '$2' changed to $url_effective."
-      [ "${BASH_SOURCE[1]}" = './makestaticsite.sh' ] && msg_redirect+=" Please ensure that this value is stored in the configuration file to avoid potential issues in generating the mirror."
-      echo "msg_redirect"
-    fi
-    if [ "$status_redirect" = "200" ]; then
-      echo "Connection established OK." "$e"
-      return 
-    elif [ "$status_redirect" = "401" ]; then
-      echo "$msg_warning: unauthorised (HTTP code $status). This means that you will need to enter a username and password as wget parameters for wget_extra_options (which you can set a bit later)."
+    if [ "$run_unattended" != "yes" ]; then
+      read -r -e -p "Do you wish to proceed with redirection here? [Y/n] " confirm < /dev/tty
+      confirm=${confirm:0:1}
     else
-      echo "$msg_error: failed to connect; the response code was $status (exit code: $?). Please try again."
-      return 1
+      confirm=Y
+    fi
+    if [ "$confirm" != "Y" ] && [ "$confirm" != "y" ] && [ "$confirm" != "" ]; then
+      printf "%s\n" "OK. Will not redirect."
+    else
+      url_effective=$(curl -s -k -L --max-redirs "$max_redirects" -o /dev/null -w "%{url_effective}" "$1") || { echo "$msg_error: Unable to follow the redirection"; return 1; } # -L: follow redirects up to the value of max_redirects
+      echo "URL effectively redirected from $1 to $url_effective."
+      status_redirect="$(curl -s -k  --max-redirs "$max_redirects" --head -w "%{http_code}" "$url_effective" -o /dev/null)"
+      if [ -n "${2+x}" ]; then
+        printf -v "$2" '%s' "$url_effective"
+        msg_redirect="Following redirection, value of '$2' changed to $url_effective."
+        [ "${BASH_SOURCE[1]}" = './makestaticsite.sh' ] && msg_redirect+=" Please ensure that this value is stored in the configuration file to avoid potential issues in generating the mirror."
+        echo "$msg_redirect"; return
+      fi
+      if [ "$status_redirect" = "200" ]; then
+        echo "Connection established OK." "$e"
+        return 
+      elif [ "$status_redirect" = "401" ]; then
+        echo "$msg_warning: unauthorised (HTTP code $status). This means that you will need to enter a username and password as wget parameters for wget_extra_options (which you can set a bit later)."
+      else
+        echo "$msg_error: failed to connect; the response code was $status (exit code: $?). Please try again."
+        return 1
+      fi
     fi
   elif [ "$status" = "401" ]; then
     echo "$msg_warning: unauthorised (HTTP code $status).  This means that you will need to enter a username and password as wget parameters for wget_extra_options (which you can set a bit later)."

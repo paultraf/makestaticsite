@@ -35,15 +35,15 @@
 # - date to
 wmd_get_wayback_site() {
   local url="$1"
-  [ -n "${2+x}" ] && wayback_date_from="$2" 
-  [ -n "${3+x}" ] && wayback_date_to="$3" 
+  [ -n "${2+x}" ] && wmd_wayback_date_from="$2" 
+  [ -n "${3+x}" ] && wmd_wayback_date_to="$3" 
 
   wmd_get_options=()
   [ "$wayback_matchtype" = "exact" ] && wmd_get_options+=(-e)
   [ -n "${wayback_machine_only+x}" ] && [ "$wayback_machine_only" != "" ] && wmd_get_options+=(-o "$wayback_machine_only") 
   [ -n "${wayback_machine_excludes+x}" ] && [ "$wayback_machine_excludes" != "" ] && wmd_get_options+=(-x "$wayback_machine_excludes") 
-  [ -n "${wayback_date_from+x}" ] && [ "$wayback_date_from" != "" ] && wmd_get_options+=(-f "$wayback_date_from") 
-  [ -n "${wayback_date_to+x}" ] && [ "$wayback_date_to" != "" ] && wmd_get_options+=(-t "$wayback_date_to") 
+  [ -n "${wmd_wayback_date_from+x}" ] && [ "$wmd_wayback_date_from" != "" ] && wmd_get_options+=(-f "$wmd_wayback_date_from") 
+  [ -n "${wmd_wayback_date_to+x}" ] && [ "$wmd_wayback_date_to" != "" ] && wmd_get_options+=(-t "$wmd_wayback_date_to") 
   [ -n "${wayback_machine_statuscodes+x}" ] && [ "$wayback_machine_statuscodes" = "all" ] && wmd_get_options+=(-a)
   
   wmd_get_options+=(-d "$mirror_archive_dir" "$url")
@@ -52,25 +52,19 @@ wmd_get_wayback_site() {
 }
 
 # Validate Wayback dates
-# Expects one parameter: timestamp or a
-# two timestamps separated by hyphen
+# Assumes wayback_date_from, wayback_date_to,
+# and wayback_date_from_to are all defined.
 validate_wayback_dates() {
-  wayback_date_from_to="$1"
-  wayback_date_from_cut=$(printf "%s" "$wayback_date_from_to" | cut -d- -f1)
+  [ "$wayback_date_to_earliest" = "" ] && wayback_date_from_earliest=19881231123456
+  [ "$wayback_date_to_latest" = "" ] && wayback_date_to_latest=29991231123456
 
-  if [ "$wayback_date_from_cut" != "$wayback_date_from_to" ]; then
-    wayback_date_to=$(printf "%s" "$wayback_date_from_to" | cut -d- -f2)
-    wayback_date_from="$wayback_date_from_cut"
-    if ! validate_timestamp "$wayback_date_to"; then
-      if [ "$wayback_date_to" = "" ]; then
-        error_notice="The 'to' date cannot be empty. "
-      else
-        error_notice="The 'to' date, $wayback_date_to, in the range $wayback_date_from_to, is invalid. "
-      fi
-      echo $'\n'"$msg_error: $error_notice It needs to be a string of digits in the format: YYYYMMDDhhmmss (substrings starting with YYYY are allowed). Aborting."; exit
+  if [ "$wayback_timestamp_policy" = "$range" ] && ! validate_timestamp "$wayback_date_to"; then
+    if [ "$wayback_date_to" = "" ]; then
+      error_notice="The 'to' date cannot be empty. "
+    else
+      error_notice="The 'to' date, $wayback_date_to, in the range $wayback_date_from_to, is invalid. "
     fi
-  else
-    wayback_date_from="$wayback_date_from_to"
+    echo $'\n'"$msg_error: $error_notice It needs to be a string of digits in the format: YYYYMMDDhhmmss (substrings starting with YYYY are allowed). Aborting."; exit
   fi
 
   if ! validate_timestamp "$wayback_date_from"; then
@@ -108,7 +102,8 @@ process_wayback_url() {
     local url_slashes=${url_stem_dates//[!\/]};
     local url_depth=$(( ${#url_slashes} ))
     wayback_date_from_to=$(env echo "$1" | cut -d/ -f${url_depth})
-    validate_wayback_dates "$wayback_date_from_to"
+    [ "$wayback_date_from" = "" ] && wayback_date_from="$wayback_date_from_to"
+    validate_wayback_dates
 
     # Remove any 'to' timestamp from url (having extracted from/to dates) 
     url=${url/$wayback_date_from_to/$wayback_date_from}
@@ -141,7 +136,7 @@ initialise_wayback() {
   url_wildcard_capture=no # reset as the Wayback Machine doesn't yet have a means to handle this; also note that it will refer to all external assets under its own host name.
   domain_wayback_machine=$(printf "%s" "$url" | awk -F/ '{print $3}' | awk -F: '{print $1}')
   process_wayback_url "$url" # will set the value of $url_original to be that of the archived site
-  printf "\nWayback Machine detected at %s, hosted on %s.\n" "$url" "$domain_wayback_machine"
+  printf "Wayback Machine detected at %s, hosted on %s.\n" "$url" "$domain_wayback_machine"
   if [ "$wayback_timestamp_policy" = "exact" ] && [ "$wayback_date_to" != "" ]; then
     echo "$msg_warning: you have specified a date range for the Wayback Machine, but the constant wayback_timestamp_policy is set to 'exact'."
     echo "To resolve this conflict, MakeStaticSite will only download assets for the earliest timestamp, $wayback_date_from. But you may like to set wayback_timestamp_policy=range."
@@ -190,7 +185,7 @@ wayback_url_paths() {
   # Wayback-related URLs
   url_base_regex=$(regex_escape "$url_base")
   url_path_original_regex=$(regex_escape "$url_path_original")
-  url_timeless=${url/${wayback_date_from_to}/[0-9]+[a-z]\{0,2\}_\?} # This could be tightened - use $wayback_datetime_regex
+  url_timeless=${url/\/${wayback_date_from}/\/[0-9]+[a-z]\{0,2\}_\?} # This could be tightened - use $wayback_datetime_regex
   url_timeless=$(regex_escape "$url_timeless")
   url_timeless=$(regex_apply "$url_timeless")
   url_timeless=${url_timeless//\\[/[} # final adjustment to remove '\' in front of '['
