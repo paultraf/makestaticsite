@@ -510,6 +510,27 @@ timestamp() {
   printf "%s" "$timestamp"
 }
 
+# Convert a numerical timestamp to a more human-readable format.
+# Expects one parameter: date-time (format YYYYMMDDhhmmss). 
+timestamp_readable(){
+  if ! validate_timestamp "$1"; then
+    return 1
+  fi
+  local timestamp="$1"
+  local year=${timestamp:0:4}
+  local month=${timestamp:4:2}
+  local day=${timestamp:6:2}
+  local hour=${timestamp:8:2}
+  local min=${timestamp:10:2}
+  local sec=${timestamp:12:2}
+  if [ "$ostype" = "BSD" ]; then
+    timestamp_human="$(date -j -f "%Y-%m-%d %H:%M:%S" "${year}-${month}-${day} ${hour}:${min}:${sec}")"
+  else
+    timestamp_human="$(date -d "${year}-${month}-${day} ${hour}:${min}:${sec}")"
+  fi
+  printf "%s" "$timestamp_human" 
+}
+
 # Touch a file and change its permissions, avoiding overwrites
 # Expects two parameters: file path and permissions
 touchmod() {

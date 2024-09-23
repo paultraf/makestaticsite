@@ -2494,8 +2494,11 @@ conclude() {
   printf "Completed in "; stopclock SECONDS
   msg_done=$(msg_ink "ok" 'All done.')
   printf "%s\nA static mirror of %s has been created in %s\n" "$msg_done" "$url" "$working_mirror_dir"
+  if [ "$wayback_url" = "yes" ] && [ -n "${msg_wayback+x}" ]; then
+    printf "\n%s\n" "$msg_wayback"
+  fi
   if [ -n "${msg_deploy+x}" ]; then
-    printf "%s\n\n" "$msg_deploy"
+    printf "%s\n" "$msg_deploy"
   fi
   printf "\nThank you for using MakeStaticSite, free software released under the %s. The latest version is available from %s.\n" "$mss_license" "$mss_download"
   echo " "
