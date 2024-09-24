@@ -76,13 +76,13 @@ validate_wayback_dates() {
     echo $'\n'"$msg_error: $error_notice It needs to be a string of digits in the format: YYYYMMDDhhmmss (substrings starting with YYYY are allowed). Aborting."; exit
   fi
 
-  if [ "$wayback_timestamp_policy" = "range" ] && (( $wayback_date_from_earliest > $wayback_date_from )); then
+  if [ "$wayback_timestamp_policy" = "range" ] && (( wayback_date_from_earliest > wayback_date_from )); then
     echo $'\n'"$msg_error: the 'from' date specified by wayback_date_from_earliest, $wayback_date_from_earliest, in constants.sh, should not be later than the 'from' date, $wayback_date_from, in the URL range entered!  Aborting."; exit
   fi
 
   if [ "$wayback_date_to" != "" ]; then
-    (( $wayback_date_to_latest > $wayback_date_to )) && wayback_date_to_latest="$wayback_date_to"
-    if (( $wayback_date_from > $wayback_date_to )); then
+    (( wayback_date_to_latest > wayback_date_to )) && wayback_date_to_latest="$wayback_date_to"
+    if (( wayback_date_from > wayback_date_to )); then
       echo $'\n'"$msg_error: the 'from' date, $wayback_date_from, should not be later than the 'to' date, $wayback_date_to!  Aborting."; exit
     fi
   fi
@@ -145,7 +145,7 @@ initialise_wayback() {
     wayback_date_to="$wayback_date_from"
   elif [ "$wayback_timestamp_policy" = "range" ] && { (( wayback_date_from < wayback_date_from_earliest)) || (( wayback_date_to > wayback_date_to_latest)); }; then
     msg_wayback_notice="the URL supplied contains a date that is outside of the allowable range specified by the values you have specified for wayback_date_from_earliest and/or wayback_date_to_latest in constants.sh."
-    if (( $phase < 4 )); then
+    if (( phase < 4 )); then
       echo "$msg_warning: $msg_wayback_notice  If you proceed, the resulting mirror may likewise contain content captured on a date outside this range."
       confirm_continue
     else
@@ -258,12 +258,12 @@ wayback_augment_urls(){
         line="$this_url$line"
       fi
       # remove any trailing slashes
-      [ ${line: -1} = "/" ] && line=${line::-1}
+      [ "${line: -1}" = "/" ] && line=${line::-1}
       # percent encode whitespace
       line=${line//[[:space:]]/%20}
       href_matches+=("$line")
     done < <(grep -o "$wayback_search_regex" "$opt")
-    webassets_all=(${webassets_all[@]} ${href_matches[@]}) 
+    webassets_all=("${webassets_all[@]}" "${href_matches[@]}") 
   done
 }
 
@@ -340,6 +340,7 @@ wayback_filter_domains() {
   done
 
   temp_IFS="$IFS"
+# shellcheck disable=SC2207
   IFS=$'\n' wayback_exceptions=($(sort -u <<<"${wayback_domain_exceptions[*]}"))
   IFS="$temp_IFS"
   
@@ -358,6 +359,7 @@ wayback_filter_domains() {
   done)
 
   temp_IFS="$IFS"
+# shellcheck disable=SC2207
   IFS=$'\n' webassets_http=($(sort -u <<<"${webassets_wayback[*]}"))
   IFS="$temp_IFS"
   
@@ -652,7 +654,7 @@ process_asset_anchors() {
     if grep -q '&#' "$opt"; then 
       # Convert character entities to percent-encoded equivalents
       for ((i=32;i<126;i++)); do
-        j=$(printf '%x\n' $i)
+        j=$(printf '%x\n' "$i")
         sed_subs=('s|&#'"$i"';|%'"$j"'|g' "$opt")
         sed "${sed_options[@]}" "${sed_subs[@]}"
       done
