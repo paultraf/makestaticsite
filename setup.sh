@@ -285,17 +285,15 @@ read_option() {
         elif [ -n "${url+x}" ] && [ "$optvar" = "url" ]; then
           echo "You have entered as URL: $url"
           input_value="$url"
+          invalid_http_reason= # description of invalid http status
           if ! validate_url "$input_value"; then
-            if [ "$run_unattended" = "yes" ]; then
-              echo "The URL is invalid.  Aborting."; exit
-            else
-              input_line="Please enter the value for $optvar$input_hint: "
-              validate_input "$input_text" "$input_line" "$optvar"
-            fi
+            invalid_http_reason="The URL is invalid."
+          else
+            validate_url_range "$input_value" "input_value"
           fi
-          if ! validate_http "$input_value" "input_value"; then
+          if [ "$invalid_http_reason" != "" ]; then
             if [ "$run_unattended" = "yes" ]; then
-              echo "Unable to connect to URL.  Aborting."; exit
+              echo "$invalid_http_reason Aborting."; exit
             else
               input_line="Please enter the value for $optvar$input_hint: "
               validate_input "$input_text" "$input_line" "$optvar"

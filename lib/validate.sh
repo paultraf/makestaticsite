@@ -181,9 +181,9 @@ validate_http() {
     return
   elif [ "$status" = "301" ] || [ "$status" = "302" ] || [ "$status" = "307" ] || [ "$status" = "308" ]; then
     echo -n $'\n'"$msg_warning: redirect detected (HTTP code $status). "
-    # Following should require user to confirm (y/n):
+    # Require the user to confirm (y/n):
     if [ "$run_unattended" != "yes" ]; then
-      read -r -e -p "Do you wish to proceed with redirection here? [Y/n] " confirm < /dev/tty
+      read -r -e -p "Do you wish to proceed with the redirection? [Y/n] " confirm < /dev/tty
       confirm=${confirm:0:1}
     else
       confirm=Y
@@ -220,6 +220,35 @@ validate_http() {
     ! validate_internet && echo -n "There doesn't appear to be any Internet connectivity. Is the server up and running? Perhaps you are offline? "
     return 1
   fi
+}
+
+# Validate a URL with a range
+# Expects two parameters: 
+#  - URL 
+#  - variable name to store URL
+validate_url_range() {
+  [ -z ${1+x} ] && { invalid_http_reason="System error: unable to test connectivity as no URL supplied."; return 1; }
+  [ -z ${2+x} ] && { invalid_http_reason="System error: unable to test connectivity as no URL variable name supplied."; return 1; }
+  url_var="$1"
+  # For Wayback URLs with ranges, use (and update) the 'from' date
+  datetime_range_check=$(echo "$url_var" | grep "/$datetime_regex-")
+  if [ "$datetime_range_check" != "" ]; then
+    echo "Date range detected in URL."
+# shellcheck disable=SC2001
+    url_from=$(echo "$url_var" | sed 's~\('/"$datetime_regex"'\)-'"$datetime_regex"/'~\1/~')
+    wayback_date_from=$(echo "$url_var" | grep -o "/${datetime_regex}-${datetime_regex}/" | grep -o "$datetime_regex\-" | grep -o "$datetime_regex")
+    wayback_date_to=$(echo "$url_var" | grep -o "/${datetime_regex}-${datetime_regex}/" | grep -o "\-$datetime_regex" | grep -o "$datetime_regex")
+    if ! validate_http "$url_from" "url_from" "quiet"; then
+      invalid_http_reason="The URL (assumed as Wayback) is invalid."
+    else
+      url_var=$(echo "$url_from" | sed 's~\('/"$datetime_regex"'\)/~\1'"-$wayback_date_to"'/~')
+    fi
+# shellcheck disable=SC2001
+    url_var=$(echo "$url_from" | sed 's~\('/"$datetime_regex"'\)/~\1'"-$wayback_date_to"'/~')
+  elif ! validate_http "$url_var" "url_var"; then
+    invalid_http_reason="Unable to connect to URL."
+  fi
+  printf -v "$2" '%s' "$url_var" 
 }
 
 validate_yesno() {
@@ -262,8 +291,16 @@ validate_input() {
       fi
     fi
     if [[ ' '${options_check_url[*]}' ' =~ ' '$3' ' ]]; then
+      invalid_http_reason= # description of invalid http status
       validate_url "$input_value" || { echo "The URL is invalid.  Please try again."; continue; }
-      validate_http "$input_value" "input_value" || { echo; continue; }
+      validate_url_range "$input_value" "input_value"
+      if [ "$invalid_http_reason" != "" ]; then
+        if [ "$run_unattended" = "yes" ]; then
+          echo "$invalid_http_reason Aborting."; exit
+        else
+          echo "$invalid_http_reason"; continue
+        fi
+      fi
     fi
     if [[ ' '${options_check_yesno[*]}' ' =~ ' '$3' ' ]]; then
       validate_yesno "$input_value" || { echo; continue; }
@@ -315,7 +352,7 @@ check_wayback_url(){
     wayback_date_from_to=$(printf "%s" "$url" | grep -o "/$wayback_datetime_regex/" | grep -o "$wayback_datetime_regex")
     doubleslashes_count=$(echo "$url" | grep -o '//' | wc -l)
 
-    if (( $doubleslashes_count < 2 )); then
+    if (( doubleslashes_count < 2 )); then
       url=${url/"$wayback_date_from_to/"/"$wayback_date_from_to"/http://}
       if [ -n "${3+x}" ]; then
         echo "$msg_warning: updating value of URL variable ($3) from $1 to $url..."

@@ -401,21 +401,11 @@ initialise_variables() {
   fi
   [ "$url_add_slash" = "yes" ] && url="$url/"; # ensure URL ends in trailing slash
 
-  # Check HTTP connectivity ahead of using Internet utilities
-  # For Wayback URLs with ranges, use (and update) the 'from' date
-  datetime_range_check=$(echo "$url" | grep "/$datetime_regex-")
-  if [ "$datetime_range_check" != "" ]; then
-    echo $'\n'"$msg_info: Date range detected in URL."
-    wayback_timestamp_policy=range
-# shellcheck disable=SC2001
-    url_from=$(echo "$url" | sed 's~\('/"$datetime_regex"'\)-'"$datetime_regex"/'~\1/~')
-    wayback_date_from=$(echo "$url" | grep -o "/${datetime_regex}-${datetime_regex}/" | grep -o "$datetime_regex\-" | grep -o "$datetime_regex")
-    wayback_date_to=$(echo "$url" | grep -o "/${datetime_regex}-${datetime_regex}/" | grep -o "\-$datetime_regex" | grep -o "$datetime_regex")
-    ! validate_http "$url_from" "url_from" "quiet" && { echo "Aborting."; exit; }
-# shellcheck disable=SC2001
-    url=$(echo "$url_from" | sed 's~\('/"$datetime_regex"'\)/~\1'"-$wayback_date_to"'/~')
-  else
-    ! validate_http "$url" "url" "quiet" && { echo "Aborting."; exit; }
+  # Check HTTP connectivity and specifically Wayback URLs with ranges
+  invalid_http_reason= # initialise reason for failure (initially none)
+  validate_url_range "$url" "url"
+  if [ "$invalid_http_reason" != "" ]; then
+    echo "$invalid_http_reason Aborting."; exit
   fi
 
   # Wayback Machine support
