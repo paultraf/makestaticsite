@@ -19,8 +19,55 @@
 ##########################################################################
 
 
+0.30.6 (released on 2024-09-24)
+       * Further Wayback Machine support, including date ranges *
+        [lib/constants.sh]
+         New constants: url_grep_search_pattern, listing URL right-hand
+         boundary characters; datetime_regex - 14-character regular expression
+         to match standard date-time.
+         Renamed variables wayback_date_from to wayback_date_from_earliest,
+         and wayback_date_to to wayback_date_to_latest for clarity.
+        [lib/general.sh]
+         New function timestamp_readable() to convert a timestamp in
+         YYYYMMDDhhmmss format to a more readable word-based format.
+        [lib/validate.sh]
+         New function validate_url_range() to validate a custom URL with
+         'from' and 'to' dates, including a call to validate_http() based
+         on the 'from' date, with support for redirection.
+         check_wayback_url(): added routine to adjust URL when target site
+         missing http protocol; added third function argument (name of URL
+         variable) to support update variable assignment. 
+        [lib/mod_wayback.sh]
+         Swapped roles of wayback_date_to and wayback_date_from.
+         wmd_get_wayback_site(): wayback_date_from renamed as
+         wmd_wayback_date_from, wayback_date_to renamed wmd_wayback_date_to. 
+         Added function validate_wayback_dates() with expanded checks on
+         user-submitted to/from dates, with error handling.
+         validate_wayback_dates() simplified with from/to date calculations
+         no longer required.
+         wayback_augment_urls(): added percent encoding of whitespaces.
+         process_wayback_url(): changed assignment of wayback_date_from_to
+         to be based on date format rather than URL field position.
+         initialise_wayback(): added further checks on date ranges.
+         consolidate_assets(): added generation of summary Wayback output.
+        [setup.sh]
+         read_option(): Moved check for Wayback Machine before the printing
+         to config file; added URL parameter to check_wayback_url() call.
+         Refactored URL validation to accommodate URL date range check.
+        [makestaticsite.sh]
+         initialise_variables(): added URL parameter to check_wayback_url()
+         call. Introduced URL date range validation.
+         mirror_site(): Added support for passing date range parameters to
+         Hartator's Wayback Machine Downloader.
+         wget_extra_urls(): Incorporated Wayback URLs into extensions filter.
+         Refinement to ensure the retainment of character
+         entities in URLs (starting &#); added conversion of ISO 8859-1
+         character entities in URLs input file to percent encoding.
+         Added filter on date ranges (when wayback_timestamp_policy=range).
+         conclude(): Added summary reporting for Wayback Machine URLs.
+
 0.30.5 (released on 2024-09-12)
-       * Refactored with speed improvements and more robust layout *
+       * Extended Wget support for Wayback Machine, improved link processing *
         [lib/constants.sh]
          New constants: wget_wayback_core_options - for Wget runs in phase 3;
          wayback_newsfeed_clean - what to do with links to newsfeeds such as
@@ -58,7 +105,7 @@
          adjusted accordingly.
          process_assets(): bug fix: refined conversion of absolute URLs to
          relative URLs to properly take account of 'assets' and 'imports'
-         directories. 
+         directories.
         [makestaticsite.sh]
          initialise_variables(): inserted call to validate_http();
          updated variable names to wget_inputs_main_stem and
