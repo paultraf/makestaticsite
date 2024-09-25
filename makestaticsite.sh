@@ -23,7 +23,7 @@
 # Prerequisites
 # Bash 3 and write permissions in this directory and in the target deployment directories
 
-# shellcheck disable=SC2154
+# shellcheck disable=SC2015,SC2154
 
 SECONDS=0                  # start timer
 
@@ -70,10 +70,10 @@ main() {
   (( phase < 8 )) && (( end_phase >= 4 )) && [ "$mss_cut_dirs" = "yes" ] && cut_mss_dirs
 
   # Phase 8: Create an offline zip archive
-  (( phase < 9 )) && (( end_phase >= 8 )) && [ "$upload_zip" = "yes" ] && create_zip || echo "Creation of ZIP archive skipped, as per preferences." "1"
+  (( phase < 9 )) && (( end_phase >= 8 )) && [ "$upload_zip" = "yes" ] && create_zip || { echolog "Creation of ZIP archive skipped, as per preferences." "1"; }
 
   # Phase 9: Deploy
-  (( end_phase >= 9 )) && [ "$deploy" = "yes" ] && deploy || echo "Runtime option for deployment set to 'no'; deployment skipped."
+  (( end_phase >= 9 )) && [ "$deploy" = "yes" ] && deploy || echolog "Runtime option for deployment set to 'no'; deployment skipped."
 
   # Phase 10: Finish
   conclude
@@ -93,7 +93,7 @@ main() {
 #  2 (restricted) - echo only for full logging (this priority is meant for
 #                   internal processing)
 #
-echo() {
+echolog() {
   echo_num=
   temp_IFS="$IFS"; IFS="|"
   params=("$@")
@@ -139,10 +139,10 @@ echo() {
     fi
   fi
   if [ "$echo_tty" != "" ]; then
-    env echo "${params[@]}"
+    echo "${params[@]}"
   fi
   if [ "$echo_log" != "" ] && [ "$log_level" != "silent" ] && [ -n "${log_file+x}" ]; then
-    env echo "${params[@]}" >> "$log_file"
+    echo "${params[@]}" >> "$log_file"
   fi
 
   IFS="$temp_IFS"
@@ -261,7 +261,7 @@ initialise_layout() {
 
   # Local target directory and web server deployment
   mirror_dir="$script_dir/mirror"         # path to Wget output root folder
-  [ -d "$mirror_dir" ] || { mkdir -p "$mirror_dir"; echo "Created folder for mirror files at $mirror_dir."; }
+  [ -d "$mirror_dir" ] || { mkdir -p "$mirror_dir"; echolog "Created folder for mirror files at $mirror_dir."; }
 
   # Substitute files for zip download (used for embeds, etc.)
   sub_dir=subs                            # This must be sit under $script_dir
@@ -291,7 +291,7 @@ initialise_layout() {
   if [ "$output_level" = "silent" ]; then
     exec 1>/dev/null
     if [ "$run_unattended" = "no" ]; then
-      echo "NOTICE: run_unattended=yes (to keep terminal output silent)" 0
+      echolog "NOTICE: run_unattended=yes (to keep terminal output silent)" 0
     fi
     run_unattended=yes
   fi
@@ -306,16 +306,16 @@ initialise_variables() {
   session_data+=("Run on|$timestamp_human")
 
   # Read phase details
-  validate_range 0 "$max_phase_num" "$phase" || { echo "Sorry, the phase number is out of range (it should be between 0 and $max_phase_num).  Please try again."; exit; }
+  validate_range 0 "$max_phase_num" "$phase" || { echolog "Sorry, the phase number is out of range (it should be between 0 and $max_phase_num).  Please try again."; exit; }
 
   # Read phase details
-  validate_range 1 "$max_phase_num" "$end_phase" || { echo "Sorry, the phase number for exiting the program is out of range (it should be between 1 and $max_phase_num).  Please try again."; exit; }
+  validate_range 1 "$max_phase_num" "$end_phase" || { echolog "Sorry, the phase number for exiting the program is out of range (it should be between 1 and $max_phase_num).  Please try again."; exit; }
 
   ((phase>end_phase)) && { printf "%s: The (start) phase number cannot be greater than the end phase number.\nPlease rerun the program." "$msg_error"; exit; }
 
   # If the phase is nonzero, then check for -m option
   if ((phase > minvalue)) && [ "$mirror_id_flag" = "off" ]; then
-    echo "$msg_error: Missing -m option (mirror archive folder name) is needed for the supplied start phase (p). Please refer to the help:"
+    echolog "$msg_error: Missing -m option (mirror archive folder name) is needed for the supplied start phase (p). Please refer to the help:"
     echo
     ./makestaticsite.sh -h
     exit
@@ -323,28 +323,28 @@ initialise_variables() {
 
   # If the phase numbers are too small, then nothing much will be done
   if ((end_phase < 2)); then
-    echo "$msg_warning: No site will be output because the supplied end phase (q) is too low."
+    echolog "$msg_warning: No site will be output because the supplied end phase (q) is too low."
   fi
 
   # Check that a mirror archive exists corresponding to the mirror identifier
   if [ "$mirror_id_flag" = "on" ]; then
      if [ ! -d "$mirror_dir/$mirror_archive_dir" ]; then
-       echo "ATTENTION! No mirror archive was found at $mirror_dir/$mirror_archive_dir"
-       echo "Here is a list of possible mirror IDs:"
+       echolog "ATTENTION! No mirror archive was found at $mirror_dir/$mirror_archive_dir"
+       echolog "Here is a list of possible mirror IDs:"
        cd "$mirror_dir" || { printf "unable to enter directory %s.\nAborting.\n" "$mirror_dir"; exit; }
        pwd
        sh -c "ls -d */ | sed 's/\///'"
-       echo "Please choose one from the list and rerun with -m option."
+       echolog "Please choose one from the list and rerun with -m option."
        cd "$script_dir" || { printf "unable to enter directory %s.\nAborting.\n" "$script_dir"; }
        exit
      else
-       echo "Found mirror archive at $mirror_dir/$mirror_archive_dir"
+       echolog "Found mirror archive at $mirror_dir/$mirror_archive_dir"
      fi
   fi
 
   start_phase_desc=$(get_phase_desc "$phase")
-  echo "Starting at phase $phase: $start_phase_desc."
-  ((end_phase<=max_phase_num)) && { end_phase_desc=$(get_phase_desc "$end_phase"); echo "Ending at phase $end_phase: $end_phase_desc."; }
+  echolog "Starting at phase $phase: $start_phase_desc."
+  ((end_phase<=max_phase_num)) && { end_phase_desc=$(get_phase_desc "$end_phase"); echolog "Ending at phase $end_phase: $end_phase_desc."; }
 
   # Check for mirror ID and, if necessary, derive input cfg file from it
   # (looking at the tail for the timestamp format)
@@ -379,7 +379,7 @@ initialise_variables() {
   msg_checking="Checking your system for Wget and other essential components ... "
   cmd_check "curl" || { printf "%s%s: Unable to find binary: curl ("'$'"PATH contains %s).\nThis command is essential for checking connectivity.  It may be downloaded from https://curl.se/.\nAborting.\n" "$msg_checking" "$msg_error" "$PATH"; exit; }
   cmd_check "$wget_cmd" "1" || { printf "%s: Unable to carry out a snapshot\nPlease review the value of the wget_cmd option.\nAborting.\n" "$msg_error"; exit; }
-  echo "OK" "1"
+  echolog "OK" "1"
   wget_cmd_version="$(which_version "$wget_cmd" "GNU Wget")"
   version_check "$wget_cmd_version" "$wget_version_atleast" || { printf "%s%s. The version of %s is %s, which is old, so some functionality may be lost.  Version %s or later is recommended.\n" "$msg_checking" "$msg_warning" "$wget_cmd" "$wget_cmd_version" "$wget_version_atleast";}
   [ "$ssl_checks" = "no" ] && wget_ssl="--no-check-certificate" || wget_ssl=''
@@ -405,7 +405,7 @@ initialise_variables() {
   invalid_http_reason= # initialise reason for failure (initially none)
   validate_url_range "$url" "url"
   if [ "$invalid_http_reason" != "" ]; then
-    echo "$invalid_http_reason Aborting."; exit
+    echolog "$invalid_http_reason Aborting."; exit
   fi
 
   # Wayback Machine support
@@ -440,10 +440,10 @@ initialise_variables() {
   c=0; for asset_domain in "${list[@]}"; do
     validate_domain "$asset_domain" || {
       asset_domains=$(printf "%s" "$asset_domains" | sed 's~'"$asset_domain"',~~' | sed 's~',"$asset_domain"'~~' )
-      c=1; echo -n $'\n'"$msg_warning: removed invalid asset domain $asset_domain from list."
+      c=1; echolog -n $'\n'"$msg_warning: removed invalid asset domain $asset_domain from list."
     }
   done
-  [ "$c" = "1" ] && echo -n $'\n'
+  [ "$c" = "1" ] && echolog -n $'\n'
   if [ "$wayback_url" = "yes" ] && [ "$wayback_mementos_only" = "yes" ]; then  
     page_element_domains=
   else
@@ -453,11 +453,11 @@ initialise_variables() {
   if [ "$page_element_domains" != "auto" ]; then
     c=0; for page_element_domain in "${list[@]}"; do
       validate_domain "$page_element_domain" || {
-        c=1; echo -n $'\n'"$msg_warning: removing invalid page element domain $page_element_domain from list."
+        c=1; echolog -n $'\n'"$msg_warning: removing invalid page element domain $page_element_domain from list."
         page_element_domains=$(printf "%s" "$page_element_domains" | sed 's~'"$page_element_domain"',~~' | sed 's~',"$page_element_domain"'~~' )
       }
     done
-    [ "$c" = "1" ] && echo -n $'\n'
+    [ "$c" = "1" ] && echolog -n $'\n'
   fi
   asset_grep_includes=()
   asset_find_names=()
@@ -633,9 +633,9 @@ initialise_variables() {
   fi
   deploy_path="$(config_get deploy_path "$myconfig")"
   deploy_domain="$(config_get deploy_domain "$myconfig")"
-  [ "$wayback_url" != "yes" ] && echo "Done."
+  [ "$wayback_url" != "yes" ] && echolog "Done."
   if [ "$cut_dirs" != "0" ]; then
-    echo "$msg_warning: You have specified Wget --cut-dirs option. Ignoring mss_cut_dirs."
+    echolog "$msg_warning: You have specified Wget --cut-dirs option. Ignoring mss_cut_dirs."
   fi
 
   # Define a timestamp
@@ -661,7 +661,7 @@ initialise_include-excludes() {
 }
 
 prepare_static_generation() {
-  echo "Starting the static site generation ..."
+  echolog "Starting the static site generation ..."
 
   # Prepare WordPress site for static archive, if applicable
   if [ "$wp_cli" = "yes" ]  && [ "$use_wayback_cli" != "yes" ]; then
@@ -679,10 +679,10 @@ prepare_static_generation() {
 }
 
 wget_error_codes() {
-  echo "Done."
+  echolog "Done."
   case "$1" in
     "8")
-      echo -n "$msg_warning: Wget ERROR code 8, i.e. the Web server gave an error on retrieving at least one file, probably HTTP 404 (file not found - possibly specified in the input file).  Less likely is a 500 (internal server error), which in the case of a CMS might be due to a plugin or module. ";
+      echolog -n "$msg_warning: Wget ERROR code 8, i.e. the Web server gave an error on retrieving at least one file, probably HTTP 404 (file not found - possibly specified in the input file).  Less likely is a 500 (internal server error), which in the case of a CMS might be due to a plugin or module. ";
       local err8_msg="It should be safe to proceed, but you may like to rerun and/or review the output"
       if [ "$output_level" = "quiet" ]; then
         if [ "$log_level" != "silent" ] && [ "$log_level" != "quiet" ]; then
@@ -693,36 +693,36 @@ wget_error_codes() {
       elif [ "$output_level" = "normal" ]; then
         err8_msg+=" and consider setting the output_level constant to 'verbose'"
       fi
-      echo "$err8_msg. "
+      echolog "$err8_msg. "
       wget_error_check 8
       ;;
     "7")
-      echo "Wget $msg_error code 7 - wget reports a protocol error, which probably means that it can't connect to the host.  Check that the web server (httpd) is running and also the host spelling."
+      echolog "Wget $msg_error code 7 - wget reports a protocol error, which probably means that it can't connect to the host.  Check that the web server (httpd) is running and also the host spelling."
       wget_error_check 7
       ;;
     "6")
-      echo "Wget $msg_error code 6: Username/password authentication failure.  This can happen when fetching a login page or accessing an API.  Such errores can often be avoided by setting in wget_extra_options the -X option to exclude the relevant directory."
+      echolog "Wget $msg_error code 6: Username/password authentication failure.  This can happen when fetching a login page or accessing an API.  Such errores can often be avoided by setting in wget_extra_options the -X option to exclude the relevant directory."
       wget_error_check 6
       ;;
     "5")
-      echo "Wget $msg_error code 5: SSL verification failure.  If you trust the certificate, then you should set the configuration option, ssl_checks=no (for the wget option --no-check-certificate)."
+      echolog "Wget $msg_error code 5: SSL verification failure.  If you trust the certificate, then you should set the configuration option, ssl_checks=no (for the wget option --no-check-certificate)."
       wget_error_check 5
       ;;
     "4")
-      echo "Wget $msg_error code 4: Network failure.  It may be a network configuration issue.  Check in particular if there are any firewalls."
+      echolog "Wget $msg_error code 4: Network failure.  It may be a network configuration issue.  Check in particular if there are any firewalls."
       wget_error_check 4
       ;;
     "3")
-      echo "Wget $msg_error code 3: File I/O error.  Check that you have write access to $working_mirror_dir.  More commonly, this error can occur when wget tries to write to a file where there already exists a directory with the same name."
+      echolog "Wget $msg_error code 3: File I/O error.  Check that you have write access to $working_mirror_dir.  More commonly, this error can occur when wget tries to write to a file where there already exists a directory with the same name."
       wget_error_check 3
       ;;
     "2")
-      echo "Wget $msg_error code 2: Parse error.  Check the command line options:"
-      echo "$wget_options"
+      echolog "Wget $msg_error code 2: Parse error.  Check the command line options:"
+      echolog "$wget_options"
       wget_error_check 2
       ;;
     "1")
-      echo "Wget $msg_error code 1: Generic error.  Check the command line options:"
+      echolog "Wget $msg_error code 1: Generic error.  Check the command line options:"
       wget_error_check 1
       exit
       ;;
@@ -742,7 +742,7 @@ wget_process_credentials() {
     if [ ! -f "$credentials_path.$credentials_extension" ]; then
       input_encrypted_password "HTTP authentication: a password for $wget_http_user is required to access the web server"
     fi
-    wget_http_password=$(pass show "$credentials_insert_path" 2>/dev/null) || { echo "$msg_error: Unable to retrieve the password from the credentials store at $credentials_insert_path. Aborting."; exit; }
+    wget_http_password=$(pass show "$credentials_insert_path" 2>/dev/null) || { echolog "$msg_error: Unable to retrieve the password from the credentials store at $credentials_insert_path. Aborting."; exit; }
   elif [ "$credentials_storage_mode" = "plain" ]; then
     if [ ! -f "$credentials_path" ]; then
       # Get user input for credentials (expected to be requested during setup; basically copy that code here)
@@ -753,7 +753,7 @@ wget_process_credentials() {
       printf "\n"
       read -r -s -e -p "Please enter the password for $wget_http_user: " wget_http_password
       if [ "$wget_http_password" = "" ]; then
-        echo "$msg_warning: No password was set!"
+        echolog "$msg_warning: No password was set!"
       fi
       printf "%s" "$wget_http_password" > "$credentials_path"
       printf "\n"
@@ -776,14 +776,14 @@ wget_process_credentials() {
         if [ "$run_unattended" != "yes" ]; then
           # ask if want to replace (y/n)?
           printf "\n"
-          echo "$msg_warning: HTTP authentication (username and password) credentials for user $wget_http_user have already been defined in $rc_file."
+          echolog "$msg_warning: HTTP authentication (username and password) credentials for user $wget_http_user have already been defined in $rc_file."
           read -r -e -p "Do you wish to overwrite (y/n)? " confirm
           confirm=${confirm:0:1}
         fi
         if [ "$confirm" = "y" ] || [ "$confirm" = "Y" ]; then
           # remove existing credentials
           replace_rc="$(grep -v "^[[:blank:]]\{0,\}$cred_pattern" "$rc_file")"
-          printf "%s\n" "$replace_rc" > "$rc_file" || echo "$msg_warning: unable to remove existing credentials"
+          printf "%s\n" "$replace_rc" > "$rc_file" || echolog "$msg_warning: unable to remove existing credentials"
         else
           ## leave credentials and don't do any further processing
           rc_process=N
@@ -809,14 +809,14 @@ wget_process_credentials() {
         if [ "$run_unattended" != "yes" ]; then
           printf "\n"
           # ask if want to replace (y/n)?
-          echo "$msg_warning: a login has already been defined (as $search_rc).  Only one user/password pair may be defined."
+          echolog "$msg_warning: a login has already been defined (as $search_rc).  Only one user/password pair may be defined."
           read -r -e -p "Do you wish to overwrite (y/n)? " confirm
           confirm=${confirm:0:1}
         fi
         if [ "$confirm" = "y" ] || [ "$confirm" = "Y" ]; then
           # remove existing credentials
           replace_rc="$(grep -v "^[[:blank:]]\{0,\}$cred_pattern\|^[[:blank:]]\{0,\}$cred_pattern_pwd" "$rc_file")"
-          printf "%s\n" "$replace_rc" > "$rc_file" || echo "$msg_warning: unable to remove existing credentials"
+          printf "%s\n" "$replace_rc" > "$rc_file" || echolog "$msg_warning: unable to remove existing credentials"
         else
           ## leave credentials and don't do any further processing
           rc_process=N
@@ -831,8 +831,8 @@ wget_process_credentials() {
     fi
   else
     # No run commands file defined
-    echo "$msg_warning: no recognisable (.netrc or .wgetrc) run commands file specified, assuming none."
-    echo "This means that credentials will be included directly in Wget."
+    echolog "$msg_warning: no recognisable (.netrc or .wgetrc) run commands file specified, assuming none."
+    echolog "This means that credentials will be included directly in Wget."
     confirm_continue
   fi
 }
@@ -840,7 +840,7 @@ wget_process_credentials() {
 
 # Mirror a site using Wget (main site capture)
 wget_mirror() {
-  echo "Will capture snapshot from $url using $wget_cmd."
+  echolog "Will capture snapshot from $url using $wget_cmd."
 
   # Test whether source host is available
   wget_test_options=(-q "$wget_ssl")
@@ -853,7 +853,7 @@ wget_mirror() {
   if ! $wget_cmd "${wget_extra_options[@]}" "${wget_test_options[@]}"; then
     msg_error="Unable to connect to $url_base.  Please check: the spelling of the domain, the web server status (is it running?) and access restrictions, particularly if any http authentication credentials are required. "
     msg_error+="Aborting."
-    echo "$msg_error"
+    echolog "$msg_error"
     exit
   fi
 
@@ -871,7 +871,7 @@ wget_mirror() {
   input_urls_file_path="$script_dir/$tmp_dir/$input_urls_file"
   if [ "$input_urls_file" != "" ] && [ -f "$input_urls_file_path" ]; then
     cat "$input_urls_file_path" >> "$input_file"
-    echo "Reading list of additional URLs to crawl from $input_urls_file."
+    echolog "Reading list of additional URLs to crawl from $input_urls_file."
   fi
 
   # Wget configuration and its outputs
@@ -888,7 +888,7 @@ wget_mirror() {
   # Overwrite an existing mirror only if the -m and wget_refresh_mirror flags are unset
   # and then only after run_unattended flag set or consent given
   if [ "$mirror_id_flag" = "off" ] && [ "$wget_refresh_mirror" = "yes" ]; then
-    [ -d "$working_mirror_dir" ] && echo "$msg_warning: $working_mirror_dir already exists.";
+    [ -d "$working_mirror_dir" ] && echolog "$msg_warning: $working_mirror_dir already exists.";
     confirm=Y
     if [ "$run_unattended" != "yes" ]; then
       read -r -e -p "Do you wish to delete and recreate $working_mirror_dir (y/n)? " confirm
@@ -943,7 +943,7 @@ wget_mirror() {
       if [ ! -f "$credentials_path.$credentials_extension" ]; then
         input_encrypted_password "The website login requires a password for $site_user"
       fi
-      site_password=$(pass show "$credentials_insert_path" 2>/dev/null) || { echo "$msg_error: $credentials_insert_path is not in the password store. Aborting."; exit; }
+      site_password=$(pass show "$credentials_insert_path" 2>/dev/null) || { echolog "$msg_error: $credentials_insert_path is not in the password store. Aborting."; exit; }
     elif [ "$credentials_storage_mode" = "plain" ]; then
       if [ ! -f "$credentials_path" ]; then
         # Get login password (usually entered during setup)
@@ -953,7 +953,7 @@ wget_mirror() {
         # Read password and write to "$credentials_path"
         read -r -s -e -p "Please enter the website login password for $site_user: " site_password
         if [ "$site_password" = "" ]; then
-          echo "$msg_warning: No password was set!"
+          echolog "$msg_warning: No password was set!"
         fi
         printf "%s" "$site_password" > "$credentials_path"
         printf "\n"
@@ -973,7 +973,7 @@ wget_mirror() {
 
     # Now log in with supplied credentials
     wget_credentials=(--post-file="$post_tmppath")
-    echo "Logging in to the site at $login_address using credentials: ${login_user_field}=${site_user}&${login_pwd_field}=******* ${wget_login_options[*]} ... "
+    echolog "Logging in to the site at $login_address using credentials: ${login_user_field}=${site_user}&${login_pwd_field}=******* ${wget_login_options[*]} ... "
     $wget_cmd "${wget_credentials[@]}" "${wget_extra_options[@]}" "${wget_login_options[@]}"
 
     # Determine whether login has succeeded by checking cookies file for addition
@@ -996,16 +996,16 @@ wget_mirror() {
           empty_cookies_msg+="You may try setting wget_user_agent to a typical user agent string, as used by a desktop browser."
         fi
         empty_cookies_msg+=$'\n'
-        echo "$empty_cookies_msg"
+        echolog "$empty_cookies_msg"
       elif [ "$cookie_session_string" = "" ]; then
-        echo "Please define the cookie_session_string in constants.sh."
+        echolog "Please define the cookie_session_string in constants.sh."
       else
-        echo "note that it should be the same as the value of cookie_session_string (currently $cookie_session_string), as set in constants.sh."
+        echolog "note that it should be the same as the value of cookie_session_string (currently $cookie_session_string), as set in constants.sh."
       fi
       printf "Also check the username and password in %s.\n" "$myconfig.cfg"
       confirm_continue
     else
-      echo "OK."
+      echolog "OK."
       # Add cookie as option for main Wget run
       wget_extra_options+=(--load-cookies "$cookies_path")
       wget_extra_options_print+=(--load-cookies "$cookies_path")
@@ -1014,12 +1014,12 @@ wget_mirror() {
 
   # Main run of Wget #
   printf "%s\n" "$msg_mirror_start"
-  echo "Running Wget with options:" "${wget_core_options[@]}" "${wget_extra_options_print[@]}" "${wget_options[@]}"
+  echolog "Running Wget with options:" "${wget_core_options[@]}" "${wget_extra_options_print[@]}" "${wget_options[@]}"
 
   # Remove previous zip upload
   zip_archive_old="$working_mirror_dir/$zip_download_folder/$zip_filename"
   if [ -f "$zip_archive_old" ]; then
-    rm "$zip_archive_old" || echo "$msg_warning: Unable to delete existing zip file at $zip_archive_old"
+    rm "$zip_archive_old" || echolog "$msg_warning: Unable to delete existing zip file at $zip_archive_old"
   fi
 
   error_set +e  # override because error traps set specially for Wget
@@ -1053,10 +1053,10 @@ wget_mirror() {
 # - Wayback Machine (Wayback Machine Downloader)
 # - the rest (Wget)
 mirror_site() {
-  cd "$mirror_dir" || { echo; echo "$msg_error: can't access working directory for the mirror ($mirror_dir)" >&2; exit 1; }
+  cd "$mirror_dir" || { echo; echolog "$msg_error: can't access working directory for the mirror ($mirror_dir)" >&2; exit 1; }
 
   if [ "$use_wayback_cli" = "yes" ]; then
-    echo "Retrieving archive for $domain... "
+    echolog "Retrieving archive for $domain... "
     mirror_archive_dir="$local_sitename"
     [ "$archive" = "yes" ] && mirror_archive_dir+="$timestamp"
     working_mirror_dir="$mirror_dir/$mirror_archive_dir"
@@ -1064,9 +1064,9 @@ mirror_site() {
 
     # Check for Wayback Machine Downloader binary, else report error (in the absence of an alternative)
     if cmd_check "$wayback_machine_downloader_cmd" "1"; then
-      echo "Running Wayback Machine Downloader on $url ... "
+      echolog "Running Wayback Machine Downloader on $url ... "
       if [ "$domain_wayback_machine" != "web.archive.org" ]; then
-        echo "$msg_error: The Wayback Machine Downloader only supports web.archive.org.  You might be able to retrieve some files by setting wayback_cli=no in constants.sh (to treat like any other site) and then re-running, though file retrieval is currently limited to the specified Wayback Machine timestamp. Aborting."
+        echolog "$msg_error: The Wayback Machine Downloader only supports web.archive.org.  You might be able to retrieve some files by setting wayback_cli=no in constants.sh (to treat like any other site) and then re-running, though file retrieval is currently limited to the specified Wayback Machine timestamp. Aborting."
         exit
       else
         wmd_args=("$url")
@@ -1077,14 +1077,14 @@ mirror_site() {
         wmd_get_wayback_site "${wmd_args[@]}"
       fi
     else
-      echo "$msg_error: Wayback Machine Downloader not found (wayback_machine_downloader_cmd is set to $wayback_machine_downloader_cmd) - please check that it is installed according to instructions at $wayback_machine_downloader_url. Aborting."
+      echolog "$msg_error: Wayback Machine Downloader not found (wayback_machine_downloader_cmd is set to $wayback_machine_downloader_cmd) - please check that it is installed according to instructions at $wayback_machine_downloader_url. Aborting."
       exit
     fi
   else
     wget_mirror
     if [ "$wayback_url" = "yes" ]; then
       wayback_wget_postprocess
-      cd "$mirror_dir" || { echo; echo "$msg_error: can't access working directory for the mirror ($mirror_dir)" >&2; exit 1; }
+      cd "$mirror_dir" || { echo; echolog "$msg_error: can't access working directory for the mirror ($mirror_dir)" >&2; exit 1; }
     fi
   fi
 }
@@ -1098,7 +1098,7 @@ generate_extra_domains() {
 # Generate search URL prefixes combining primary domain and extra domains
   if [ "$page_element_domains" = "auto" ]; then
     echo
-    echo -n "Searching for extra asset domains (working in $working_mirror_dir) ... "
+    echolog -n "Searching for extra asset domains (working in $working_mirror_dir) ... "
     domain_grep="[\"'=]https?:\\\?/\\\?/[^\"'/< ]+\.[^\"'/< ]+\\\?/[^\"'< ]+[^\"'/< ]+\.[^\"'/< ]+"
     domain_grepv="[\"'=]https?:\\\?/\\\?/[^\"'/< ]+\.[^\"'/< ]+\\\?/[^\"'< ]+[^\"'/< ]+\.html?[^\"'/< ]*"
     domain_grep2="https?:\\\?/\\\?/[^\"'/< ]+\.[^\"'/< ]+\\\?/"
@@ -1106,14 +1106,14 @@ generate_extra_domains() {
     add_domains=()
     while IFS='' read -r line; do add_domains+=("$line"); done < <(grep -Eroh "$domain_grep" "$working_mirror_dir" "${asset_grep_includes[@]}" | grep -Ev "$domain_grepv" | grep -Eo "$domain_grep2" | grep -Eo "$domain_grep3" )
 
-    echo "add_domains array has ${#add_domains[@]} elements" "2"
+    echolog "add_domains array has ${#add_domains[@]} elements" "2"
     # Store unique elements only
     add_domains_unique=()
     while IFS='' read -r line; do add_domains_unique+=("$line"); done < <(for item in "${add_domains[@]}"; do printf "%s\n" "${item%/}"; done | sort -u)
-    echo "add_domains_unique array has ${#add_domains_unique[@]} elements" "2"
+    echolog "add_domains_unique array has ${#add_domains_unique[@]} elements" "2"
     # Convert array to domain list (string), removing any slashes
     page_element_domains=$(printf "%s" "${add_domains_unique[*]}" | sed 's/ /,/g' | sed 's/\\\?\/,/,/g' | sed "s/$domain,//g" | sed "s/,$domain//g" | sed 's/\///g' | sed 's/\\//g')
-    echo "Done."
+    echolog "Done."
   fi
   if [ "$page_element_domains" != "" ]; then
     if [ "$extra_domains" != "" ]; then
@@ -1131,12 +1131,12 @@ generate_extra_domains() {
 # We use Wget instead of cURL to avoid repeated overwrites -
 # target files are not expected to change during this site generation
 wget_extra_urls() {
-  cd "$mirror_dir" || { echo "Unable to enter $mirror_dir."; echo "Aborting."; exit; }
+  cd "$mirror_dir" || { echolog "Unable to enter $mirror_dir."; echolog "Aborting."; exit; }
 
   if (( wget_extra_urls_count == 1 )); then
 
     if [ "$prune_query_strings" != "no" ]; then
-      echo "Pruning links to assets that have query strings appended" "1"
+      echolog "Pruning links to assets that have query strings appended" "1"
       IFS="," read -ra prune_list <<< "$query_prune_list"
       for opt in "${prune_list[@]}"; do
         # Prune file names on disk
@@ -1150,23 +1150,23 @@ wget_extra_urls() {
           find "$working_mirror_dir" -type f -name "$file_ext" "${asset_exclude_dirs[@]}" -print0 | xargs "${xargs_options[@]}" sed "${sed_options[@]}" "${sed_subs[@]}"
         done
       done
-      echo " " "1"
+      echolog " " "1"
     fi
     
     wget_protocol_relative_urls=$(yesno "$wget_protocol_relative_urls")
     if [ "$wget_protocol_relative_urls" = "yes" ]; then
-      echo "Prefixing protocol-relative URLs with $wget_protocol_prefix" "1"
+      echolog "Prefixing protocol-relative URLs with $wget_protocol_prefix" "1"
       # Define BRE version of domain_bre0 
       domain_bre0=$(regex_apply "$domain_re0")
       sed_subs=('s|\([\"'\'']\)//\('"$domain_bre0"'\)|\1'"$wget_protocol_prefix"'://\2|g')
       for file_ext in "${asset_find_names[@]}"; do 
         find "$working_mirror_dir" -type f -name "$file_ext" "${asset_exclude_dirs[@]}" -print0 | xargs "${xargs_options[@]}" sed "${sed_options[@]}" "${sed_subs[@]}"
       done
-      echo " " "1"
+      echolog " " "1"
     fi
 
     touchmod "$input_long_filenames"; echo > "$input_long_filenames"
-    echo "Searching for additional URLs to retrieve with Wget (working in $working_mirror_dir) ... " "1"
+    echolog "Searching for additional URLs to retrieve with Wget (working in $working_mirror_dir) ... " "1"
   
   fi
 
@@ -1176,7 +1176,7 @@ wget_extra_urls() {
   # Generate search URL prefixes combining primary domain and extra domains
   generate_extra_domains
 
-  echo "Generating a list of extra asset URLs for Wget (run number $wget_extra_urls_count out of $wget_extra_urls_depth max) ... "
+  echolog "Generating a list of extra asset URLs for Wget (run number $wget_extra_urls_count out of $wget_extra_urls_depth max) ... "
   if [ "$extra_assets_allow_query_strings" = "no" ]; then
     url_grep_search_pattern_qy=${url_grep_search_pattern//[^/[^\?}
     url_grep="$(assets_search_string "$all_domains" "${url_grep_search_pattern_qy}+")" # ERE notation
@@ -1221,36 +1221,36 @@ wget_extra_urls() {
   fi
 
   webassets_all_count=${#webassets_all[@]}
-  echo "webassets_all array has $webassets_all_count elements" "1"
+  echolog "webassets_all array has $webassets_all_count elements" "1"
 
   # Return if empty (nothing further found)
-  [ ${#webassets_all[@]} -eq 0 ] && { echo "None found. " "1"; (( wget_extra_urls_count=wget_extra_urls_depth+1 )); print_progress; echo "Done."; return 0; }
-  [ "$output_level" != "quiet" ] && echo " "
+  [ ${#webassets_all[@]} -eq 0 ] && { echolog "None found. " "1"; (( wget_extra_urls_count=wget_extra_urls_depth+1 )); print_progress; echolog "Done."; return 0; }
+  [ "$output_level" != "quiet" ] && echolog " "
 
   # Pick out unique items
-  echo "Pick out unique items" "1"
+  echolog "Pick out unique items" "1"
   webassets_unique=()
   (( webasset_step_count++ ))
   print_progress "$webasset_step_count" "$num_webasset_steps"
   while IFS='' read -r line; do webassets_unique+=("$line"); done < <(for item in "${webassets_all[@]}"; do printf "%s\n" "${item}"; done | sort -u)
-  echo "webassets_unique array has ${#webassets_unique[@]} elements" "2"
+  echolog "webassets_unique array has ${#webassets_unique[@]} elements" "2"
   (( webasset_step_count++ ))
   print_progress "$webasset_step_count" "$num_webasset_steps"
 
   # Filter out all items not starting http
-  echo "Filter out all items not starting http" "1"
+  echolog "Filter out all items not starting http" "1"
   webassets_http=()
   while IFS='' read -r line; do webassets_http+=("$line"); done < <(for item in "${webassets_unique[@]}"; do if [ "${item:0:4}" = "http" ]; then printf "%s\n" "${item}"; else continue; fi; done)
-  [ ${#webassets_http[@]} -eq 0 ] && { echo "None found. " "1"; (( wget_extra_urls_count=wget_extra_urls_depth+1 )); print_progress; echo "Done."; return 0; }
+  [ ${#webassets_http[@]} -eq 0 ] && { echolog "None found. " "1"; (( wget_extra_urls_count=wget_extra_urls_depth+1 )); print_progress; echolog "Done."; return 0; }
   num_webassets_http="${#webassets_http[@]}"
-  echo "webassets_http array has $num_webassets_http elements" "2"
+  echolog "webassets_http array has $num_webassets_http elements" "2"
   (( webasset_step_count++ ))
   print_progress "$webasset_step_count" "$num_webasset_steps"
 
   # Filter out web pages and newsfeeds; limit to non-HTML assets, such as images and JS files
   # (this filter is the most process-intensive)
   (( count=0 ))
-  echo "Filter out web pages and newsfeeds (limit to non-HTML assets, such as images and JS files)" "1"
+  echolog "Filter out web pages and newsfeeds (limit to non-HTML assets, such as images and JS files)" "1"
   webassets_filter_html=()
   assets_or='\.('${asset_extensions//,/|}')'
   assets_or_external='\.('${asset_extensions_external//,/|}')'
@@ -1296,14 +1296,14 @@ wget_extra_urls() {
   done)
   (( webasset_step_count=subcount+1 ))
 
-  [ ${#webassets_filter_html[@]} -eq 0 ] && { echo "None found. " "1"; (( wget_extra_urls_count=wget_extra_urls_depth+1 )); print_progress; echo "Done."; return 0; }
-  echo "webassets_filter_html array has ${#webassets_filter_html[@]} elements" "2"
+  [ ${#webassets_filter_html[@]} -eq 0 ] && { echolog "None found. " "1"; (( wget_extra_urls_count=wget_extra_urls_depth+1 )); print_progress; echolog "Done."; return 0; }
+  echolog "webassets_filter_html array has ${#webassets_filter_html[@]} elements" "2"
   (( webasset_step_count++ ))
   print_progress "$webasset_step_count" "$num_webasset_steps"
   if [ ${#wget_extra_options[@]} -ne 0 ]; then
     url_bas="$protocol://$hostport"
     # Filter out URLs whose paths match an excluded directory (via subloop)
-    echo "Filter out URLs whose paths match an excluded directory (via subloop)" "1"
+    echolog "Filter out URLs whose paths match an excluded directory (via subloop)" "1"
     # We assume that grep works as expected, but should really trap exit code 2
     exclude_dirs=$(printf "%s\n" "$wget_plus_ops"| grep -o "\-X[[:space:]]*[[:alnum:]/,\-]*" | grep -o "/.*"; exit 0)
     temp_IFS=$IFS; IFS=","; read -ra exclude_arr <<< "$exclude_dirs"; IFS=$temp_IFS
@@ -1317,16 +1317,16 @@ wget_extra_urls() {
     webassets_omissions=("${webassets_filter_html[@]}")
   fi
   num_webassets_omissions="${#webassets_omissions[@]}"
-  echo "webassets_omissions array has $num_webassets_omissions elements" "2"
+  echolog "webassets_omissions array has $num_webassets_omissions elements" "2"
   (( webasset_step_count++ ))
   print_progress "$webasset_step_count" "$num_webasset_steps"
 
   # Return if empty (nothing further found)
-  [ "$num_webassets_omissions" -eq 0 ] && { echo "None found. " "1"; (( wget_extra_urls_count=wget_extra_urls_depth+1 )); print_progress; echo "Done."; return 0; }
+  [ "$num_webassets_omissions" -eq 0 ] && { echolog "None found. " "1"; (( wget_extra_urls_count=wget_extra_urls_depth+1 )); print_progress; echolog "Done."; return 0; }
 
   if (( extra_assets_query_strings_limit < num_webassets_omissions )); then
     # Filter out URLs with query strings
-    echo "$msg_warning: too many asset URLs found, so filtering out those with query strings. If you need them, consider increasing the value of extra_assets_query_strings_limit from its current value, $extra_assets_query_strings_limit."
+    echolog "$msg_warning: too many asset URLs found, so filtering out those with query strings. If you need them, consider increasing the value of extra_assets_query_strings_limit from its current value, $extra_assets_query_strings_limit."
     webassets=()
     while IFS='' read -r line; do webassets+=("$line"); done < <(for opt in "${webassets_omissions[@]}"; do if [[ "$opt" != *"?"* ]]; then printf "%s\n" "$opt"; else continue; fi; done)
   else
@@ -1335,9 +1335,9 @@ wget_extra_urls() {
   (( webasset_step_count++ ))
   print_progress "$webasset_step_count" "$num_webasset_steps"
 
-  echo "webassets array has ${#webassets[@]} elements" "2"
+  echolog "webassets array has ${#webassets[@]} elements" "2"
   # Return if empty (all those found were filtered out)
-  [ ${#webassets[@]} -eq 0 ] && { echo "None suitable found. " "1"; (( wget_extra_urls_count=wget_extra_urls_depth+1 )); print_progress; echo "Done."; return 0; }
+  [ ${#webassets[@]} -eq 0 ] && { echolog "None suitable found. " "1"; (( wget_extra_urls_count=wget_extra_urls_depth+1 )); print_progress; echolog "Done."; return 0; }
 
   if [ "$wayback_url" = "yes" ]; then
     wayback_filter_snapshots
@@ -1347,7 +1347,7 @@ wget_extra_urls() {
   webassets_filtered=("${webassets[@]//&amp;/&}")
 
   if [[ ${webassets_filtered[*]} =~ '&#' ]]; then
-    echo "Converting ISO 8859-1 character entities to percent encoding." "1" # Entities cannot be used in Wget input file because of hash '#'
+    echolog "Converting ISO 8859-1 character entities to percent encoding." "1" # Entities cannot be used in Wget input file because of hash '#'
     for ((i=32;i<126;i++)); do
       j=$(printf '%x\n' "$i")
       webassets_filtered=("${webassets_filtered[@]//&#"$i";/%"$j"}")
@@ -1355,6 +1355,7 @@ wget_extra_urls() {
   fi
 
   if [ "$wayback_url" = "yes" ] && [ "$wayback_timestamp_policy" = "range" ]; then
+    echolog "Applying to/from timestamp restrictions to Wayback URLs." "1"
     webassets_date_filtered=()
     for line in "${webassets_filtered[@]}"; do
       wayback_date_check=$(printf "%s" "$line" | grep -o "/$wayback_datetime_regex/" | grep -o "[0-9]\+")
@@ -1365,7 +1366,7 @@ wget_extra_urls() {
     webassets_filtered=("${webassets_date_filtered[@]}")
   fi
 
-  [ "${#webassets_filtered[@]}" -eq 0 ] && { echo "None found (webassets_filtered). " "1"; (( wget_extra_urls_count=wget_extra_urls_depth+1 )); print_progress; echo "Done."; return 0; }
+  [ "${#webassets_filtered[@]}" -eq 0 ] && { echolog "None found (webassets_filtered). " "1"; (( wget_extra_urls_count=wget_extra_urls_depth+1 )); print_progress; echolog "Done."; return 0; }
 
   printf "%s\n" "${webassets_filtered[@]}" > "$input_file_extra"
   if (( wget_extra_urls_count == 1 )); then
@@ -1380,7 +1381,7 @@ wget_extra_urls() {
       cat "$input_file_extra" >> "$input_file_extra_all"
     else
       # file empty - nothing further to process
-      (( wget_extra_urls_count = wget_extra_urls_depth+1 )); print_progress; echo "No further URLs found.  Done."; return 0; 
+      (( wget_extra_urls_count = wget_extra_urls_depth+1 )); print_progress; echolog "No further URLs found.  Done."; return 0; 
     fi
   fi
   (( webasset_step_count++ ))
@@ -1401,7 +1402,7 @@ wget_extra_urls() {
     wget_extra_core_options+=("$wvol")
   fi
 
-  echo "Checking URLs for very long filenames ... " "1"
+  echolog "Checking URLs for very long filenames ... " "1"
   # Read the file line by line and store it in the array
   while IFS= read -r line; do
     # check Wget report for occurrence of string: The destination name is too long (M), reducing to N
@@ -1421,9 +1422,9 @@ wget_extra_urls() {
   done < "$input_file_extra"
   (( webasset_step_count++ ))
   print_progress
-  echo "Done."
+  echolog "Done."
 
-  echo "Running Wget on these additional URLs with options: " "${wget_extra_core_options[@]}" "${wget_extra_options[@]}" "${wget_asset_options[@]}"
+  echolog "Running Wget on these additional URLs with options: " "${wget_extra_core_options[@]}" "${wget_extra_options[@]}" "${wget_asset_options[@]}"
   error_set +e
   if (( wget_threads > 1 )); then
     xargs -a "$input_file_extra" -n 1 -P $wget_threads $wget_cmd "${wget_extra_core_options[@]}" "${wget_progress_indicator[@]}" "${wget_extra_options[@]}" "${wget_asset_options[@]}"
@@ -1441,7 +1442,7 @@ wget_extra_urls() {
 
 
 process_assets() {
-  echo "Processing asset storage locations ... "
+  echolog "Processing asset storage locations ... "
 
   # First, generate a list of all the web pages that contain relevant URLs to process
   # (makes subsequent sed replacements more targeted than searching all web pages).
@@ -1482,7 +1483,7 @@ process_assets() {
   IFS='|' read -ra url_grep_array <<< "$url_grep"
   num_url_grep_array="${#url_grep_array[@]}";
   count=1
-  echo "Generating list of pages with relevant assets ... "
+  echolog "Generating list of pages with relevant assets ... "
   for item in "${url_grep_array[@]}"; do
     print_progress "$count" "$num_url_grep_array"; (( count++ ))
     while IFS='' read -r line; do
@@ -1496,7 +1497,7 @@ process_assets() {
   num_webpages=${#webpages[@]}
   # Split long lines to reduce processing time
   if [ "$shorten_longlines" != "off" ] && (( num_webpages != 0 )); then
-    echo "Splitting long lines in files to speed up processing ... "
+    echolog "Splitting long lines in files to speed up processing ... "
     (( count=0 ))
     for item in "${webpages[@]}"; do
       print_progress "$count" "$num_webpages"
@@ -1506,7 +1507,7 @@ process_assets() {
         item_longest_line=$(longest_line "$item")        
         if (( item_chars/item_newlines <= average_linelength_max )) && (( item_longest_line <= longest_linelength_max )); then { (( count++ )); continue; }
         else
-          echo "Shortening lines in $item" "1"
+          echolog "Shortening lines in $item" "1"
         fi
       fi
       file_contents=$(<"$item")
@@ -1520,14 +1521,14 @@ process_assets() {
     print_progress
   fi
 
-  echo "Converting paths to become relative to imports and assets directories ... " 
+  echolog "Converting paths to become relative to imports and assets directories ... " 
 
   # Prepare adjustment for relative paths with assets directory
   if [ "$assets_directory" != "" ] && [ "$cut_dirs" = "0" ]; then
     assets_dir_suffix=/
     # Also, check for duplication of assets directory label
     if [ "$(find . -name "$assets_directory" -type d -print)" != "" ]; then
-      echo -n "$msg_warning: website already contains a directory, $assets_directory.  To avoid confusion (and errors), a timestamp is being appended to the MakeStaticSite-generated assets directory, but it is recommended that you modify the assets_directory constant and re-run. ... "
+      echolog -n "$msg_warning: website already contains a directory, $assets_directory.  To avoid confusion (and errors), a timestamp is being appended to the MakeStaticSite-generated assets directory, but it is recommended that you modify the assets_directory constant and re-run. ... "
       assets_directory="$assets_directory$timestamp"
     fi
   else
@@ -1539,7 +1540,7 @@ process_assets() {
     imports_dir_suffix=/
     # Also, check for duplication of assets directory label
     if [ "$(find . -name "$imports_directory" -type d -print)" != "" ]; then
-      echo -n "$msg_warning: website already contains a directory, $imports_directory.  To avoid confusion (and errors), a timestamp is being appended to the MakeStaticSite-generated imports directory, but it is recommended that you modify the imports_directory constant and re-run. ... "
+      echolog -n "$msg_warning: website already contains a directory, $imports_directory.  To avoid confusion (and errors), a timestamp is being appended to the MakeStaticSite-generated imports directory, but it is recommended that you modify the imports_directory constant and re-run. ... "
       imports_directory="$imports_directory$timestamp"
     fi
   else
@@ -1548,11 +1549,11 @@ process_assets() {
 
   # General case: conversion of absolute links to relative links
   if [ ${#webpages[@]} -eq 0 ]; then
-    echo "No web pages to process.  Done." "1"
+    echolog "No web pages to process.  Done." "1"
   elif [ "$waybackurl" = "yes" ] && [ ! -s "$input_file_wayback_extra" ] && [ "$url_wildcard_capture" != "yes" ]; then
-    echo "No URLs to apply in search and replace.  Done." "1"
+    echolog "No URLs to apply in search and replace.  Done." "1"
   elif [ "$waybackurl" != "yes" ] && [ ! -s "$input_file_extra_all" ] && [ "$url_wildcard_capture" != "yes" ]; then
-    echo "No URLs to apply in search and replace.  Done." "1"
+    echolog "No URLs to apply in search and replace.  Done." "1"
   elif [ "$cut_dirs" = "0" ]; then
     # Initialise URLs array
     urls_array=()
@@ -1567,11 +1568,11 @@ process_assets() {
     else
       # Produce a copy of input_file_extra_all ready for sed to process with extended regular expressions
       if [ "$wayback_url" = "yes" ] && [ "$wayback_assets_mode" = "original" ]; then
-        input_string_extra=$(<"$input_file_wayback_extra") || echo "$msg_error: Expected file $input_file_wayback_extra not found!  No further absolute links will be converted to relative links."
+        input_string_extra=$(<"$input_file_wayback_extra") || echolog "$msg_error: Expected file $input_file_wayback_extra not found!  No further absolute links will be converted to relative links."
         input_string_extra_all=$(regex_escape "$input_string_extra" "BRE")
         input_file_extra_all_BRE="${input_file_wayback_extra}.BRE"
       else
-        input_string_extra=$(<"$input_file_extra_all") || echo "$msg_error: no file $input_file_wayback_extra found!  No further absolute links will be converted to relative links."
+        input_string_extra=$(<"$input_file_extra_all") || echolog "$msg_error: no file $input_file_wayback_extra found!  No further absolute links will be converted to relative links."
         input_string_extra_all=$(regex_escape "$input_string_extra" "BRE")
         input_file_extra_all_BRE="${input_file_extra_all}.BRE"
       fi
@@ -1727,8 +1728,8 @@ process_assets() {
           asset_move="$mirror_extra_dir to $mirror_imports_directory/"
           # Move only if mirror_imports_directory is not a subdirectory of mirror_extra_dir
           if [[ ! $mirror_imports_directory/ = $mirror_extra_dir/* ]]; then
-            mv "$mirror_extra_dir" "$mirror_imports_directory/" || { echo "$msg_error: Unable to move $asset_move."; exit; }
-            echo "Moved $asset_move." "1"
+            mv "$mirror_extra_dir" "$mirror_imports_directory/" || { echolog "$msg_error: Unable to move $asset_move."; exit; }
+            echolog "Moved $asset_move." "1"
           fi
         fi
       done
@@ -1758,7 +1759,7 @@ process_assets() {
     # Determine which web pages to search and replace
     find_web_pages '.'
     count=1
-    echo "Additional processing for mirroring a directory, not a domain ... "
+    echolog "Additional processing for mirroring a directory, not a domain ... "
     for opt in "${webpages[@]}"; do
       { [ -z ${opt+x} ] || [ "$opt" = "" ]; } && continue; # trap the case there are no web pages to process
       print_progress "$count" "$num_webpages"; (( count++ ))
@@ -1822,7 +1823,7 @@ process_assets() {
             # to do: if not in parent_file_omissions then ...
             if [ ! -d "$x" ]; then
               mv "${mv_params[@]}"
-              echo "Moved file: $mv_file." "1"
+              echolog "Moved file: $mv_file." "1"
             fi
           done
           cd "$working_mirror_dir"
@@ -1837,15 +1838,15 @@ process_assets() {
           fi
           # Move only if mirror_assets_directory/$extra_dir_stem is not a subdirectory of mv_dir
           if [[ ! $mirror_assets_directory/$extra_dir_stem = $mv_dir/* ]]; then
-            mv "$mv_dir" "$mirror_assets_directory/$extra_dir_stem" || { echo "$msg_error: Unable to move $asset_move."; exit; }
-            echo "Moved directory: $asset_move." "1"
+            mv "$mv_dir" "$mirror_assets_directory/$extra_dir_stem" || { echolog "$msg_error: Unable to move $asset_move."; exit; }
+            echolog "Moved directory: $asset_move." "1"
           fi
         fi
       done
     fi
   fi
 
-  echo "Done."
+  echolog "Done."
 }
 
 # Carry out further processing of output:
@@ -1857,7 +1858,7 @@ process_assets() {
 #  4. If Wget --cut-dirs options set, then only carry out option 3.
 site_postprocessing() {
   cd "$working_mirror_dir" || { printf "Unable to enter %s.\nAborting.\n" "$working_mirror_dir"; exit; }
-  echo "Carrying out site postprocessing in $working_mirror_dir ... "
+  echolog "Carrying out site postprocessing in $working_mirror_dir ... "
 
   # Adjust storage locations of assets, where applicable
   if [ "$wayback_url" = "yes" ] && [ "$use_wayback_cli" != "yes" ] && [ "$wayback_assets_mode" = "original" ]; then
@@ -1880,25 +1881,25 @@ site_postprocessing() {
       matches_s=$(pluralize "$num_domain_matches")
       confirm=y
       if [ "$deploy" = "no" ] && [ "$domain" != "$deploy_domain" ]; then
-        echo "You have chosen not to deploy, with your source having domain $domain, different from the deployment domain, $deploy_domain. "
+        echolog "You have chosen not to deploy, with your source having domain $domain, different from the deployment domain, $deploy_domain. "
         if [ "$run_unattended" = "yes" ]; then
-          echo "Assuming that you still wish to replace any occurrence of $domain with $deploy_domain."
+          echolog "Assuming that you still wish to replace any occurrence of $domain with $deploy_domain."
         else
           read -r -e -p "For the static mirror, would you still like to replace any occurrence of $domain with $deploy_domain (y/n)? " confirm
           confirm=${confirm:0:1}
         fi
       elif [ "$deploy" = "yes" ] && [ "$force_domains" = "no" ] && [ "$run_unattended" != "yes" ]; then
-        echo "Found $num_domain_matches matching line$matches_s."
+        echolog "Found $num_domain_matches matching line$matches_s."
         read -r -e -p "For the static mirror, would you still like to replace any occurrence of $domain with $deploy_domain (y/n)? " confirm
         confirm=${confirm:0:1}
       fi
       if [ "$confirm" = "y" ] || [ "$confirm" = "Y" ]; then
-        echo -n "Replacing remaining occurrences of $domain with $deploy_domain ... "
+        echolog -n "Replacing remaining occurrences of $domain with $deploy_domain ... "
         sed_subs=('s|'"$domain_match_prefix$domain"'|'"$domain_subs_prefix$deploy_domain"'|g')
         for file_ext in "${asset_find_names[@]}"; do 
           find . -type f -name "$file_ext" "${asset_exclude_dirs[@]}" -print0 | xargs "${xargs_options[@]}" sed "${sed_options[@]}" "${sed_subs[@]}"
         done
-        echo "Done."
+        echolog "Done."
       fi
     fi
   fi
@@ -1944,7 +1945,7 @@ site_postprocessing() {
       sed "${sed_options[@]}" "${sed_subs[@]}"
     done
   fi
-  echo "Done."
+  echolog "Done."
 
   sed_subs1=('s|href="http://'"${deploy_domain}"'|href="https://'"${deploy_domain}"'|g')
   sed_subs2=("s|href='http://${deploy_domain}|href='https://${deploy_domain}|g")
@@ -1956,7 +1957,7 @@ site_postprocessing() {
     for file_ext in "${asset_find_names[@]}"; do 
       find . -type f -name "$file_ext" -print0 | xargs "${xargs_options[@]}" sed "${sed_options[@]}" "${sed_subs2[@]}"
     done
-    echo "Done."
+    echolog "Done."
   fi
 
   cd "$mirror_dir" || { printf "Unable to enter %s.\nAborting.\n" "$mirror_dir"; exit; }
@@ -1966,24 +1967,24 @@ add_extras() {
   # For archival, copy subs files into the respective mirror directory
   extras_src="$script_dir/$extras_dir/$hostport"
   extras_dest="$working_mirror_dir"
-  echo "Copying additional files from $extras_src to $extras_dest, the static mirror (for distribution) ... "
+  echolog "Copying additional files from $extras_src to $extras_dest, the static mirror (for distribution) ... "
 
   # Create necessary directories
   if [ ! -d "$extras_src" ]; then
     printf "\n";
-    echo "Your configuration file specifies 'add_extras=y', but the folder for extra files, $extras_src, doesn't exist."
+    echolog "Your configuration file specifies 'add_extras=y', but the folder for extra files, $extras_src, doesn't exist."
     read -r -e -p "Do you wish to create it (y/n)? " confirm
     confirm=${confirm:0:1}
     if [ "$confirm" = "y" ] || [ "$confirm" = "Y" ]; then
       mkdir -p "$extras_src"
-      echo "Created folder for extra files at $extras_src."
+      echolog "Created folder for extra files at $extras_src."
       read -r -e -p "If you wish to manually copy some files into this folder then please do so now and hit 'y' to confirm, any other key to skip: " confirm
       confirm=${confirm:0:1}
       if [ "$confirm" != "y" ] && [ "$confirm" != "Y" ]; then
-        echo "Skipping extra files."
+        echolog "Skipping extra files."
         return 0
       else
-        echo "OK. Proceeding with copy of extra files."
+        echolog "OK. Proceeding with copy of extra files."
       fi
     fi
   fi
@@ -1997,7 +1998,7 @@ add_extras() {
     cp -r "$extras_src/." "$extras_dest/." || { printf "%s: copy failed.\n" "$msg_error"; return; }
   fi
   error_set -e
-  echo "Done."
+  echolog "Done."
 }
 
 clean_mirror() {
@@ -2019,7 +2020,7 @@ clean_mirror() {
      s|="canonical" href="index.html|canonical" href="'"$url_canonical"'"|g' "$opt")
     sed "${sed_options[@]}" "${sed_subs_canonical[@]}"
   done <   <(for file_ext in "${asset_find_names[@]}"; do find . -type f -name "$file_ext" -print0; done)
-  echo "Done."
+  echolog "Done."
 
   error_set +e
   html_errors_file="$script_dir/$tmp_dir/${htmltidy_errors_file}-$myconfig.txt"
@@ -2032,7 +2033,7 @@ clean_mirror() {
       do
         $htmltidy_cmd "${htmltidy_options[@]}" "$fname" 2>>"$html_errors_file"
       done <   <(for file_ext in "${htmltidy_file_exts[@]}"; do find . -type f -name "$file_ext" -print0; done)
-      echo "Done."
+      echolog "Done."
     fi
   fi
   error_set -e
@@ -2065,7 +2066,7 @@ clean_mirror() {
     if [ -f "$cookies_path" ]; then
       rm "$cookies_path"
     else
-      echo "Tidy up: no cookies_path at $cookies_path" "1"
+      echolog "Tidy up: no cookies_path at $cookies_path" "1"
     fi
 
     # Delete temporary post data file
@@ -2123,7 +2124,7 @@ clean_mirror() {
   fi
 
   echo "$sitemap_content" > "$sitemap_path"
-  echo "Created a sitemap file at $sitemap_path"
+  echolog "Created a sitemap file at $sitemap_path"
 
   # Wrap lines that end in '='
   printf "Wrap lines that end in '=' ... "
@@ -2132,12 +2133,12 @@ clean_mirror() {
   # and ensure that the title is on one line
   sed_subs=(-e ':a' -e 'N' -e '$!ba' -e 's/[\r\n][\r\n]*[[:space:]]*\([^<]*<\/title>\)/ \1/g')
   find . -type f -name "*.html" -exec sed "${sed_options[@]}" "${sed_subs[@]}" {} +
-  echo "Done."
+  echolog "Done."
 
   # Rename files ending with query strings, as required
   if [ "$deploy_netlify" = "yes" ]; then
     clean_query_extensions="yes"
-    echo "Cleaning file names with question marks for Netlify." "1"
+    echolog "Cleaning file names with question marks for Netlify." "1"
   fi
   if [ "$clean_query_extensions" = "yes" ]; then
     find "$working_mirror_dir" -type f -name "*\?*" -exec sh -c 'mv "$0" "${0%%\?*}"' {} \;
@@ -2156,7 +2157,7 @@ clean_mirror() {
         # Check to see if an entry exists (with superfluous "''" inserted to pass Shellcheck SC1087)
         cred_pattern="machine[[:blank:]]\{1,\}$domain"''"[[:blank:]]\{1,\}login[[:blank:]]\{1,\}$wget_http_user"
         replace_rc="$(grep -v "$cred_pattern" "$rc_file")"
-        printf "%s\n" "$replace_rc" > "$rc_file" || echo "$msg_warning: unable to remove existing credentials"
+        printf "%s\n" "$replace_rc" > "$rc_file" || echolog "$msg_warning: unable to remove existing credentials"
         chmod 0600 "$rc_file"
       fi
     elif [ "$credentials_rc_file" = ".wgetrc" ]; then
@@ -2168,7 +2169,7 @@ clean_mirror() {
         cred_pattern_pwd="http_password="
         # remove existing credentials
         replace_rc="$(grep -v "^[[:blank:]]\{0,\}$cred_pattern\|^[[:blank:]]\{0,\}$cred_pattern_pwd" "$rc_file")"
-        printf "%s\n" "$replace_rc" > "$rc_file" || echo "$msg_warning: unable to remove existing credentials"
+        printf "%s\n" "$replace_rc" > "$rc_file" || echolog "$msg_warning: unable to remove existing credentials"
         touchmod "$rc_file"
       fi
     fi
@@ -2176,9 +2177,9 @@ clean_mirror() {
 
   # For Wayback Machine mirrors, optionally rename domain folder
   if [ "$wayback_url" = "yes" ] && [ "$wayback_domain_original" = "yes" ]; then
-    cd "$mirror_dir/$mirror_archive_dir/" || { echo "$msg_error: Unable to enter $mirror_dir/$mirror_archive_dir/"; exit; }
-    mv "$domain" "$domain_original" || echo "$msg_warning: Unable to rename working_mirror_dir $mirror_dir/$mirror_archive_dir/$domain_original"
-    echo "Renamed $working_mirror_dir to $mirror_dir/$mirror_archive_dir/$domain_original."
+    cd "$mirror_dir/$mirror_archive_dir/" || { echolog "$msg_error: Unable to enter $mirror_dir/$mirror_archive_dir/"; exit; }
+    mv "$domain" "$domain_original" || echolog "$msg_warning: Unable to rename working_mirror_dir $mirror_dir/$mirror_archive_dir/$domain_original"
+    echolog "Renamed $working_mirror_dir to $mirror_dir/$mirror_archive_dir/$domain_original."
     # Update mirror variable
     working_mirror_dir="$mirror_dir/$mirror_archive_dir/$domain_original"
   fi
@@ -2202,7 +2203,7 @@ clean_mirror() {
        makestaticsite_session_comment+="\n"
     done
     IFS="$old_ifs"
-    cd "$mirror_dir/$mirror_archive_dir/" || { echo "$msg_error: Unable to enter $mirror_dir/$mirror_archive_dir/"; exit; }
+    cd "$mirror_dir/$mirror_archive_dir/" || { echolog "$msg_error: Unable to enter $mirror_dir/$mirror_archive_dir/"; exit; }
     # Regenerate list of web pages
     while IFS= read -r line; do webpages_final+=("$line"); done <<<"$(for file_ext in "${htmltidy_file_exts[@]}"; do find . -type f -name "$file_ext" "${asset_exclude_dirs[@]}" -print; done)"
     for opt in "${webpages_final[@]}"; do
@@ -2216,11 +2217,11 @@ clean_mirror() {
 
 process_snippets() {
   # Create necessary directories for substitution files and snippets
-  [ -d "$sub_files_path" ] || { mkdir -p "$sub_files_path"; echo "Created folders for substitute files at $sub_files_path."; }
-  [ -d "$snippets_dir" ] || { mkdir -p "$snippets_dir"; echo "Created folder for snippet files at $snippets_dir."; }
+  [ -d "$sub_files_path" ] || { mkdir -p "$sub_files_path"; echolog "Created folders for substitute files at $sub_files_path."; }
+  [ -d "$snippets_dir" ] || { mkdir -p "$snippets_dir"; echolog "Created folder for snippet files at $snippets_dir."; }
 
   # Change to subs directory
-  cd "$script_dir/$sub_dir" || { echo "$msg_error: can't access substitutes directory ($script_dir/$sub_dir)" >&2; echo "No substitutions can be made." >&2;exit 1; }
+  cd "$script_dir/$sub_dir" || { echolog "$msg_error: can't access substitutes directory ($script_dir/$sub_dir)" >&2; echolog "No substitutions can be made." >&2;exit 1; }
 
   # Create a substitutions area replicating the mirrored folder
   [ -d "$mirror_archive_dir" ] || mkdir -p "$mirror_archive_dir"
@@ -2230,12 +2231,12 @@ process_snippets() {
   [ -d "$subs_hostport_dir" ] || mkdir -p "$subs_hostport_dir"
 
   # Carry out snippet substitutions:
-  echo "current directory: $(pwd)" "1"
+  echolog "current directory: $(pwd)" "1"
   if [ ! -f "$snippets_data_file" ]; then
-    echo "$msg_warning: Unable to find snippets data file $snippets_data_file"
-    echo 'Skipping substitutions'
+    echolog "$msg_warning: Unable to find snippets data file $snippets_data_file"
+    echolog 'Skipping substitutions'
   else
-    echo "Snippets data file found at: $snippets_data_file"
+    echolog "Snippets data file found at: $snippets_data_file"
     temp_IFS=$IFS; IFS=":" # file_path:list
 
     # Clear the contents of files/ for this run
@@ -2263,7 +2264,7 @@ process_snippets() {
         read -ra strarr <<< "$line"
         src_file=${strarr[0]}
         sub_input_file=$sub_files_dir'/'$src_file
-        echo -e "input file $sub_input_file" "1"
+        echolog -e "input file $sub_input_file" "1"
 
         # Create the necessary subdirectories containing modified files
         src="$subs_hostport_dir/$src_file"
@@ -2272,7 +2273,7 @@ process_snippets() {
         mkdir -p "$src_dir"
 
         # Freshen the files to be updated by copying across from the latest mirror
-        echo "local source: $working_mirror_dir/$src_file copied to $sub_input_dir/" "1"
+        echolog "local source: $working_mirror_dir/$src_file copied to $sub_input_dir/" "1"
         mkdir -p "$sub_input_dir" && cp "$working_mirror_dir/$src_file" "$sub_input_dir/"
 
         # Loop through the snippet IDs for this file, read and apply changes for each
@@ -2282,7 +2283,7 @@ process_snippets() {
         do
           id_num=$(printf "%0*d" 3 "$i")
           snippet_id="SNIPPET"$id_num
-          echo "$snippet_id" "1"
+          echolog "$snippet_id" "1"
           snippet_file_id=$(printf "%s" "$snippet_id" | tr '[:upper:]' '[:lower:]')
           snippet_file=$snippets_dir'/'$snippet_file_id'.html'
           start='<!--'$snippet_id'BEGIN'
@@ -2297,29 +2298,29 @@ process_snippets() {
   IFS=$temp_IFS # restore IFS to defaults
 
   if (( snippets_count==0 )); then
-    echo "$msg_warning: No snippets were found."
+    echolog "$msg_warning: No snippets were found."
   elif (( snippets_count==1 )); then
-    echo "Processed one snippet."
+    echolog "Processed one snippet."
   else
-    echo "Processed $snippets_count snippets."
+    echolog "Processed $snippets_count snippets."
   fi
 
   # Copy any snippets across to mirror
   if [ "$snippets_count" != 0 ]; then
     snippets_src="$script_dir/$sub_dir/$subs_hostport_dir"
     dest="$working_mirror_dir"
-    echo "Copying from: $snippets_src" "1"
-    echo "To: $dest" "1"
+    echolog "Copying from: $snippets_src" "1"
+    echolog "To: $dest" "1"
     cp -r "$snippets_src/." "$dest/." || { printf ".\n%s: Unable to copy the snippets to the mirror.\n" "$msg_error"; }
   fi
 
-  cd "$script_dir" || echo "$msg_warning: cannot change directory to $script_dir."
+  cd "$script_dir" || echolog "$msg_warning: cannot change directory to $script_dir."
 }
 
 #  If Wget --cut-dirs not specified, then move top-level index.html to root directory.
 cut_mss_dirs() {
   if [ "$url_has_path" = "no" ]; then
-    echo "$msg_info: You have specified mss_cut_dirs to cut directories, but this is only effective for a URL with a directory path. No action taken."
+    echolog "$msg_info: You have specified mss_cut_dirs to cut directories, but this is only effective for a URL with a directory path. No action taken."
     return 0
   fi
   if [ "$cut_dirs" != "0" ]; then
@@ -2328,7 +2329,7 @@ cut_mss_dirs() {
   cd "$working_mirror_dir" || { printf "Unable to enter %s.\nAborting.\n" "$working_mirror_dir"; exit; }
   dir_path="$working_mirror_dir/$url_path_dir"
   mv "$dir_path/"* "$working_mirror_dir/"
-  echo "Moved files and folders from $dir_path to $working_mirror_dir/." "1"
+  echolog "Moved files and folders from $dir_path to $working_mirror_dir/." "1"
 
   # remove top-level folder of $url_path
   url_root_dir=$(printf "%s" "$url_path_dir" | cut -d/ -f1)
@@ -2339,22 +2340,22 @@ cut_mss_dirs() {
 
 create_zip() {
   cd "$mirror_dir" || { printf "%s: Unable to enter directory %s.\nSkipping the creation of the zip file.\n" "$msg_error" "$mirror_dir"; return; }
-  echo "Creating a ZIP archive ... "
+  echolog "Creating a ZIP archive ... "
   if [ -f "$zip_archive" ]; then
     zip_backup="$zip_archive.backup"
-    mv "$zip_archive" "$zip_backup" || echo "$msg_warning: unable to create a backup for $zip_archive"
-    echo "Backed up $zip_archive to $zip_backup" "1"
+    mv "$zip_archive" "$zip_backup" || echolog "$msg_warning: unable to create a backup for $zip_archive"
+    echolog "Backed up $zip_archive to $zip_backup" "1"
   fi
   zip_options="-q -r $zip_archive $mirror_archive_dir"
   [ "$zip_omit_download" = "yes" ] && zip_options+=" -x $mirror_archive_dir$hostport_dir/$zip_download_folder/*" 
   IFS=" " read -ra zip_options_all <<< "$zip_options"
   zip "${zip_options_all[@]}"
   cd "$script_dir"
-  echo "ZIP archive created at $mirror_dir/$zip_archive."
+  echolog "ZIP archive created at $mirror_dir/$zip_archive."
 }
 
 deploy_on_netlify() {
-  echo "Deploying on Netlify ... "
+  echolog "Deploying on Netlify ... "
 
   # Check Netlify is installed
   if ! cmd_check "netlify" "1"; then
@@ -2370,25 +2371,25 @@ deploy_on_netlify() {
     # Deploy site to Netlify
     netlify_options=(deploy --dir="$working_mirror_dir" --prod)
     if ! netlify "${netlify_options[@]}"; then
-      echo "$msg_error: Failed to deploy to Netlify."
+      echolog "$msg_error: Failed to deploy to Netlify."
     fi
   fi
   echo
 }
 
 prep_rsync() {
-  echo "Deploying on a remote server using rsync over ssh ... "
+  echolog "Deploying on a remote server using rsync over ssh ... "
 
   # Test network connection to remote server host using netcat
   if ! nc -w2 -z "$deploy_host" "$deploy_port"; then
-    echo "Unable to connect to the remote server, $deploy_host, on port $deploy_port, needed for rsync."
-    echo "Use of rsync aborted."
-    echo "Static archive created, but not deployed remotely using rsync."
-    echo "$msg_signoff"
+    echolog "Unable to connect to the remote server, $deploy_host, on port $deploy_port, needed for rsync."
+    echolog "Use of rsync aborted."
+    echolog "Static archive created, but not deployed remotely using rsync."
+    echolog "$msg_signoff"
     exit
   else
     dest=$deploy_user'@'$deploy_host':'$deploy_path'/'
-    echo "Sync to remote server"
+    echolog "Sync to remote server"
   fi
 }
 
@@ -2409,14 +2410,14 @@ deploy() {
   sed_subs=(-e ':a' -e 'N' -e '$!ba' -e 's/\(=\)\([\n]*[[:space:]]*\)\(["'\''][^:\\"'\'']*\)\/index.html\([\"'\'']\)/\1\3'"$a_href_tail"'\4/g')
   find . -type f -name "*.html" -exec sed "${sed_options[@]}" "${sed_subs[@]}" {} +
 
-  echo "Done."
-  cd "$script_dir" || echo "$msg_warning: cannot change directory to $script_dir."
+  echolog "Done."
+  cd "$script_dir" || echolog "$msg_warning: cannot change directory to $script_dir."
 
   # Copy zip file into site uploads folder, ready for deployment
   mkdir -p "$working_mirror_dir/$zip_download_folder"
   local_dest="$working_mirror_dir/$zip_download_folder/$zip_filename"
   if [ "$upload_zip" = "yes" ]; then
-    cp "$mirror_dir/$zip_archive" "$local_dest" || { echo "$msg_error: can't copy zip archive into the site uploads area, $local_dest" >&2; exit 1; }
+    cp "$mirror_dir/$zip_archive" "$local_dest" || { echolog "$msg_error: can't copy zip archive into the site uploads area, $local_dest" >&2; exit 1; }
   fi
 
   cmd_check "rsync" "1" || { printf "%s: The rsync command is not available.\nCheck that it is installed and is within PATH.\nAborting.\n" "$msg_error"; exit; }
@@ -2427,16 +2428,16 @@ deploy() {
 
   # if source and deployment domains are the same, then call Hosts function
   if [ "$deploy_host" = "$domain" ]; then
-    echo "NOTICE: Your source and deployment domains are the same."
+    echolog "NOTICE: Your source and deployment domains are the same."
     # Check /etc/hosts - if it exists, search for the domain and then offer choice ...
     if [ -f "$etc_hosts" ]; then
       hosts_toggle
     else
-      echo "However, you do not appear to have an entry in $etc_hosts."
+      echolog "However, you do not appear to have an entry in $etc_hosts."
       # Check whether paths are the same
-      echo "Source site path: $site_path"
-      echo "Deployment path: $deploy_path"
-      [ "$site_path" != "$deploy_path" ] && echo "The paths appear to be distinct, so deployment should not overwrite" || echo "$msg_warning: The paths appear to be the same - about to overwrite the source folder with the static mirror!"
+      echolog "Source site path: $site_path"
+      echolog "Deployment path: $deploy_path"
+      [ "$site_path" != "$deploy_path" ] && echolog "The paths appear to be distinct, so deployment should not overwrite" || echolog "$msg_warning: The paths appear to be the same - about to overwrite the source folder with the static mirror!"
       confirm_continue ""
     fi
   fi
@@ -2461,12 +2462,12 @@ deploy() {
     fi
   else
     # Deploy on local server (a single instance that gets overwritten at each run)
-    echo "Deploying locally, using 'cp' command ... "
+    echolog "Deploying locally, using 'cp' command ... "
     dest="$deploy_path"
-    echo "From: $src/"
-    echo "To: $dest"
+    echolog "From: $src/"
+    echolog "To: $dest"
     mkdir -p "$dest"
-    cp -r "$src/." "$dest/." || { echo "$msg_error: unable to make the copy."; msg_deploy="The site was not deployed locally."; }
+    cp -r "$src/." "$dest/." || { echolog "$msg_error: unable to make the copy."; msg_deploy="The site was not deployed locally."; }
   fi
   
   if [ "$toggle_flag" = "1" ]; then
@@ -2481,17 +2482,18 @@ deploy() {
 }
 
 conclude() {
-  printf "Completed in "; stopclock SECONDS
+  echolog -n "Completed in "; stopclock SECONDS
   msg_done=$(msg_ink "ok" 'All done.')
-  printf "%s\nA static mirror of %s has been created in %s\n" "$msg_done" "$url" "$working_mirror_dir"
+  echolog "$msg_done"
+  echolog "A static mirror of $url has been created in $working_mirror_dir"
   if [ "$wayback_url" = "yes" ] && [ -n "${msg_wayback+x}" ]; then
-    printf "\n%s\n" "$msg_wayback"
+    echolog $'\n'"$msg_wayback"
   fi
   if [ -n "${msg_deploy+x}" ]; then
-    printf "%s\n" "$msg_deploy"
+    echolog $'\n'"$msg_deploy"
   fi
-  printf "\nThank you for using MakeStaticSite, free software released under the %s. The latest version is available from %s.\n" "$mss_license" "$mss_download"
-  echo " "
+  echolog $'\n'"Thank you for using MakeStaticSite, free software released under the $mss_license. The latest version is available from $mss_download".  
+  echolog " "
   timestamp_end=$(timestamp "$timezone")
   printf "%s\n" "$msg_signoff" >> "$log_file"
   printf "Timestamp: %s\n\n" "$timestamp_end" >> "$log_file"

@@ -47,7 +47,7 @@ wmd_get_wayback_site() {
   [ -n "${wayback_machine_statuscodes+x}" ] && [ "$wayback_machine_statuscodes" = "all" ] && wmd_get_options+=(-a)
   
   wmd_get_options+=(-d "$mirror_archive_dir" "$url")
-  echo " "; echo "Executing: $wayback_machine_downloader_cmd ${wmd_get_options[*]}"
+  echolog " "; echolog "Executing: $wayback_machine_downloader_cmd ${wmd_get_options[*]}"
   $wayback_machine_downloader_cmd "${wmd_get_options[@]}"
 }
 
@@ -64,7 +64,7 @@ validate_wayback_dates() {
     else
       error_notice="The 'to' date, $wayback_date_to, in the range $wayback_date_from_to, is invalid. "
     fi
-    echo $'\n'"$msg_error: $error_notice It needs to be a string of digits in the format: YYYYMMDDhhmmss (substrings starting with YYYY are allowed). Aborting."; exit
+    echolog $'\n'"$msg_error: $error_notice It needs to be a string of digits in the format: YYYYMMDDhhmmss (substrings starting with YYYY are allowed). Aborting."; exit
   fi
 
   if ! validate_timestamp "$wayback_date_from"; then
@@ -73,17 +73,17 @@ validate_wayback_dates() {
     else
       error_notice="The 'from' date, $wayback_date_from, in the range $wayback_date_from_to, is invalid."
     fi
-    echo $'\n'"$msg_error: $error_notice It needs to be a string of digits in the format: YYYYMMDDhhmmss (substrings starting with YYYY are allowed). Aborting."; exit
+    echolog $'\n'"$msg_error: $error_notice It needs to be a string of digits in the format: YYYYMMDDhhmmss (substrings starting with YYYY are allowed). Aborting."; exit
   fi
 
   if [ "$wayback_timestamp_policy" = "range" ] && (( wayback_date_from_earliest > wayback_date_from )); then
-    echo $'\n'"$msg_error: the 'from' date specified by wayback_date_from_earliest, $wayback_date_from_earliest, in constants.sh, should not be later than the 'from' date, $wayback_date_from, in the URL range entered!  Aborting."; exit
+    echolog $'\n'"$msg_error: the 'from' date specified by wayback_date_from_earliest, $wayback_date_from_earliest, in constants.sh, should not be later than the 'from' date, $wayback_date_from, in the URL range entered!  Aborting."; exit
   fi
 
   if [ "$wayback_date_to" != "" ]; then
     (( wayback_date_to_latest > wayback_date_to )) && wayback_date_to_latest="$wayback_date_to"
     if (( wayback_date_from > wayback_date_to )); then
-      echo $'\n'"$msg_error: the 'from' date, $wayback_date_from, should not be later than the 'to' date, $wayback_date_to!  Aborting."; exit
+      echolog $'\n'"$msg_error: the 'from' date, $wayback_date_from, should not be later than the 'to' date, $wayback_date_to!  Aborting."; exit
     fi
   fi
 }
@@ -94,14 +94,14 @@ validate_wayback_dates() {
 # Expects one parameter: URL
 process_wayback_url() {
   if [ -z ${1+x} ]; then
-    echo "$msg_error: URL not supplied. Unable to check Wayback dates."
-    echo "Aborting."
+    echolog "$msg_error: URL not supplied. Unable to check Wayback dates."
+    echolog "Aborting."
     exit
   else
     local url_stem_dates=${1%http*}
     local url_slashes=${url_stem_dates//[!\/]};
     local url_depth=$(( ${#url_slashes} ))
-    wayback_date_from_to=$(env echo "$1" | cut -d/ -f${url_depth})
+    wayback_date_from_to=$(echo "$1" | cut -d/ -f${url_depth})
     [ "$wayback_date_from" = "" ] && wayback_date_from="$wayback_date_from_to"
     validate_wayback_dates
 
@@ -123,7 +123,7 @@ process_wayback_url() {
     if [ "$url_stem_dates" = "" ] || ! validate_url "$url_original"; then
       printf "%s: The extracted URL, %s, is considered invalid.\n" "$msg_error" "$url_original"
       printf "It is recommended that you modify the value of 'url' and re-run\n."
-      echo "Aborting."
+      echolog "Aborting."
       exit
     fi
     domain_original=$(printf "%s\n" "$url_original" | awk -F/ '{print $3}' | awk -F: '{print $1}')
@@ -138,18 +138,18 @@ initialise_wayback() {
   process_wayback_url "$url" # will set the value of $url_original to be that of the archived site
   printf "Wayback Machine detected at %s, hosted on %s.\n" "$url" "$domain_wayback_machine"
   if [ "$wayback_timestamp_policy" = "exact" ] && [ "$wayback_date_to" != "" ]; then
-    echo "$msg_warning: you have specified a date range for the Wayback Machine, but the constant wayback_timestamp_policy is set to 'exact'."
-    echo "To resolve this conflict, MakeStaticSite will only download assets for the earliest timestamp, $wayback_date_from. But you may like to set wayback_timestamp_policy=range."
+    echolog "$msg_warning: you have specified a date range for the Wayback Machine, but the constant wayback_timestamp_policy is set to 'exact'."
+    echolog "To resolve this conflict, MakeStaticSite will only download assets for the earliest timestamp, $wayback_date_from. But you may like to set wayback_timestamp_policy=range."
     confirm_continue "Y" "OK. Please change the URL or review the Wayback settings in constants.sh."
     url=${url/-$waybackdatefrom/}
     wayback_date_to="$wayback_date_from"
   elif [ "$wayback_timestamp_policy" = "range" ] && { (( wayback_date_from < wayback_date_from_earliest)) || (( wayback_date_to > wayback_date_to_latest)); }; then
     msg_wayback_notice="the URL supplied contains a date that is outside of the allowable range specified by the values you have specified for wayback_date_from_earliest and/or wayback_date_to_latest in constants.sh."
     if (( phase < 4 )); then
-      echo "$msg_warning: $msg_wayback_notice  If you proceed, the resulting mirror may likewise contain content captured on a date outside this range."
+      echolog "$msg_warning: $msg_wayback_notice  If you proceed, the resulting mirror may likewise contain content captured on a date outside this range."
       confirm_continue
     else
-      echo "$msg_error: $msg_wayback_notice  Please review.  Aborting"; exit
+      echolog "$msg_error: $msg_wayback_notice  Please review.  Aborting"; exit
     fi
   fi
   if [ "$wayback_assets_mode" = "original" ]; then
@@ -168,8 +168,8 @@ initialise_wayback() {
   fi
   if [ "$wayback_cli" = "yes" ]; then
     if (( phase < 4 )) && ! validate_internet; then
-      echo " "; echo "$msg_error: Unable to establish Internet access. Please check your network connectivity."
-      echo "Aborting."
+      echolog " "; echolog "$msg_error: Unable to establish Internet access. Please check your network connectivity."
+      echolog "Aborting."
       exit
     fi
     use_wayback_cli=yes
@@ -213,7 +213,7 @@ wayback_url_paths() {
 # Augment list of candidate URLs
 wayback_augment_urls(){
   src_path_snapshot="$working_mirror_dir/$url_path_snapshot_prefix"
-  cd "$src_path_snapshot" || { echo "$msg_error: Unable to enter $src_path_snapshot.  Aborting"; exit; }
+  cd "$src_path_snapshot" || { echolog "$msg_error: Unable to enter $src_path_snapshot.  Aborting"; exit; }
   snapshot_path_list=()
   while IFS= read -r line; do
     line="${line#./}"
@@ -303,7 +303,7 @@ wayback_filter_domains() {
   # but subsequent runs will potentially generate many more, depending on
   # the URLs harvested from the initially downloaded pages.
   # For web pages, timestamped folder names contain only numbers.
-  cd "$src_path_snapshot" || { echo "$msg_error: Unable to enter $src_path_snapshot.  Aborting"; exit; }
+  cd "$src_path_snapshot" || { echolog "$msg_error: Unable to enter $src_path_snapshot.  Aborting"; exit; }
 
   snapshot_path_list=()
   while IFS= read -r line; do
@@ -371,11 +371,11 @@ wayback_filter_snapshots() {
   webassets_wayback=()
   if [ "$wayback_assets_mode" = "original" ] && (( wget_extra_urls_count == 1 )); then
     # Pick out unique items, accepting multiple snapshots for the same file and write out
-    echo "Pick out unique items, no snapshot filter" "1"
+    echolog "Pick out unique items, no snapshot filter" "1"
     webassets_unique_snapshots=()
     while IFS='' read -r line; do webassets_unique_snapshots+=("$line"); done < <(for item in "${webassets[@]}"; do printf "%s\n" "${item}"; done |
       sort -u;)
-    echo "webassets_unique_snapshots array has ${#webassets_unique_snapshots[@]} elements" "2"
+    echolog "webassets_unique_snapshots array has ${#webassets_unique_snapshots[@]} elements" "2"
     printf "%s\n" "${webassets_unique_snapshots[@]}" > "$input_file_wayback_extra"
   fi
   # Apply timestamp-related filters
@@ -395,15 +395,15 @@ wayback_filter_snapshots() {
 # Consolidate snapshot assets in a single location,
 # reflecting the original layout.
 consolidate_assets() {
-  echo "Consolidating snapshot assets in a single location, reflecting original layout ... "
+  echolog "Consolidating snapshot assets in a single location, reflecting original layout ... "
   print_progress "0" "100";
 
   webpages=()
   while IFS= read -r line; do webpages+=("$line"); done <<<"$(for file_ext in "${asset_find_names[@]}"; do find . -type f -name "$file_ext" "${asset_exclude_dirs[@]}" -print; done)"
-  [ "${webpages[*]}" = "" ] && echo "$msg_warning: no web pages found for processing."
+  [ "${webpages[*]}" = "" ] && echolog "$msg_warning: no web pages found for processing."
   num_webpages="${#webpages[@]}"
   
-  cd "$src_path_snapshot" || echo "Unable to enter $src_path_snapshot"
+  cd "$src_path_snapshot" || echolog "Unable to enter $src_path_snapshot"
   snapshot_exclude_dirs=()
   snapshot_list=("$wayback_date_from")
   for item in "${snapshot_list[@]}"; do
@@ -432,7 +432,7 @@ consolidate_assets() {
   date_to_readable="$(timestamp_readable "$last_snapshot_dir_root")"
   msg_wayback="The site was generated from a Wayback Machine and used $num_snapshot_dirs snapshots, ranging from $wayback_date_from to $last_snapshot_dir, i.e. from $date_from_readable to $date_to_readable."
 
-  cd "$working_mirror_dir" || { echo "msg_error: Unable to return to $working_mirror_dir. Aborting."; exit; } 
+  cd "$working_mirror_dir" || { echolog "msg_error: Unable to return to $working_mirror_dir. Aborting."; exit; } 
 
   # Initialised source and destination paths (trunks)
   dest_path="$working_mirror_dir/$url_path"
@@ -440,16 +440,16 @@ consolidate_assets() {
   if [ "$url_path_original" != "" ]; then
     [ "$url_add_slash" = "avoid" ] && dest_path="${dest_path%\/*}"  # remove anything after last '/'
     if [ "$(find . -name "$assets_directory" -type d -print)" != "" ]; then
-      echo -n "$msg_warning: website already contains a directory, $assets_directory.  To avoid confusion (and errors), a timestamp is being appended to the MakeStaticSite-generated assets directory, but it is recommended that you modify the assets_directory constant and re-run. ... "
+      echolog -n "$msg_warning: website already contains a directory, $assets_directory.  To avoid confusion (and errors), a timestamp is being appended to the MakeStaticSite-generated assets directory, but it is recommended that you modify the assets_directory constant and re-run. ... "
       assets_directory="$assets_directory$timestamp"
     fi
-    mkdir "$dest_path/$assets_directory" || echo "Unable to created directory"
+    mkdir "$dest_path/$assets_directory" || echolog "Unable to created directory"
   fi
 
   # Replace the relative links created by Wget (that point to levels higher up in the directory hierarchy)
   count=0
   if (( "${#snapshot_path_list[@]}" > 0 )); then
-    mkdir "$dest_path/$imports_directory" || echo "$msg_error: Unable to create the 'imports' directory."
+    mkdir "$dest_path/$imports_directory" || echolog "$msg_error: Unable to create the 'imports' directory."
   fi
   for opt in "${webpages[@]}"; do
     print_progress "$count" "$num_webpages";
@@ -506,20 +506,20 @@ consolidate_assets() {
     (( count++ ))
   done
 
-  cd "$src_path_snapshot" || { echo "$msg_error: Unable to enter $src_path_snapshot.  Aborting"; exit; }
+  cd "$src_path_snapshot" || { echolog "$msg_error: Unable to enter $src_path_snapshot.  Aborting"; exit; }
 
   ## Copy over directories and folders to URL Path.
   for snapshot_dir in "${snapshot_path_list[@]}"; do
     this_domain="${snapshot_dir##*/}" # remove everything before trailing slash
     # Create a directory for $this_domain inside the 'imports' directory under the 'destination' path.
     if [ "$this_domain" != "$domain_original" ]; then
-      mkdir -p "$dest_path/$imports_directory/$this_domain" || echo "$msg_error: Unable to create the external domain directory $this_domain inside $dest_path/$imports_directory."
+      mkdir -p "$dest_path/$imports_directory/$this_domain" || echolog "$msg_error: Unable to create the external domain directory $this_domain inside $dest_path/$imports_directory."
     fi
-    echo "Entering $snapshot_dir" "1"
+    echolog "Entering $snapshot_dir" "1"
     if [ -d "$snapshot_dir" ]; then
       cd "$snapshot_dir"
     else
-      echo "$msg_warning: unable to enter directory $snapshot_dir" "1"; continue
+      echolog "$msg_warning: unable to enter directory $snapshot_dir" "1"; continue
     fi
 
     while IFS= read -r copy_dir; do
@@ -535,8 +535,8 @@ consolidate_assets() {
         if [[ $copy_dir == $url_path_original* ]]; then
           this_dest_path="$dest_path_root/$copy_dir"
         fi
-        echo "mkdir -p $this_dest_path" "1"
-        mkdir -p "$this_dest_path" || echo "$msg_error: Unable to create directory $this_dest_path."
+        echolog "mkdir -p $this_dest_path" "1"
+        mkdir -p "$this_dest_path" || echolog "$msg_error: Unable to create directory $this_dest_path."
 
         # loop over files in subdirectory
         while IFS= read -r item; do
@@ -553,10 +553,10 @@ consolidate_assets() {
           fi
           # check if file already exists in destination
           if [ -f "$file_dest" ]; then
-            echo "File exists at $file_dest" "2"
+            echolog "File exists at $file_dest" "2"
           else
-            echo "Move file $item to $file_dest" "1"
-            mv "$item" "$file_dest" || echo "$msg_warning: Unable to move $item to $file_dest."
+            echolog "Move file $item to $file_dest" "1"
+            mv "$item" "$file_dest" || echolog "$msg_warning: Unable to move $item to $file_dest."
           fi
         done <<<"$(find "$copy_dir/" -maxdepth 1 -type f ! -empty -print)"
       fi
@@ -573,25 +573,25 @@ consolidate_assets() {
             file_dest="$dest_path/$item"
           fi
           if [ -f "$file_dest" ]; then
-            echo "File exists at $file_dest" "2"
+            echolog "File exists at $file_dest" "2"
           else
-            echo "Move file $item to $file_dest" "1"
-            mv "$item" "$file_dest" || echo "$msg_warning: Unable to move $item to $file_dest."
+            echolog "Move file $item to $file_dest" "1"
+            mv "$item" "$file_dest" || echolog "$msg_warning: Unable to move $item to $file_dest."
           fi
         fi
       done <<<"$(find "." -maxdepth 1 -type f ! -empty -print)"
     done <<<"$(find "." -type d ! -empty -not -path "." -not -path "" -print)"
-    cd "$src_path_snapshot" || { echo "Unable to cd back to $src_path_snapshot"; exit; }
+    cd "$src_path_snapshot" || { echolog "Unable to cd back to $src_path_snapshot"; exit; }
   done
 
-  cd "$working_mirror_dir" || echo "$msg_warning: Unable to enter $working_mirror_dir"
-  cd "$url_path_dir" || echo "$msg_warning: Unable to enter $working_mirror_dir"
+  cd "$working_mirror_dir" || echolog "$msg_warning: Unable to enter $working_mirror_dir"
+  cd "$url_path_dir" || echolog "$msg_warning: Unable to enter $working_mirror_dir"
   webpaths_output2=() # to store directory paths for internal links, creating array before moving supporting assets here
   while IFS='' read -r line; do
     webpaths_output2+=("$line")
     line=${line:2}
   done < <(find "." -type d "${asset_exclude_dirs[@]}" -print)
-  cd "$src_path_snapshot" || { echo "Unable to cd back to $src_path_snapshot"; exit; }
+  cd "$src_path_snapshot" || { echolog "Unable to cd back to $src_path_snapshot"; exit; }
   if [ "$url_path_original" != "" ]; then
     folder_exclude="$url_path_original/"
     folder_exclude="${folder_exclude%\/*}"
@@ -600,7 +600,7 @@ consolidate_assets() {
     folder_exclude_not_path=
   fi
 
-  cd "$url_path_snapshot_root" || echo "Unable to enter $url_path_snapshot_root"
+  cd "$url_path_snapshot_root" || echolog "Unable to enter $url_path_snapshot_root"
   if [ "$url_path_original" != "" ]; then
     while IFS= read -r line; do
       line="${line#./}"
@@ -608,25 +608,25 @@ consolidate_assets() {
       [[ ! $url_path_original == $line* ]] && parent_assets_path+="/$assets_directory"
       if [ "$line" != "" ] && [[ ! $url_path_original == $line/* ]]; then
         if [ -d "$parent_assets_path/$line" ]; then
-          echo "$msg_info: the directory $parent_assets_path/$line already exists." "1"
-          cp -n -r "$line/"* "$parent_assets_path/$line/" || true; echo "$msg_warning: An error occurred in copying files/directories under $line to $parent_assets_path/" "1"
+          echolog "$msg_info: the directory $parent_assets_path/$line already exists." "1"
+          cp -n -r "$line/"* "$parent_assets_path/$line/" || true; echolog "$msg_warning: An error occurred in copying files/directories under $line to $parent_assets_path/" "1"
         else
-          cp -n -r "$line" "$parent_assets_path/" || true; echo "$msg_warning: Unable to copy $line to $parent_assets_path/" "1"
+          cp -n -r "$line" "$parent_assets_path/" || true; echolog "$msg_warning: Unable to copy $line to $parent_assets_path/" "1"
         fi
       fi
     done <<<"$(find . -maxdepth 1 -type d ! -empty -not -path "." $folder_exclude_not_path -print)"
   fi
   print_progress
-  cd "$working_mirror_dir" || echo "$msg_warning: Unable to enter $working_mirror_dir"
+  cd "$working_mirror_dir" || echolog "$msg_warning: Unable to enter $working_mirror_dir"
 }
 
 # Convert absolute URLs or paths to relative URLs for internal anchors
 process_asset_anchors() {
-  echo "Converting absolute URLs to relative URLs for Wayback internal anchors ... "
+  echolog "Converting absolute URLs to relative URLs for Wayback internal anchors ... "
   print_progress "0" "100";
 
   # Generate lists of webasset paths
-  cd "$url_path_dir" || echo "$msg_warning: Unable to enter $working_mirror_dir"
+  cd "$url_path_dir" || echolog "$msg_warning: Unable to enter $working_mirror_dir"
   webpages_output1=() # to store file paths to web pages only
   webpaths_output1=() # to store file paths to web assets for internal links
 
@@ -745,29 +745,29 @@ wayback_wget_postprocess() {
 # We have to deal with newlines, so use awk rather than sed
 # Specify as record separator an ASCII character that is not used in files (in this case: bell alert) 
 wayback_output_clean() {
-  echo -n "Cleaning the HTML output generated by the Wayback Machine ... "
+  echolog -n "Cleaning the HTML output generated by the Wayback Machine ... "
   if [ "$wayback_code_clean" = "yes" ]; then
     # Delete (JavaScript) Playback code inserted by Wayback Machine
-    echo "Delete (JavaScript) Playback code inserted by Wayback Machine ... " "1"
+    echolog "Delete (JavaScript) Playback code inserted by Wayback Machine ... " "1"
     for opt in "${webpages[@]}"; do
       tmp_file="$opt.tmp"
       if [ -f "$opt" ]; then
         awk -v RS='\x7' '{sub(/'"$wayback_code_re"'/,"<head>"); print}' "$opt" > "$tmp_file" && mv "$tmp_file" "$opt"
       else
-        echo "$msg_warning: File $opt not found, so not running awk on it." "1"
+        echolog "$msg_warning: File $opt not found, so not running awk on it." "1"
       fi
     done
   fi
 
   if [ "$wayback_comments_clean" = "yes" ]; then
     # Delete HTML comments inserted by Wayback Machine
-    echo "Delete HTML comments inserted by Wayback Machine ... " "1"
+    echolog "Delete HTML comments inserted by Wayback Machine ... " "1"
     for opt in "${webpages[@]}"; do
       tmp_file="$opt.tmp"
       if [ -f "$opt" ]; then
         awk -v RS='\x7' '{sub(/'"$wayback_comments_re"'/,"</html>"); print}' "$opt" > "$tmp_file" && mv "$tmp_file" "$opt"
       else
-        echo "$msg_warning: File $opt not found, so not running awk on it." "1"
+        echolog "$msg_warning: File $opt not found, so not running awk on it." "1"
       fi
     done
   fi

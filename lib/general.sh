@@ -189,7 +189,7 @@ confirm_continue() {
       printf "OK. Continuing.\n"
     fi
   else
-    echo "Continuing (to run unattended)."
+    echolog "Continuing (to run unattended)."
   fi
 }
 
@@ -211,7 +211,7 @@ remote_command_prefix() {
     return 1
   fi
   if [ "$source_protocol" = "ssh" ]; then
-    echo "ssh $source_user@$source_host -p $source_port"
+    echolog "ssh $source_user@$source_host -p $source_port"
   else
     echo
     return # there's not yet support for checking with other protocols  
@@ -224,7 +224,7 @@ wget_error_check() {
   if [ "$wget_error_level" -le "$1" ]; then
     confirm_continue
   else
-    echo "Aborting due to wget_error_level setting in constants.sh. To allow continuation, please set its value to $1 or less and rerun."; exit
+    echolog "Aborting due to wget_error_level setting in constants.sh. To allow continuation, please set its value to $1 or less and rerun."; exit
   fi
 }
 
@@ -250,7 +250,7 @@ wget_canonical_options() {
 
 wget_level_comment() {
   if [ "$output_level" = "quiet" ] && [ "$log_level" != "silent" ]; then
-    echo "More details are available in the log file"
+    echolog "More details are available in the log file"
   fi
 }
 
@@ -269,7 +269,7 @@ input_encrypted_password() {
   fi
   while true; do
     "$credentials_manage_cmd" insert "$credentials_insert_path" || {
-      echo "Please try again."; continue;
+      echolog "Please try again."; continue;
     }
     break
   done
@@ -294,7 +294,7 @@ assets_search_string() {
     done
   fi
   [ "$url_path" != "" ] && url_path="${url_path:1}" # Remove the first separator character using parameter expansion
-  echo "$url_path"
+  echolog "$url_path"
 }
 
 # Generate a list of web pages matching grep criteria
@@ -314,7 +314,7 @@ find_web_pages() {
   webpages=()
   while IFS= read -r line; do webpages+=("$line"); done <<<"$(for file_ext in "${asset_find_names[@]}"; do find "$dir" -type f -name "$file_ext" "${asset_exclude_dirs[@]}" -print; done)"
   num_webpages="${#webpages[@]}"
-  [ "$num_webpages" = "0" ] && echo "$msg_warning: no web pages found for processing."
+  [ "$num_webpages" = "0" ] && echolog "$msg_warning: no web pages found for processing."
 }
 
 # Write contents of a string to a given file
@@ -324,7 +324,7 @@ print_to_file() {
   ((last_idx=${#a[@]} - 1))
   local output_file=${a[last_idx]}
   unset 'a[last_idx]'
-  touch "$output_file" || { echo "ERROR: Unable to write to file at $output_file. Please check the directory and file permissions."; exit; }
+  touch "$output_file" || { echolog "ERROR: Unable to write to file at $output_file. Please check the directory and file permissions."; exit; }
 #  printf "%s\n" "${a[@]}" | sort -u > "$output_file"
   printf "%s\n" "${a[@]}" > "$output_file"
 }
@@ -340,15 +340,15 @@ comment_uncomment() {
     # what follows becomes the replacement string (whitespace trimmed at tail)
     replacement_string=$(printf "%s" "$mystring"|tr -s '#'|xargs)
     replacement_string="${replacement_string:1}"
-    echo "enable entry in $myfile for $mystring"
+    echolog "enable entry in $myfile for $mystring"
   else
     # Trim $mystring of leading and trailing whitespace;
     # the replacement string is this preceded by '#'
     replacement_string=$(printf "%s" "$mystring"|xargs)
     replacement_string="#$replacement_string"
-    echo "disable entry in $myfile for $mystring"
+    echolog "disable entry in $myfile for $mystring"
   fi
-  echo "search for: $mystring, replace with $replacement_string"
+  echolog "search for: $mystring, replace with $replacement_string"
 
   # sed -i creates a temporary file in the same folder
   # which may cause a file permission problem. So, 
@@ -363,12 +363,12 @@ comment_uncomment() {
   # If hosts file not writeable, then offer sudo for copy operation
   sudo_tee="tee"
   if [ ! -w "$myfile" ]; then
-    echo "Cannot write to the file"
+    echolog "Cannot write to the file"
     read -r -e -p "Do you wish to try using sudo (y/n)? " confirm
     confirm=${confirm:0:1}
     if [ "$confirm" == "y" ] || [ "$confirm" == "Y" ]; then
       sudo_tee="sudo tee"
-      echo "OK. You may be asked for your sudo password ..."
+      echolog "OK. You may be asked for your sudo password ..."
     fi
   fi
 
@@ -385,22 +385,22 @@ hosts_toggle() {
   if [ "$entry" != "" ]; then
     entry_count=$(printf "%s" "$entry"| wc -l | xargs)
     if [ "$entry_count" = "1" ]; then
-      echo "You have the following entry for the domain in $etc_hosts:"
+      echolog "You have the following entry for the domain in $etc_hosts:"
     else
-      echo "WARNING: You have $entry_count entries for the domain in $etc_hosts, but we will only look at the first one to determine the action:"
+      echolog "WARNING: You have $entry_count entries for the domain in $etc_hosts, but we will only look at the first one to determine the action:"
     fi
-    env echo "$entry"
+    echolog "$entry"
     entry_backup=$entry
     entry=$(printf "%s" "${entry}"| head -1)
 
     # Determine whether or not the entry is commented out
     comment_prefix="^[[:space:]]*#.*$domain"
     if [[ $entry =~ $comment_prefix ]]; then
-      echo "It appears this entry is commented out." "1"
+      echolog "It appears this entry is commented out." "1"
       comment_status=1
       comment_mode="uncomment"
     else
-      echo "It appears this entry is active." "1"
+      echolog "It appears this entry is active." "1"
       comment_status=0
       comment_mode="comment out"
     fi
@@ -414,7 +414,7 @@ hosts_toggle() {
       read -r -e -p "Stop here without deploying (y/n)? " confirm
       confirm=${confirm:0:1}
       if [ "$confirm" == "y" ] || [ "$confirm" == "Y" ]; then
-        echo "OK. Stopping here."; exit
+        echolog "OK. Stopping here."; exit
       elif [ "$site_path" = "$deploy_path" ]; then
         printf "WARNING: The paths appear to be the same - would mean overwriting the source folder with the static mirror!\nAborting."; exit
       else
@@ -454,7 +454,7 @@ print_progress() {
   hash_string_length=${#hash_string}
   nohash_string=$(printf ' %.0s' $(seq 1 $col_width))
   counter="$1"; max_count="$2"
-  (( max_count == 0 )) && { max_count=1; echo "$msg_warning: max_count was set to 0, changed to 1 to avoid division by zero."; }
+  (( max_count == 0 )) && { max_count=1; echolog "$msg_warning: max_count was set to 0, changed to 1 to avoid division by zero."; }
   (( hash_substring_length = hash_string_length * counter / max_count ))
   (( nohash_substring_length = hash_string_length - hash_substring_length ))
   hash_substring=${hash_string:0:hash_substring_length}
@@ -474,20 +474,20 @@ stopclock() {
   timer_seconds=$1
   (( hrs=timer_seconds/3600, mins=(timer_seconds%3600)/60, secs=(timer_seconds%3600)%60 ))
   hour_s=$(pluralize $hrs); min_s=$(pluralize $mins); sec_s=$(pluralize $secs);
-  (( hrs > 0 )) && printf "%s" "$hrs hour$hour_s"
+  (( hrs > 0 )) && echolog -n "%s" "$hrs hour$hour_s"
   if (( mins > 0 )); then
     if (( hrs > 0 )); then
-      (( secs > 0 )) && printf ", " || printf " and "
+      (( secs > 0 )) && echolog -n ", " || echolog -n " and "
     fi
-    printf "%s" "$mins minute$min_s"
+    echolog -n "$mins minute$min_s"
   fi
   if (( secs > 0 )); then
     if (( hrs > 0 )) || (( mins > 0 )); then
-      printf " and "
+      echolog -n " and "
     fi
-    printf "%s" "$secs second$sec_s"
+    echolog -n "$secs second$sec_s"
   fi
-  (( timer_seconds == 0 )) && echo "no time at all!" || echo "."
+  (( timer_seconds == 0 )) && echolog "no time at all!" || echolog "."
 }
 
 # Generate timestamp

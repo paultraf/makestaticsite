@@ -24,36 +24,36 @@ bash_check() {
   read -r SH <setup.sh
   shell_path="${SH:2}"
   if [ "$BASH_VERSION" -lt "4" ]; then
-    echo "Just checking your system ..."
-    echo -n "Attention! This script is written in Bash and you are currently using $shell_path, at version $BASH_VERSION. "
+    echolog "Just checking your system ..."
+    echolog -n "Attention! This script is written in Bash and you are currently using $shell_path, at version $BASH_VERSION. "
     if [ "$BASH_VERSION" = "3" ]; then
-      echo "This is sufficient, but entering setup options will take more effort. "
+      echolog "This is sufficient, but entering setup options will take more effort. "
     else
-      echo " Sorry, this version is not supported, at least 3 is required. "
+      echolog " Sorry, this version is not supported, at least 3 is required. "
     fi
-    echo "Looking for other Bash versions in /etc/shells ... "
+    echolog "Looking for other Bash versions in /etc/shells ... "
     alt_bash=$(grep bash /etc/shells | grep -vw "$shell_path")
     if [ "$alt_bash" != "" ]; then
-      echo "You could try updating the default version or else replace the path in the first line of this script (setup.sh) with one of the following alternatives:"
-      echo "$alt_bash"
+      echolog "You could try updating the default version or else replace the path in the first line of this script (setup.sh) with one of the following alternatives:"
+      echolog "$alt_bash"
     else
-      echo -n "Unable to find alternative versions. So, "
+      echolog -n "Unable to find alternative versions. So, "
       if [ "$BASH_VERSION" -lt "3" ]; then
-        echo -n "in order to proceed please use/install"
+        echolog -n "in order to proceed please use/install"
       else
-        echo -n "we recommend using/installing"
+        echolog -n "we recommend using/installing"
       fi
-      echo " another version of Bash and add it to /etc/shells"
+      echolog " another version of Bash and add it to /etc/shells"
     fi
-    echo "Please press any key to continue ... "
+    echolog "Please press any key to continue ... "
     read -r -s -n 1
   fi
 }
 
 cmd_check() {
-  [ -z ${1+x} ] && echo "Checking command: $1" "$2"
+  [ -z ${1+x} ] && echolog "Checking command: $1" "$2"
   if ! command -v "$1" 1> /dev/null; then
-    [ -z ${1+x} ] && echo "There doesn't appear to be a valid command at $1"
+    [ -z ${1+x} ] && echolog "There doesn't appear to be a valid command at $1"
     return 1
   fi
 }
@@ -64,7 +64,7 @@ version() {
 
 version_check() {
   if [ "$(version "$2")" -gt "$(version "$1")" ]; then
-    [ -z ${2+x} ] && echo "The version $1 is older than the recommended version $2"
+    [ -z ${2+x} ] && echolog "The version $1 is older than the recommended version $2"
     return 1
   fi
 }
@@ -76,9 +76,9 @@ validate_dir() {
   echo "$1"
   local err_msg="There doesn't appear to be a valid directory at $1"
   if [ -n "${2+x}" ]; then
-    "$2" [ -d "$1" ] || { echo "$err_msg"; return 1; }
+    "$2" [ -d "$1" ] || { echolog "$err_msg"; return 1; }
   else
-    [ -d "$1" ] || { echo "$err_msg"; return 1; }
+    [ -d "$1" ] || { echolog "$err_msg"; return 1; }
   fi
 }
 
@@ -168,7 +168,7 @@ validate_http() {
   if [ "$3" = "quiet" ]; then
     e="1"
   else
-    echo "$msg_status"
+    echolog "$msg_status"
   fi
   curl_options=(-s -k)
   if [ "$wget_user_agent" != "" ];then
@@ -177,10 +177,10 @@ validate_http() {
   curl_options+=(--head -w "%{http_code}" "$1" -o /dev/null)
   status="$(curl "${curl_options[@]}")"
   if [ "$status" = "200" ]; then
-    echo "Connection established OK." "$e"
+    echolog "Connection established OK." "$e"
     return
   elif [ "$status" = "301" ] || [ "$status" = "302" ] || [ "$status" = "307" ] || [ "$status" = "308" ]; then
-    echo -n $'\n'"$msg_warning: redirect detected (HTTP code $status). "
+    echolog -n $'\n'"$msg_warning: redirect detected (HTTP code $status). "
     # Require the user to confirm (y/n):
     if [ "$run_unattended" != "yes" ]; then
       read -r -e -p "Do you wish to proceed with the redirection? [Y/n] " confirm < /dev/tty
@@ -191,33 +191,33 @@ validate_http() {
     if [ "$confirm" != "Y" ] && [ "$confirm" != "y" ] && [ "$confirm" != "" ]; then
       printf "%s\n" "OK. Will not redirect."
     else
-      url_effective=$(curl -s -k -L --max-redirs "$max_redirects" -o /dev/null -w "%{url_effective}" "$1") || { echo "$msg_error: Unable to follow the redirection"; return 1; } # -L: follow redirects up to the value of max_redirects
-      echo "URL effectively redirected from $1 to $url_effective."
+      url_effective=$(curl -s -k -L --max-redirs "$max_redirects" -o /dev/null -w "%{url_effective}" "$1") || { echolog "$msg_error: Unable to follow the redirection"; return 1; } # -L: follow redirects up to the value of max_redirects
+      echolog "URL effectively redirected from $1 to $url_effective."
       status_redirect="$(curl -s -k  --max-redirs "$max_redirects" --head -w "%{http_code}" "$url_effective" -o /dev/null)"
       if [ -n "${2+x}" ]; then
         printf -v "$2" '%s' "$url_effective"
         msg_redirect="Following redirection, value of '$2' changed to $url_effective."
         [ "${BASH_SOURCE[1]}" = './makestaticsite.sh' ] && msg_redirect+=" Please ensure that this value is stored in the configuration file to avoid potential issues in generating the mirror."
-        echo "$msg_redirect"; return
+        echolog "$msg_redirect"; return
       fi
       if [ "$status_redirect" = "200" ]; then
-        echo "Connection established OK." "$e"
+        echolog "Connection established OK." "$e"
         return 
       elif [ "$status_redirect" = "401" ]; then
-        echo "$msg_warning: unauthorised (HTTP code $status). This means that you will need to enter a username and password as wget parameters for wget_extra_options (which you can set a bit later)."
+        echolog "$msg_warning: unauthorised (HTTP code $status). This means that you will need to enter a username and password as wget parameters for wget_extra_options (which you can set a bit later)."
       else
-        echo "$msg_error: failed to connect; the response code was $status (exit code: $?). Please try again."
+        echolog "$msg_error: failed to connect; the response code was $status (exit code: $?). Please try again."
         return 1
       fi
     fi
   elif [ "$status" = "401" ]; then
-    echo "$msg_warning: unauthorised (HTTP code $status).  This means that you will need to enter a username and password as wget parameters for wget_extra_options (which you can set a bit later)."
+    echolog "$msg_warning: unauthorised (HTTP code $status).  This means that you will need to enter a username and password as wget parameters for wget_extra_options (which you can set a bit later)."
   elif [ "$run_unattended" = "yes" ]; then
-    echo "$msg_error: failed to connect; the response code was $status (exit code: $?). Aborting.  Please check the URL and your network connectivity."; exit
+    echolog "$msg_error: failed to connect; the response code was $status (exit code: $?). Aborting.  Please check the URL and your network connectivity."; exit
   else
-    echo " "; echo "$msg_status"
-    echo -n "$msg_error: Unable to connect to $1. The response code was $status (exit code: $?). "
-    ! validate_internet && echo -n "There doesn't appear to be any Internet connectivity. Is the server up and running? Perhaps you are offline? "
+    echolog " "; echolog "$msg_status"
+    echolog -n "$msg_error: Unable to connect to $1. The response code was $status (exit code: $?). "
+    ! validate_internet && echolog -n "There doesn't appear to be any Internet connectivity. Is the server up and running? Perhaps you are offline? "
     return 1
   fi
 }
@@ -233,7 +233,7 @@ validate_url_range() {
   # For Wayback URLs with ranges, use (and update) the 'from' date
   datetime_range_check=$(echo "$url_var" | grep "/$datetime_regex-")
   if [ "$datetime_range_check" != "" ]; then
-    echo "Date range detected in URL."
+    echolog "Date range detected in URL."
 # shellcheck disable=SC2001
     url_from=$(echo "$url_var" | sed 's~\('/"$datetime_regex"'\)-'"$datetime_regex"/'~\1/~')
     wayback_date_from=$(echo "$url_var" | grep -o "/${datetime_regex}-${datetime_regex}/" | grep -o "$datetime_regex\-" | grep -o "$datetime_regex")
@@ -254,7 +254,7 @@ validate_url_range() {
 validate_yesno() {
   # Assume that any option that starts with 'n' or 'N' is a 'no', similarly for 'yes'
   if [ "${1:0:1}" != "n" ] && [ "${1:0:1}" != "N" ] && [ "${1:0:1}" != "y" ] && [ "${1:0:1}" != "Y" ]; then
-    echo "Error: please enter 'y' for yes or 'n' for no."
+    echolog "Error: please enter 'y' for yes or 'n' for no."
     return 1
   fi
 }
