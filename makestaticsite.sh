@@ -331,11 +331,11 @@ initialise_variables() {
      if [ ! -d "$mirror_dir/$mirror_archive_dir" ]; then
        echolog "ATTENTION! No mirror archive was found at $mirror_dir/$mirror_archive_dir"
        echolog "Here is a list of possible mirror IDs:"
-       ! cd_check "$mirror_dir" && { echolog "Aborting."; exit; }
+       cd_check "$mirror_dir" || { echolog "Aborting."; exit; }
        pwd
        sh -c "ls -d */ | sed 's/\///'"
        echolog "Please choose one from the list and rerun with -m option."
-       ! cd_check "$script_dir" && { echolog "Aborting."; exit; }
+       cd_check "$script_dir" || { echolog "Aborting."; exit; }
        exit
      else
        echolog "Found mirror archive at $mirror_dir/$mirror_archive_dir"
@@ -1053,7 +1053,7 @@ wget_mirror() {
 # - Wayback Machine (Wayback Machine Downloader)
 # - the rest (Wget)
 mirror_site() {
-  ! cd_check "$mirror_dir" "can't access working directory for the mirror ($mirror_dir)" && { echolog "Aborting."; exit 1; }
+  cd_check "$mirror_dir" "can't access working directory for the mirror ($mirror_dir)" || { echolog "Aborting."; exit 1; }
 
   if [ "$use_wayback_cli" = "yes" ]; then
     echolog "Retrieving archive for $domain... "
@@ -1084,7 +1084,7 @@ mirror_site() {
     wget_mirror
     if [ "$wayback_url" = "yes" ]; then
       wayback_wget_postprocess
-      ! cd_check "$mirror_dir" "can't access working directory for the mirror ($mirror_dir)" && { echolog "Aborting."; exit 1; }
+      cd_check "$mirror_dir" "can't access working directory for the mirror ($mirror_dir)" || { echolog "Aborting."; exit 1; }
     fi
   fi
 }
@@ -1131,7 +1131,7 @@ generate_extra_domains() {
 # We use Wget instead of cURL to avoid repeated overwrites -
 # target files are not expected to change during this site generation
 wget_extra_urls() {
-  ! cd_check "$mirror_dir" && { echolog "Aborting."; exit; }
+  cd_check "$mirror_dir" || { echolog "Aborting."; exit; }
 
   if (( wget_extra_urls_count == 1 )); then
 
@@ -1816,7 +1816,7 @@ process_assets() {
         mv_dir="$working_mirror_dir/$extra_dir"
         if [ "$url_path" != "" ] && [[ $url_path =~ $extra_dir ]] && [ "$extra_dir" != "" ]; then
           # Move files
-          ! cd_check "$extra_dir" && { echolog "Aborting."; exit; }
+          cd_check "$extra_dir" || { echolog "Aborting."; exit; }
           for x in *; do
             mv_file="$mv_dir/$x"
             mv_params=("--" "$mv_file" "$mirror_assets_directory/$extra_dir/")
@@ -1826,7 +1826,7 @@ process_assets() {
               echolog "Moved file: $mv_file." "1"
             fi
           done
-          ! cd_check "$working_mirror_dir" && { echolog "Aborting."; exit; }
+          cd_check "$working_mirror_dir" || { echolog "Aborting."; exit; }
         elif [ -d "$mv_dir" ]; then
           # Move directories
           asset_move="$mv_dir to $mirror_assets_directory/"
@@ -1857,7 +1857,7 @@ process_assets() {
 #     (subject to user confirmation).
 #  4. If Wget --cut-dirs options set, then only carry out option 3.
 site_postprocessing() {
-  ! cd_check "$working_mirror_dir" && { echolog "Aborting."; exit; }
+  cd_check "$working_mirror_dir" || { echolog "Aborting."; exit; }
   echolog "Carrying out site postprocessing in $working_mirror_dir ... "
 
   # Adjust storage locations of assets, where applicable
@@ -1960,7 +1960,7 @@ site_postprocessing() {
     echolog "Done."
   fi
 
-  ! cd_check "$mirror_dir" && { echolog "Aborting."; exit; }
+  cd_check "$mirror_dir" || { echolog "Aborting."; exit; }
 }
 
 add_extras() {
@@ -2002,7 +2002,7 @@ add_extras() {
 }
 
 clean_mirror() {
-  ! cd_check "$working_mirror_dir" && { echolog "Aborting."; exit; }
+  cd_check "$working_mirror_dir" || { echolog "Aborting."; exit; }
 
   # Reconstruct the canonical URL and replace index.html, the default output from Wget
   url_base_deploy="$protocol://$deploy_domain"
@@ -2177,7 +2177,7 @@ clean_mirror() {
 
   # For Wayback Machine mirrors, optionally rename domain folder
   if [ "$wayback_url" = "yes" ] && [ "$wayback_domain_original" = "yes" ]; then
-    ! cd_check "$mirror_dir/$mirror_archive_dir/" && { echolog "Aborting."; exit; }
+    cd_check "$mirror_dir/$mirror_archive_dir/" || { echolog "Aborting."; exit; }
     mv "$domain" "$domain_original" || echolog "$msg_warning: Unable to rename working_mirror_dir $mirror_dir/$mirror_archive_dir/$domain_original"
     echolog "Renamed $working_mirror_dir to $mirror_dir/$mirror_archive_dir/$domain_original."
     # Update mirror variable
@@ -2203,7 +2203,7 @@ clean_mirror() {
        makestaticsite_session_comment+="\n"
     done
     IFS="$old_ifs"
-    ! cd_check "$mirror_dir/$mirror_archive_dir/" && { echolog "Aborting."; exit; }
+    cd_check "$mirror_dir/$mirror_archive_dir/" || { echolog "Aborting."; exit; }
     # Regenerate list of web pages
     while IFS= read -r line; do webpages_final+=("$line"); done <<<"$(for file_ext in "${htmltidy_file_exts[@]}"; do find . -type f -name "$file_ext" "${asset_exclude_dirs[@]}" -print; done)"
     for opt in "${webpages_final[@]}"; do
@@ -2212,7 +2212,7 @@ clean_mirror() {
     done
   fi
   
-  ! cd_check "$mirror_dir" && { echolog "Aborting."; exit; }
+  cd_check "$mirror_dir" || { echolog "Aborting."; exit; }
 }
 
 process_snippets() {
@@ -2221,7 +2221,7 @@ process_snippets() {
   [ -d "$snippets_dir" ] || { mkdir -p "$snippets_dir"; echolog "Created folder for snippet files at $snippets_dir."; }
 
   # Change to subs directory
-  ! cd_check "$script_dir/$sub_dir" "can't access substitutes directory ($script_dir/$sub_dir). No substitutions can be made." && { echolog "Aborting."; exit 1; }
+  cd_check "$script_dir/$sub_dir" "can't access substitutes directory ($script_dir/$sub_dir). No substitutions can be made." || { echolog "Aborting."; exit 1; }
 
   # Create a substitutions area replicating the mirrored folder
   [ -d "$mirror_archive_dir" ] || mkdir -p "$mirror_archive_dir"
@@ -2314,7 +2314,7 @@ process_snippets() {
     cp -r "$snippets_src/." "$dest/." || { printf ".\n%s: Unable to copy the snippets to the mirror.\n" "$msg_error"; }
   fi
 
-  ! cd_check "$script_dir" "$msg_warning: cannot change directory to $script_dir." && echolog " "
+  cd_check "$script_dir" "$msg_warning: cannot change directory to $script_dir." || echolog " "
 }
 
 #  If Wget --cut-dirs not specified, then move top-level index.html to root directory.
@@ -2326,7 +2326,7 @@ cut_mss_dirs() {
   if [ "$cut_dirs" != "0" ]; then
     return 0
   fi
-  ! cd_check "$working_mirror_dir" && { echolog "Aborting."; exit; }
+  cd_check "$working_mirror_dir" || { echolog "Aborting."; exit; }
   dir_path="$working_mirror_dir/$url_path_dir"
   mv "$dir_path/"* "$working_mirror_dir/"
   echolog "Moved files and folders from $dir_path to $working_mirror_dir/." "1"
@@ -2339,7 +2339,7 @@ cut_mss_dirs() {
 }
 
 create_zip() {
-  ! cd_check "$mirror_dir" "Unable to enter directory $mirror_dir"$'\n'"Skipping the creation of the zip file." && { echolog " "; return; }
+  cd_check "$mirror_dir" "Unable to enter directory $mirror_dir"$'\n'"Skipping the creation of the zip file." || { echolog " "; return; }
   echolog "Creating a ZIP archive ... "
   if [ -f "$zip_archive" ]; then
     zip_backup="$zip_archive.backup"
@@ -2350,7 +2350,7 @@ create_zip() {
   [ "$zip_omit_download" = "yes" ] && zip_options+=" -x $mirror_archive_dir$hostport_dir/$zip_download_folder/*" 
   IFS=" " read -ra zip_options_all <<< "$zip_options"
   zip "${zip_options_all[@]}"
-  ! cd_check "$script_dir" && echolog " "
+  cd_check "$script_dir" || echolog " "
   echolog "ZIP archive created at $mirror_dir/$zip_archive."
 }
 
@@ -2394,7 +2394,7 @@ prep_rsync() {
 }
 
 deploy() {
-  ! cd_check "$working_mirror_dir" && { echolog "Aborting."; exit; }
+  cd_check "$working_mirror_dir" || { echolog "Aborting."; exit; }
 
   # Final tweaks for canonical URL links ahead of deployment
   printf "Updating internal anchors to conform with canonical URLs ... "
@@ -2411,7 +2411,7 @@ deploy() {
   find . -type f -name "*.html" -exec sed "${sed_options[@]}" "${sed_subs[@]}" {} +
 
   echolog "Done."
-  ! cd_check "$script_dir" "$msg_warning: cannot change directory to $script_dir." && echolog " "
+  cd_check "$script_dir" "$msg_warning: cannot change directory to $script_dir." || echolog " "
 
   # Copy zip file into site uploads folder, ready for deployment
   mkdir -p "$working_mirror_dir/$zip_download_folder"
