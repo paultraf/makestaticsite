@@ -469,13 +469,13 @@ write_config() {
     # copy to default.cfg if it doesn't already exist else confirm whether or not to overwrite it
     default_cfg="$script_dir/config/default.cfg"
     if [ ! -f "$default_cfg" ]; then
-      cp "$write_file" "$default_cfg"
+      cp_check "$write_file" "$default_cfg"
       printf "Made a copy to default.cfg.  This means that you can run makestaticsite.sh without a parameter and it will load %s automatically.\n" "$cfgfile"
     elif [ "$level" != 0 ]; then
       read -r -e -p "Would you like this configuration to be copied to default.cfg file, which is loaded automatically when you run makestaticsite.sh without a parameter (y/n)? " confirm
       confirm=${confirm:0:1}
       if [ "$confirm" = "y" ] || [ "$confirm" = "Y" ]; then
-        cp "$write_file" "$default_cfg"
+        cp_check "$write_file" "$default_cfg"
         echo "OK. Made a copy to default.cfg."
       else
         echo "OK. Left default.cfg alone."

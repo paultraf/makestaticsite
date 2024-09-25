@@ -193,6 +193,38 @@ confirm_continue() {
   fi
 }
 
+# Change directory (cd) command, including a check
+# Expected parameter: directory.
+# Optional parameter: custom error message.
+cd_check() {
+  if [ -z ${1+x} ]; then
+    echolog "$msg_error: Invalid call to cd_check() function - a parameter (directory) is required."
+    return 1
+  fi
+  if [ -n "${2+x}" ]; then
+    msg_cd_error="$2."
+  else
+    msg_cd_error="Unable to change directory to $1."
+  fi
+  cd "$1" || { echolog "$msg_error: $msg_cd_error"; return 1; }
+}
+
+# Copy command (cp), including a check
+# Expected parameters: source and destination.
+# Optional parameter: custom error message.
+cp_check() {
+  if [ -z ${1+x} ] || [ -z ${2+x} ]; then
+    echolog "$msg_error: Invalid call to cp_check() function - two parameters required."
+    return 1
+  fi
+  if [ -n "${3+x}" ]; then
+    msg_copy_error="$3."
+  else
+    msg_copy_error="Unable to copy $1 to $2."
+  fi
+  cp "$1" "$2" || { echolog "$msg_error: $msg_copy_error"; return 1; }
+}
+
 get_phase_desc() {
   local opt var
   for opt in "${all_phases[@]}"; do
@@ -355,7 +387,7 @@ comment_uncomment() {
   # make the change locally and copy across
   backup_dir="$script_dir/backup"
   [ -d "$backup_dir" ] || mkdir -p "$backup_dir"
-  cp "$myfile" "$backup_dir/"
+  cp_check "$myfile" "$backup_dir/"
   file_name=$(basename "${myfile}")
   edited_file="$backup_dir/$file_name"
   sed -i'.backup' "s/$mystring/$replacement_string/" "$edited_file"

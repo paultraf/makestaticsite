@@ -85,7 +85,7 @@ main() {
 #                Support functions
 ###################################################
 
-# Override built-in echo and also write to log file
+# Simultaneously echo to terminal and write to log file
 # This takes an optional priority parameter (number) to constrain output,
 # stored in echo_num:
 #  0 (liberal)    - echo unless output level is silent
@@ -1370,7 +1370,7 @@ wget_extra_urls() {
 
   printf "%s\n" "${webassets_filtered[@]}" > "$input_file_extra"
   if (( wget_extra_urls_count == 1 )); then
-    cp "$input_file_extra" "$input_file_extra_all" 
+    cp_check "$input_file_extra" "$input_file_extra_all" "unable to make a copy of the Wget input file, $input_file_extra, to $input_file_extra_all."
   else
     # generate a diff and store result as $input_file_extra
     diff "$input_file_extra_all" "$input_file_extra" | grep "> " | grep -o "http[^[:space:]]*" > "${input_file_extra}.tmp"
@@ -1995,7 +1995,7 @@ add_extras() {
   # First, try with rsync, otherwise use cp, to make the copy
   if ! rsync "${rsync_options[@]}" "$extras_src/" "$extras_dest"; then
     printf "%s: there was a problem running rsync.  Using 'cp' command ... " "$msg_error"
-    cp -r "$extras_src/." "$extras_dest/." || { printf "%s: copy failed.\n" "$msg_error"; return; }
+    cp -r "$extras_src/." "$extras_dest/." || { echolog "$msg_error: copy failed."; return; }
   fi
   error_set -e
   echolog "Done."
@@ -2080,7 +2080,7 @@ clean_mirror() {
     robots_path="$mirror_dir/$mirror_archive_dir$hostport_dir/robots.txt"
     robots_default="$script_dir/$lib_files/$robots_default_file"
     if [ -f "$robots_default" ]; then
-      cp "$robots_default" "$robots_path"
+      cp_check "$robots_default" "$robots_path"
     else
       touchmod "$robots_path"
     fi
@@ -2274,7 +2274,7 @@ process_snippets() {
 
         # Freshen the files to be updated by copying across from the latest mirror
         echolog "local source: $working_mirror_dir/$src_file copied to $sub_input_dir/" "1"
-        mkdir -p "$sub_input_dir" && cp "$working_mirror_dir/$src_file" "$sub_input_dir/"
+        mkdir -p "$sub_input_dir" && cp_check "$working_mirror_dir/$src_file" "$sub_input_dir/"
 
         # Loop through the snippet IDs for this file, read and apply changes for each
         # (uses the /r command to read input from a file)
@@ -2291,7 +2291,7 @@ process_snippets() {
           sed -i'.original.'"$i" -e '/'"$end"'/r '"$snippet_file" -e '/'"$start"'/,/'"$end"'/d' "$sub_input_file"
         done
         (( snippets_count+=1 ))
-        cp "$sub_input_file" "$src_dir"
+        cp_check "$sub_input_file" "$src_dir"
       fi
     done < "$snippets_data_file"
   fi
@@ -2417,10 +2417,12 @@ deploy() {
   mkdir -p "$working_mirror_dir/$zip_download_folder"
   local_dest="$working_mirror_dir/$zip_download_folder/$zip_filename"
   if [ "$upload_zip" = "yes" ]; then
-    cp "$mirror_dir/$zip_archive" "$local_dest" || { echolog "$msg_error: can't copy zip archive into the site uploads area, $local_dest" >&2; exit 1; }
+    if ! cp_check "$mirror_dir/$zip_archive" "$local_dest" "can't copy zip archive into the site uploads area, $local_dest"; then
+      exit 1
+    fi
   fi
 
-  cmd_check "rsync" "1" || { printf "%s: The rsync command is not available.\nCheck that it is installed and is within PATH.\nAborting.\n" "$msg_error"; exit; }
+  cmd_check "rsync" "1" || { echolog "$msg_error: the rsync command is not available."$'\n'"Check that it is installed and is within PATH."$'\n'"Aborting."; exit; }
 
   src="$working_mirror_dir"
   comment_status=0   # Host entry commented out? (0 for no, 1 for yes)
