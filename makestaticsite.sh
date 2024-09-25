@@ -2339,7 +2339,7 @@ cut_mss_dirs() {
 }
 
 create_zip() {
-  ! cd_check "$mirror_dir" "Unable to enter directory $mirror_dir"$'\n'"Skipping the creation of the zip file." && { && echolog " "; return; }
+  ! cd_check "$mirror_dir" "Unable to enter directory $mirror_dir"$'\n'"Skipping the creation of the zip file." && { echolog " "; return; }
   echolog "Creating a ZIP archive ... "
   if [ -f "$zip_archive" ]; then
     zip_backup="$zip_archive.backup"
