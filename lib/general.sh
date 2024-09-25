@@ -202,11 +202,11 @@ cd_check() {
     return 1
   fi
   if [ -n "${2+x}" ]; then
-    msg_cd_error="$2."
+    msg_cd_error="$2. "
   else
-    msg_cd_error="Unable to change directory to $1."
+    msg_cd_error="$msg_error: Unable to change directory to $1. "
   fi
-  cd "$1" || { echolog "$msg_error: $msg_cd_error"; return 1; }
+  cd "$1" || { echolog -n "$msg_cd_error"; return 1; }
 }
 
 # Copy command (cp), including a check

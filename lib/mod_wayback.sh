@@ -213,7 +213,7 @@ wayback_url_paths() {
 # Augment list of candidate URLs
 wayback_augment_urls(){
   src_path_snapshot="$working_mirror_dir/$url_path_snapshot_prefix"
-  cd "$src_path_snapshot" || { echolog "$msg_error: Unable to enter $src_path_snapshot.  Aborting"; exit; }
+  ! cd_check "$src_path_snapshot" && { echolog "Aborting."; exit; }
   snapshot_path_list=()
   while IFS= read -r line; do
     line="${line#./}"
@@ -303,7 +303,7 @@ wayback_filter_domains() {
   # but subsequent runs will potentially generate many more, depending on
   # the URLs harvested from the initially downloaded pages.
   # For web pages, timestamped folder names contain only numbers.
-  cd "$src_path_snapshot" || { echolog "$msg_error: Unable to enter $src_path_snapshot.  Aborting"; exit; }
+  ! cd_check "$src_path_snapshot" && { echolog "Aborting."; exit; }
 
   snapshot_path_list=()
   while IFS= read -r line; do
@@ -363,7 +363,7 @@ wayback_filter_domains() {
   IFS=$'\n' webassets_http=($(sort -u <<<"${webassets_wayback[*]}"))
   IFS="$temp_IFS"
   
-  cd "$mirror_dir"
+  ! cd_check "$mirror_dir" && echolog " "
 }
 
 # Apply Wayback snapshot-related filters to determine web assets (URLs)
@@ -403,7 +403,7 @@ consolidate_assets() {
   [ "${webpages[*]}" = "" ] && echolog "$msg_warning: no web pages found for processing."
   num_webpages="${#webpages[@]}"
   
-  cd "$src_path_snapshot" || echolog "Unable to enter $src_path_snapshot"
+  ! cd_check "$src_path_snapshot" && echolog " "
   snapshot_exclude_dirs=()
   snapshot_list=("$wayback_date_from")
   for item in "${snapshot_list[@]}"; do
@@ -432,7 +432,7 @@ consolidate_assets() {
   date_to_readable="$(timestamp_readable "$last_snapshot_dir_root")"
   msg_wayback="The site was generated from a Wayback Machine and used $num_snapshot_dirs snapshots, ranging from $wayback_date_from to $last_snapshot_dir, i.e. from $date_from_readable to $date_to_readable."
 
-  cd "$working_mirror_dir" || { echolog "msg_error: Unable to return to $working_mirror_dir. Aborting."; exit; } 
+  ! cd_check "$working_mirror_dir" "msg_error: Unable to return to $working_mirror_dir." && { echolog "Aborting."; exit; } 
 
   # Initialised source and destination paths (trunks)
   dest_path="$working_mirror_dir/$url_path"
@@ -506,7 +506,7 @@ consolidate_assets() {
     (( count++ ))
   done
 
-  cd "$src_path_snapshot" || { echolog "$msg_error: Unable to enter $src_path_snapshot.  Aborting"; exit; }
+  ! cd_check "$src_path_snapshot" && { echolog "Aborting."; exit; }
 
   ## Copy over directories and folders to URL Path.
   for snapshot_dir in "${snapshot_path_list[@]}"; do
@@ -517,9 +517,9 @@ consolidate_assets() {
     fi
     echolog "Entering $snapshot_dir" "1"
     if [ -d "$snapshot_dir" ]; then
-      cd "$snapshot_dir"
+      ! cd_check "$snapshot_dir" && echolog " "
     else
-      echolog "$msg_warning: unable to enter directory $snapshot_dir" "1"; continue
+      echolog "$msg_warning: the $snapshot_dir isn't present, so unable to enter it." "1"; continue
     fi
 
     while IFS= read -r copy_dir; do
@@ -581,17 +581,17 @@ consolidate_assets() {
         fi
       done <<<"$(find "." -maxdepth 1 -type f ! -empty -print)"
     done <<<"$(find "." -type d ! -empty -not -path "." -not -path "" -print)"
-    cd "$src_path_snapshot" || { echolog "Unable to cd back to $src_path_snapshot"; exit; }
+    ! cd_check "$src_path_snapshot" "$msg_serror: Unable to change directory back to $src_path_snapshot" && { echolog "Aborting."; exit; }
   done
 
-  cd "$working_mirror_dir" || echolog "$msg_warning: Unable to enter $working_mirror_dir"
-  cd "$url_path_dir" || echolog "$msg_warning: Unable to enter $working_mirror_dir"
+  ! cd_check "$working_mirror_dir" && echolog " "
+  ! cd_check "$url_path_dir" && echolog " "
   webpaths_output2=() # to store directory paths for internal links, creating array before moving supporting assets here
   while IFS='' read -r line; do
     webpaths_output2+=("$line")
     line=${line:2}
   done < <(find "." -type d "${asset_exclude_dirs[@]}" -print)
-  cd "$src_path_snapshot" || { echolog "Unable to cd back to $src_path_snapshot"; exit; }
+  ! cd_check "$src_path_snapshot" && { echolog "Aborting"; exit; }
   if [ "$url_path_original" != "" ]; then
     folder_exclude="$url_path_original/"
     folder_exclude="${folder_exclude%\/*}"
@@ -600,7 +600,7 @@ consolidate_assets() {
     folder_exclude_not_path=
   fi
 
-  cd "$url_path_snapshot_root" || echolog "Unable to enter $url_path_snapshot_root"
+  ! cd_check "$url_path_snapshot_root" && echolog " "
   if [ "$url_path_original" != "" ]; then
     while IFS= read -r line; do
       line="${line#./}"
@@ -617,7 +617,7 @@ consolidate_assets() {
     done <<<"$(find . -maxdepth 1 -type d ! -empty -not -path "." $folder_exclude_not_path -print)"
   fi
   print_progress
-  cd "$working_mirror_dir" || echolog "$msg_warning: Unable to enter $working_mirror_dir"
+  ! cd_check "$working_mirror_dir" "$msg_warning: Unable to enter $working_mirror_dir" && echolog " "
 }
 
 # Convert absolute URLs or paths to relative URLs for internal anchors
@@ -626,7 +626,7 @@ process_asset_anchors() {
   print_progress "0" "100";
 
   # Generate lists of webasset paths
-  cd "$url_path_dir" || echolog "$msg_warning: Unable to enter $working_mirror_dir"
+  ! cd_check "$url_path_dir" "$msg_warning: Unable to enter $working_mirror_dir" && echolog " "
   webpages_output1=() # to store file paths to web pages only
   webpaths_output1=() # to store file paths to web assets for internal links
 
@@ -724,14 +724,14 @@ process_asset_anchors() {
     (( count++ ))
   done
   print_progress
-  cd "$working_mirror_dir"
+  ! cd_check "$working_mirror_dir" && echolog " "
 }
 
 # Postprocessing of Wget output
 # generated by requests to Wayback Machine
 wayback_wget_postprocess() {
   # Insert Wayback Machine domain for relative links to the root directory
-  cd "$working_mirror_dir" || { printf "Unable to enter %s.\nAborting.\n" "$working_mirror_dir"; exit; }
+  ! cd_check "$working_mirror_dir" && { echolog "Aborting."; exit; }
   while IFS='' read -r opt; do
     # Carry out search and replace
     sed_subs=('s|\([\"'\'']\)\('"$url_timeless_nodomain"'\)|'"\1$url_base\2"'|g' "$opt")
