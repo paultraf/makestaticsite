@@ -171,7 +171,7 @@ validate_http() {
     echolog "$msg_status"
   fi
   curl_options=(-s -k)
-  if [ "$wget_user_agent" != "" ];then
+  if [ "$wget_user_agent" != "" ] && [ "$wget_user_agent" != "default" ];then
     curl_options+=(-A "$wget_user_agent") # note that we don't need to insert extra quotes
   fi
   curl_options+=(--head -w "%{http_code}" "$1" -o /dev/null)
