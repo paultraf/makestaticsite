@@ -31,6 +31,69 @@ error_set() {
   fi
 }
 
+# Simultaneously echo to terminal and write to log file
+# This takes an optional priority parameter (number) to constrain output,
+# stored in echo_num:
+#  0 (liberal)    - echo unless output level is silent
+#  1 (normal)     - echo normally
+#  2 (restricted) - echo only for full logging (this priority is meant for
+#                   internal processing)
+#
+echolog() {
+  echo_num=
+  temp_IFS="$IFS"; IFS="|"
+  params=("$@")
+  if [ -z ${1+x} ]; then
+    echo_txt=
+  elif [ "$1" = "-e" ] || [ "$1" = "-n" ]; then
+    echo_opt="$1"
+    echo_txt="$2"
+    if [ -n "${3+x}" ]; then
+      echo_num="$3"
+    fi
+  else
+    echo_opt=
+    echo_txt="$1"
+    if [ -n "${2+x}" ]; then
+      echo_num="$2"
+    fi
+  fi
+  echo_tty="$echo_txt"
+  echo_log="$echo_txt"
+  # Now remove the priority parameter (if supplied)
+  if [ "$#" = "3" ] || { [ "$#" = "2" ] && [ "$echo_opt" = "" ]; }; then
+    unset "params["${#params[@]}-1"]"
+  fi
+
+  if [ "$echo_num" = "0" ]; then
+  # For priority 0, don't echo anything to terminal when level is silent
+    if [ "$output_level" = "silent" ]; then
+      echo_tty=""
+    fi
+  elif [ "$echo_num" = "1" ]; then
+    # For priority 1, don't echo anything unless runtime level is normal or verbose
+    if [ "$output_level" != "normal" ] && [ "$output_level" != "verbose" ]; then
+      echo_tty=""
+    fi;
+  elif [ "$echo_num" = "2" ]; then
+    # For priority 2, only log and echo when verbose
+    if [ "$log_level" != "verbose" ]; then
+      echo_log=""
+    fi
+    if [ "$output_level" != "verbose" ]; then
+      echo_tty=""
+    fi
+  fi
+  if [ "$echo_tty" != "" ]; then
+    echo "${params[@]}"
+  fi
+  if [ "$echo_log" != "" ] && [ "$log_level" != "silent" ] && [ -n "${log_file+x}" ]; then
+    echo "${params[@]}" >> "$log_file"
+  fi
+
+  IFS="$temp_IFS"
+}
+
 # Return canonical form for on/off, yes/no.
 # Assume that any option (first parameter) that 
 # starts with 'n' or 'off' (as lower case) is a 'no';
