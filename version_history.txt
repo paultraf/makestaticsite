@@ -19,6 +19,35 @@
 ##########################################################################
 
 
+0.30.7 (released on 2024-09-)
+       * System refinements and maintenance *
+        [makestaticsite.sh]
+         Renamed echo() to echolog(), so no longer override built-in 'echo'
+         command, and moved to lib/generals.sh; updated function calls.  
+         Updated calls to cd() with cd_check(); and to cp() with cp_check()
+         conclude(): replaced calls to printf() by echolog(), enabling logging
+         of summary run information.
+        [setup.sh]
+         Updated calls to cd() with cd_check(); and to cp() with cp_check().
+        [lib/constants.sh]
+         Refined constant wget_user_agent to three types of values based on
+         no agent, Wget, or user-defined.
+        [lib/general.sh]
+         echolog() function moved here; replaced calls to echo() by echolog().
+         stopclock(): replaced calls to printf() by echolog(), enabling
+         logging of clock timings.
+         New function cd_check(), combining 'cd' command with error checking,
+         including optional custom error messages.
+         New function cp_check(), combining 'cp' command with error checking,
+         including optional custom error messages.
+        [lib/validate.sh]
+         Replaced calls to echo() by echolog().
+        [lib/mod_wayback.sh]
+         Replaced calls to echo() by echolog().
+        [README.md]
+         Updated the 'About' section to include added support for Wayback
+         Machine.
+
 0.30.6 (released on 2024-09-24)
        * Further Wayback Machine support, including date ranges *
         [lib/constants.sh]
@@ -36,7 +65,7 @@
          on the 'from' date, with support for redirection.
          check_wayback_url(): added routine to adjust URL when target site
          missing http protocol; added third function argument (name of URL
-         variable) to support update variable assignment. 
+         variable) to support update variable assignment.
         [lib/mod_wayback.sh]
          Swapped roles of wayback_date_to and wayback_date_from.
          wmd_get_wayback_site(): wayback_date_from renamed as

@@ -22,7 +22,7 @@
 ################################################
 # MakeStaticSite info
 ################################################
-version=0.30.7-beta2
+version=0.30.7
 version_date='26 September 2024'
 version_header="MakeStaticSite version $version, released on $version_date."
 mss_license="GNU Affero General Public License version 3"
