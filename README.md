@@ -27,7 +27,9 @@ MakeStaticSite (project site [https://makestaticsite.sh/](https://makestaticsite
 
 ## About
 
-MakeStaticSite provides a convenient means to set up and manage the automated creation and deployment of static versions of websites.  These include content management systems (such as [WordPress](https://wordpress.org/) and [Drupal](https://drupal.org/)) that can, for example, be administered locally and then deployed remotely to a hosting provider or Content Distribution Network (CDN).  Strictly speaking, this is not an archival tool as the output is not an exact mirror, but a version of the site that preserves content while aiming to remain current. For example, RSS feeds are saved and then renamed with `.xml` extensions, and further files may be added.
+MakeStaticSite provides a convenient means to set up and manage the automated creation and deployment of static (or flat) versions of websites.  These include content management systems (such as [WordPress](https://wordpress.org/) and [Drupal](https://drupal.org/)) that can, for example, be administered locally and then deployed remotely to a hosting provider or Content Distribution Network (CDN).  It delivers a version of the site that preserves content and look and feel, in a static format that is inherently fast and secure.
+
+MakeStaticSite is not intended as a strict archival tool as the output is not an exact mirror &mdash; for example, it has its own canonical layout and modifies internal links accordingly; further files may be added; RSS feeds are saved and then renamed with `.xml` extensions, and so on. Nevertheless, it has been recently extended to provide native support for the Wayback Machine, focused mainly on the [Internet Archive Service](https://web.archive.org/).
 
 The goal is for anyone who has a little familiarity with the command line to be able to use the tool to assist in maintaining their sites.  Similarly, a scripting-based approach has been chosen to make the code widely accessible for developers to further fine-tune;
 a number of refinements are already included that augment the standard use of [Wget](https://www.gnu.org/software/wget/), such as support for arbitrary attributes and, in the case of WordPress, the use of [WP-CLI](https://wp-cli.org/) to prepare sites beforehand.
@@ -62,6 +64,7 @@ Please note that the system is not designed for [Wget2](https://gitlab.com/gnuwg
 * For [WordPress](https://wordpress.org) installations, optional WP-CLI-based site streamlining with a drop-in search replacement (WP Offline Search plugin) that works offline.
 * Snippets &mdash; for tweaking page with offline variants using chunks of HTML.
 * Assistance for W3C standards compliance with [HTML Tidy](https://www.html-tidy.org/). The system also generates a sitemap XML and `robots.txt` file under the primary domain to match the outputted files.
+* Support for the Wayback Machine, including date-time ranges.
 
 ### Limitations
 

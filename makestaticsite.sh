@@ -863,7 +863,7 @@ wget_mirror() {
     wget_sitemap_options+=("$wvol")
   fi
 
-  if [ "$wget_user_agent" != "" ] && [ "$wget_user_agent" != "default" ]; then
+  if [ "$wget_user_agent" != "default" ]; then
     if [ "$require_login" != "yes" ] || [ "$wget_cookies_nullify_user_agent" = "no" ]; then
       wget_extra_options+=(-U "$wget_user_agent")
       wget_extra_options_print+=(-U \""$wget_user_agent"\")
