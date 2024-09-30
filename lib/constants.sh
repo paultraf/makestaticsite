@@ -22,8 +22,8 @@
 ################################################
 # MakeStaticSite info
 ################################################
-version=0.30.7
-version_date='26 September 2024'
+version=0.30.7.1-alpha1
+version_date='30 September 2024'
 version_header="MakeStaticSite version $version, released on $version_date."
 mss_license="GNU Affero General Public License version 3"
 mss_download="https://makestaticsite.sh/download/makestaticsite_latest.tar.gz"
@@ -98,7 +98,7 @@ wget_version_atleast=1.21
 wget_error_level=4              # The lowest Wget error code tolerated or else aborts (>8 for no tolerance)
 wget_protocol_relative_urls=yes # Allow protocol-relative URLs to be fetched by Wget by prefixing a protocol (y/n)
 wget_protocol_prefix=https      # Protocol to prefix protocol-relative URLs
-wget_user_agent=                # Set browser user agent
+wget_user_agent=default         # Set browser user agent
                                 # - 'default' for Wget's default ‘Wget/version’
                                 # - empty string to not send any
                                 # - otherwise a non-empty string, wrapped in quotes, e.g. "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15)"

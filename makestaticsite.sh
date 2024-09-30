@@ -173,6 +173,22 @@ read_config() {
   shift $((OPTIND-1))
 }
 
+initialise_include_excludes() {
+  # Directories to exclude from processing
+  # -not -path "/full/path/to/directory/*"
+  asset_exclude_dirs=()
+  IFS=',' read -ra list <<< "$web_source_exclude_dirs"
+  for item in "${list[@]}"; do
+    asset_exclude_dirs+=( -not -path "${working_mirror_dir}/$item/"\* ) # this needs to be a full path
+  done
+}
+
+initialise_mirror() {
+  working_mirror_dir="$mirror_dir/$mirror_archive_dir$hostport_dir"
+  zip_archive="$mirror_archive_dir.zip"
+  initialise_include_excludes
+}
+
 initialise_layout() {
   # Set up logging
   log_file_dir="$script_dir/log"
@@ -540,9 +556,7 @@ initialise_variables() {
   fi
 
   if [ "$mirror_archive_dir" != "" ]; then
-    working_mirror_dir="$mirror_dir/$mirror_archive_dir$hostport_dir"
-    zip_archive="$mirror_archive_dir.zip"
-    initialise_include-excludes
+    initialise_mirror
   fi
 
   mss_cut_dirs=$(yesno "$mss_cut_dirs" "1")
@@ -585,16 +599,6 @@ initialise_variables() {
 
   # Script sign-off message
   msg_signoff="Ending run of MakeStaticSite."
-}
-
-initialise_include-excludes() {
-  # Directories to exclude from processing
-  # -not -path "/full/path/to/directory/*"
-  asset_exclude_dirs=()
-  IFS=',' read -ra list <<< "$web_source_exclude_dirs"
-  for item in "${list[@]}"; do
-    asset_exclude_dirs+=( -not -path "${working_mirror_dir}/$item/"\* ) # this needs to be a full path
-  done
 }
 
 prepare_static_generation() {
@@ -814,14 +818,6 @@ wget_mirror() {
   # Wget configuration and its outputs
   input_options="--input-file=$input_file"
 
-  if [ "$mirror_archive_dir" = "" ]; then
-    mirror_archive_dir="$local_sitename"
-    [ "$archive" = "yes" ] && mirror_archive_dir+="$timestamp"
-    working_mirror_dir="$mirror_dir/$mirror_archive_dir$hostport_dir"
-    zip_archive="$mirror_archive_dir.zip"
-    initialise_include-excludes
-  fi
-
   # Overwrite an existing mirror only if the -m and wget_refresh_mirror flags are unset
   # and then only after run_unattended flag set or consent given
   if [ "$mirror_id_flag" = "off" ] && [ "$wget_refresh_mirror" = "yes" ]; then
@@ -991,13 +987,15 @@ wget_mirror() {
 # - the rest (Wget)
 mirror_site() {
   cd_check "$mirror_dir" "can't access working directory for the mirror ($mirror_dir)" || { echolog "Aborting."; exit 1; }
+  
+  if [ "$mirror_archive_dir" = "" ]; then
+    mirror_archive_dir="$local_sitename"
+    [ "$archive" = "yes" ] && mirror_archive_dir+="$timestamp"
+    initialise_mirror
+  fi
 
   if [ "$use_wayback_cli" = "yes" ]; then
     echolog "Retrieving archive for $domain... "
-    mirror_archive_dir="$local_sitename"
-    [ "$archive" = "yes" ] && mirror_archive_dir+="$timestamp"
-    working_mirror_dir="$mirror_dir/$mirror_archive_dir"
-    zip_archive="$mirror_archive_dir.zip"
 
     # Check for Wayback Machine Downloader binary, else report error (in the absence of an alternative)
     if cmd_check "$wayback_machine_downloader_cmd" "1"; then
@@ -2136,8 +2134,8 @@ clean_mirror() {
       IFS='|' read -ra list <<< "$datum"
       datum_key="${list[0]}"
       datum_value="${list[1]}"
-       makestaticsite_session_comment+=$(printf "<!-- %-12s %-80s %s" "$datum_key:" "$datum_value" "-->")
-       makestaticsite_session_comment+="\n"
+      makestaticsite_session_comment+=$(printf "<!-- %-12s %-80s %s" "$datum_key:" "$datum_value" "-->")
+      makestaticsite_session_comment+="\n"
     done
     IFS="$old_ifs"
     cd_check "$mirror_dir/$mirror_archive_dir/" || { echolog "Aborting."; exit; }
