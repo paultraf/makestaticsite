@@ -202,7 +202,7 @@ validate_http() {
       fi
       if [ "$status_redirect" = "200" ]; then
         echolog "Connection established OK." "$e"
-        return 
+        return
       elif [ "$status_redirect" = "401" ]; then
         echolog "$msg_warning: unauthorised (HTTP code $status). This means that you will need to enter a username and password as wget parameters for wget_extra_options (which you can set a bit later)."
       else
@@ -211,9 +211,12 @@ validate_http() {
       fi
     fi
   elif [ "$status" = "401" ]; then
-    echolog "$msg_warning: unauthorised (HTTP code $status).  This means that you will need to enter a username and password as wget parameters for wget_extra_options (which you can set a bit later)."
+    echolog "$msg_warning: unauthorised (HTTP response code $status).  This means that you will need to enter a username and password as wget parameters for wget_extra_options (which you can set a bit later)."
+  elif [ "$status" = "404" ]; then
+    echolog "$msg_error: File not found (HTTP response code $status). The server was unable to find any resource at this URL."
+    return 1
   elif [ "$run_unattended" = "yes" ]; then
-    echolog "$msg_error: failed to connect; the response code was $status (exit code: $?). Aborting.  Please check the URL and your network connectivity."; exit
+    echolog "$msg_error: failed to connect; the HTTP response code was $status (exit code: $?). Aborting.  Please check the URL and your network connectivity."; exit
   else
     echolog " "; echolog "$msg_status"
     echolog -n "$msg_error: Unable to connect to $1. The response code was $status (exit code: $?). "
