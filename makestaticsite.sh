@@ -183,8 +183,48 @@ initialise_include_excludes() {
   done
 }
 
-initialise_mirror() {
+initialise_mirror_archive_dir() {
+  if [ "$mirror_archive_dir" = "" ]; then
+    mirror_archive_dir="$local_sitename"
+    [ "$archive" = "yes" ] && mirror_archive_dir+="$timestamp"
+  fi
   working_mirror_dir="$mirror_dir/$mirror_archive_dir$hostport_dir"
+
+ # For Wayback Machine mirrors, optionally rename archive folder
+  if [ "$wayback_url" = "yes" ] && (( phase < 3 )); then
+    cd_check "$mirror_dir" || { echolog "Aborting."; exit; }
+    # (re-)name archive directory in terms of constants wayback_sitename_hosts and wayback_sitename_timestamps
+    mirror_archive_dir_old="$mirror_archive_dir"
+    mirror_archive_dir=
+    if [ "$wayback_sitename_hosts" = "primary" ]; then
+      mirror_archive_dir="$domain_original"
+    elif [ "$wayback_sitename_hosts" = "both" ]; then
+      mirror_archive_dir="$domain-$domain_original"
+    else
+      mirror_archive_dir="$domain"
+    fi
+
+    if [ "$wayback_sitename_timestamps" = "mss" ]; then
+      mirror_archive_dir+="$timestamp"
+    elif [ "$wayback_sitename_timestamps" = "both" ]; then
+      if [ "$wayback_sitename_hosts" != "both" ]; then
+        echolog "$msg_warning: setting wayback_sitename_hosts=both to support your setting of wayback_sitename_timestamps=both"
+      fi
+      mirror_archive_dir="$domain$timestamp-$domain_original$wayback_date_from_to"
+    elif [ "$wayback_sitename_timestamps" = "wayback" ] || [ "$wayback_sitename_timestamps" = "" ]; then
+      mirror_archive_dir+="$wayback_date_from_to"
+    fi
+    mirror_archive_dir="${mirror_archive_dir//\./_}"
+    if (( phase > 2 )); then
+      if mv "$mirror_archive_dir_old" "$mirror_archive_dir"; then
+        echolog "Renamed $working_mirror_dir to $mirror_dir/$mirror_archive_dir$hostport_dir." "1"
+      else
+        echolog "$msg_warning: Unable to rename mirror_archive_dir $mirror_dir/$mirror_archive_dir"
+      fi
+    fi
+    # Update mirror variable
+    working_mirror_dir="$mirror_dir/$mirror_archive_dir$hostport_dir"
+  fi
   zip_archive="$mirror_archive_dir.zip"
   initialise_include_excludes
 }
@@ -555,10 +595,10 @@ initialise_variables() {
     hostport_dir="/$hostport"
   fi
 
-  if [ "$mirror_archive_dir" != "" ]; then
-    initialise_mirror
-  fi
-
+  # Define a timestamp and then initialise (generate the name of) the mirror archive directory
+  timestamp=$(timestamp "$timezone")
+  initialise_mirror_archive_dir
+  
   mss_cut_dirs=$(yesno "$mss_cut_dirs" "1")
   cut_dirs=0
   if [[ $wget_extra_options_tmp =~ "--cut-dirs" ]]; then
@@ -588,9 +628,6 @@ initialise_variables() {
   if [ "$cut_dirs" != "0" ]; then
     echolog "$msg_warning: You have specified Wget --cut-dirs option. Ignoring mss_cut_dirs."
   fi
-
-  # Define a timestamp
-  timestamp=$(timestamp "$timezone")
 
   # Further variable initialisation for Wayback URLs
   if [ "$wayback_url" = "yes" ]; then
@@ -987,12 +1024,6 @@ wget_mirror() {
 # - the rest (Wget)
 mirror_site() {
   cd_check "$mirror_dir" "can't access working directory for the mirror ($mirror_dir)" || { echolog "Aborting."; exit 1; }
-  
-  if [ "$mirror_archive_dir" = "" ]; then
-    mirror_archive_dir="$local_sitename"
-    [ "$archive" = "yes" ] && mirror_archive_dir+="$timestamp"
-    initialise_mirror
-  fi
 
   if [ "$use_wayback_cli" = "yes" ]; then
     echolog "Retrieving archive for $domain... "
@@ -2112,12 +2143,16 @@ clean_mirror() {
 
   # For Wayback Machine mirrors, optionally rename domain folder
   if [ "$wayback_url" = "yes" ] && [ "$wayback_domain_original" = "yes" ]; then
-    cd_check "$mirror_dir/$mirror_archive_dir/" || { echolog "Aborting."; exit; }
-    mv "$domain" "$domain_original" || echolog "$msg_warning: Unable to rename working_mirror_dir $mirror_dir/$mirror_archive_dir/$domain_original"
-    echolog "Renamed $working_mirror_dir to $mirror_dir/$mirror_archive_dir/$domain_original."
-    # Update mirror variable
-    working_mirror_dir="$mirror_dir/$mirror_archive_dir/$domain_original"
-  fi
+    cd_check "$mirror_dir/$mirror_archive_dir" || { echolog "Aborting."; exit; }
+    if mv "$domain" "$domain_original"; then
+      # Update mirror variables
+      hostport_dir="/$domain_original"
+      echolog "Renamed $working_mirror_dir to $mirror_dir/$mirror_archive_dir$hostport_dir."
+      working_mirror_dir="$mirror_dir/$mirror_archive_dir$hostport_dir"
+    else
+      echolog "$msg_warning: Unable to rename working_mirror_dir $mirror_dir/$mirror_archive_dir/$domain_original"
+    fi
+  fi  
 
   # Optionally append MakeStaticSite session information
   if [ "$web_print_runtime_data" = "yes" ]; then
@@ -2263,8 +2298,12 @@ cut_mss_dirs() {
   fi
   cd_check "$working_mirror_dir" || { echolog "Aborting."; exit; }
   dir_path="$working_mirror_dir/$url_path_dir"
-  mv "$dir_path/"* "$working_mirror_dir/"
-  echolog "Moved files and folders from $dir_path to $working_mirror_dir/." "1"
+  if mv "$dir_path/"* "$working_mirror_dir/"; then 
+    echolog "Moved files and folders from $dir_path to $working_mirror_dir/" "1"
+  else
+    echolog "$msg_error: unable to move the contents of $dir_path/ to $working_mirror_dir/"
+    confirm_continue
+  fi
 
   # remove top-level folder of $url_path
   url_root_dir=$(printf "%s" "$url_path_dir" | cut -d/ -f1)

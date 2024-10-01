@@ -22,8 +22,8 @@
 ################################################
 # MakeStaticSite info
 ################################################
-version=0.30.7.1-alpha1
-version_date='30 September 2024'
+version=0.30.8-beta1
+version_date='1 October 2024'
 version_header="MakeStaticSite version $version, released on $version_date."
 mss_license="GNU Affero General Public License version 3"
 mss_download="https://makestaticsite.sh/download/makestaticsite_latest.tar.gz"
@@ -249,8 +249,23 @@ wayback_snapshot_path_depth=3   # The number of directories to traverse to get t
 wayback_search_regex="href[[:space:]]*=[[:space:]]*[\'\"]\?[^#:>\'\"/][^:>]\+[[:space:]]*[\'\"]\?[[:space:]]*>" # Basic regular expression for matching the href attribute in an anchor
 
 # Tidy up of Wayback Machine output
+wayback_sitename_hosts=         # Host domain[s] to base the top-level directory and zipfile names on (overrides setup settings)
+                                #  - 'wayback' (or empty string) sets the stem based on the Wayback host name 
+                                # E.g. web.archive.org
+                                #  - 'primary' sets the stem based on the target primary domain 
+                                # E.g. www.example.org
+                                #  - 'both' sets the stem based on the concatenation of the Wayback host name and the target primary domain
+                                # E.g. web.archive.org-www.example.org
+wayback_sitename_timestamps=    # Which timestamps to include, specific to Wayback Machine mirrors
+                                #  - 'wayback' (or empty string) appends the 'from'[-'to'] Wayback timestamp[s]
+                                # E.g. web.archive.org19970412232929     
+                                #      web.archive.org-www.mhs.ox.ac.uk19970412232929
+                                #  - 'mss' appends the MakeStaticSite timestamp (note its distinguishing use of underscore)
+                                # E.g. web.archive.org202409_30160154
+                                #  - 'both' appends the 'from'[-'to'] Wayback timestamp[s] to the Wayback host portion and the MakeStaticSite timestamp to the target domain portion.
+                                # E.g. web.archive.org202409_30160154-www.mhs.ox.ac.uk19970412232929
 wayback_domain_original=yes     # Restore original domain folder when generating a mirror of site archived by the Wayback Machine (y/n)?
-wayback_domain_original_sitemap=yes  # Restore original URLs when generating the sitemap for a site archived by the Wayback Machine (y/n)?
+wayback_domain_original_sitemap=yes # Restore original URLs when generating the sitemap for a site archived by the Wayback Machine (y/n)?
 wayback_newsfeed_clean=yes      # Delete references to Wayback Machine host for newsfeeds (y/n)?
                                 #  - 'no' to keep as is
                                 #  - 'yes' to restore the original link

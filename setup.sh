@@ -335,7 +335,12 @@ read_option() {
             echo "$msg_error: Sorry, no archive URL found at the Wayback Machine!  For guidance on acceptable URLs, please consult https://help.archive.org/help/using-the-wayback-machine/ and then try again."; exit
           else
             echo "Wayback Machine URL detected with archive having domain and path: $archived_domain_path."
-            host=$(printf "%s" "$archived_domain_path" | cut -d/ -f1)
+            primary_host=$(printf "%s" "$archived_domain_path" | cut -d/ -f1)
+            if [ "$wayback_sitename_hosts" = "primary" ]; then
+              host="$primary_host"
+            elif [ "$wayback_sitename_hosts" = "both" ]; then
+              host+="-$primary_host"
+            fi
             process_wayback_url "$input_value"
           fi
         fi
