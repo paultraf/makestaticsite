@@ -22,7 +22,7 @@
 ################################################
 # MakeStaticSite info
 ################################################
-version=0.30.8-beta2
+version=0.30.8
 version_date='3 October 2024'
 version_header="MakeStaticSite version $version, released on $version_date."
 mss_license="GNU Affero General Public License version 3"
@@ -274,7 +274,7 @@ wayback_code_clean=yes          # Delete (JavaScript) Playback code inserted by 
 wayback_code_re='<head>[ \n]*<script type="text\/javascript".*bundle-playback\.js.*<!-- End Wayback Rewrite JS Include -->' # Code inserted by the Wayback Machine (regular expression)
 wayback_comments_clean=yes      # Delete HTML comments inserted by Wayback Machine (y/n)?
 wayback_comments_re='<\/html>.*JAVASCRIPT APPENDED BY WAYBACK MACHINE.*load_resource.*-->' # Comments appended by the Wayback Machine (regular expression)
-wayback_links_clean=no          # Strip Wayback Machine prefix from link URLs in web pages (y/n)?
+wayback_links_clean=no          # Restore original URL links in web pages, removing Wayback prefixes (y/n)?
                                 #  - 'yes' to remove all such links
                                 #  - 'no' (or any other value) to keep as is
 
