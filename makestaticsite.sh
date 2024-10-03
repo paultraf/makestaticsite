@@ -2144,15 +2144,21 @@ clean_mirror() {
   # For Wayback Machine mirrors, optionally rename domain folder
   if [ "$wayback_url" = "yes" ] && [ "$wayback_domain_original" = "yes" ]; then
     cd_check "$mirror_dir/$mirror_archive_dir" || { echolog "Aborting."; exit; }
-    if mv "$domain" "$domain_original"; then
-      # Update mirror variables
-      hostport_dir="/$domain_original"
-      echolog "Renamed $working_mirror_dir to $mirror_dir/$mirror_archive_dir$hostport_dir."
-      working_mirror_dir="$mirror_dir/$mirror_archive_dir$hostport_dir"
+    working_mirror_dir_old="$working_mirror_dir"
+    hostport_dir="/$domain_original"
+    working_mirror_dir="$mirror_dir/$mirror_archive_dir$hostport_dir"
+    if [ -d "$domain_original" ]; then
+      echolog "$msg_warning: The working mirror directory is already in place, using the original domain, at $working_mirror_dir. Leaving as is."
+    elif [ -d "$domain" ]; then
+      if mv "$domain" "$domain_original"; then
+        echolog "Renamed $working_mirror_dir_old to $working_mirror_dir." "1"
+      else
+        echolog "$msg_warning: Unable to rename the working mirror directory to $working_mirror_dir."
+      fi
     else
-      echolog "$msg_warning: Unable to rename working_mirror_dir $mirror_dir/$mirror_archive_dir/$domain_original"
+      echolog "$msg_error: Expected either a $domain/ or $domain_original/ directory inside $mirror_dir/$mirror_archive_dir, but neither found. Aborting."; exit
     fi
-  fi  
+  fi
 
   # Optionally append MakeStaticSite session information
   if [ "$web_print_runtime_data" = "yes" ]; then
@@ -2300,6 +2306,8 @@ cut_mss_dirs() {
   dir_path="$working_mirror_dir/$url_path_dir"
   if mv "$dir_path/"* "$working_mirror_dir/"; then 
     echolog "Moved files and folders from $dir_path to $working_mirror_dir/" "1"
+  elif (( phase > 4 )); then
+    echolog "$msg_warning: unable to move the contents of $dir_path/ to $working_mirror_dir/.  Assume this is because content was moved in a previous run."
   else
     echolog "$msg_error: unable to move the contents of $dir_path/ to $working_mirror_dir/"
     confirm_continue
