@@ -241,14 +241,14 @@ validate_url_range() {
     url_from=$(echo "$url_var" | sed 's~\('/"$datetime_regex"'\)-'"$datetime_regex"/'~\1/~')
     wayback_date_from=$(echo "$url_var" | grep -o "/${datetime_regex}-${datetime_regex}/" | grep -o "$datetime_regex\-" | grep -o "$datetime_regex")
     wayback_date_to=$(echo "$url_var" | grep -o "/${datetime_regex}-${datetime_regex}/" | grep -o "\-$datetime_regex" | grep -o "$datetime_regex")
-    if ! validate_http "$url_from" "url_from" "quiet"; then
+    if (( phase < 4 )) && ! validate_http "$url_from" "url_from" "quiet"; then
       invalid_http_reason="The URL (assumed as Wayback) is invalid."
     else
       url_var=$(echo "$url_from" | sed 's~\('/"$datetime_regex"'\)/~\1'"-$wayback_date_to"'/~')
     fi
 # shellcheck disable=SC2001
     url_var=$(echo "$url_from" | sed 's~\('/"$datetime_regex"'\)/~\1'"-$wayback_date_to"'/~')
-  elif ! validate_http "$url_var" "url_var"; then
+  elif (( phase < 4 )) && ! validate_http "$url_var" "url_var"; then
     invalid_http_reason="Unable to connect to URL."
   fi
   printf -v "$2" '%s' "$url_var" 
