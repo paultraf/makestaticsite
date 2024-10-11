@@ -187,6 +187,25 @@ initialise_mirror_archive_dir() {
   if [ "$mirror_archive_dir" = "" ]; then
     mirror_archive_dir="$local_sitename"
     [ "$archive" = "yes" ] && mirror_archive_dir+="$timestamp"
+    
+    # Rename existing mirror_archive_dir if it already exists
+    if [ -d "$mirror_dir/$mirror_archive_dir" ]; then
+      # determine what the backup file should be
+      archive_dir_current="$mirror_dir/$mirror_archive_dir"
+      archive_dir_backup="$archive_dir_current"
+      i=1
+      while [ -d "$archive_dir_backup" ]
+      do
+        archive_dir_backup="${archive_dir_current}_$i"
+        (( i++ ))
+      done
+      echolog "$msg_warning: a mirror archive directory, $archive_dir_current, already exists! It will be renamed $archive_dir_backup." 
+      confirm_continue
+      if ! mv "$archive_dir_current" "$archive_dir_backup"; then
+        echolog "$msg_error: unable to rename!"
+        confirm_continue "no"
+      fi
+    fi
   fi
   working_mirror_dir="$mirror_dir/$mirror_archive_dir$hostport_dir"
 
