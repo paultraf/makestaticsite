@@ -651,6 +651,12 @@ initialise_variables() {
   # Further variable initialisation for Wayback URLs
   if [ "$wayback_url" = "yes" ]; then
     wayback_url_paths
+    # Check that the principal timestamp of the mirror matches the URL in the config file
+    wayback_primary_snapshot_dir="$mirror_dir/$mirror_archive_dir$hostport_dir/$url_path_snapshot_prefix/$wayback_date_from"
+    if (( phase > 2 )) && [ ! -d "$wayback_primary_snapshot_dir" ]; then
+      echolog "$msg_error: The mirror does not have a timestamp that matches the 'from' date in the URL of the configuration (.cfg) file you have supplied. Suggest changing the -i or -m argument."
+      confirm_continue "no" 
+    fi
   fi
 
   # Script sign-off message

@@ -225,7 +225,7 @@ confirm_continue() {
   local msg_abort="OK, aborting. Please review the settings."
   local opt
   if [ -n "${1+x}" ]; then
-    opt=$(printf "%s" "$1" | tr '[:lower:]' '[:upper:]')
+    opt=$(printf "%.1s" "$1" | tr '[:lower:]' '[:upper:]')
     if [ "$opt" != "Y" ] && [ "$opt" != "N" ]; then
       opt="Y" # trap the case where first parameter is set incorrectly 
     fi
