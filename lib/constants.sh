@@ -22,8 +22,8 @@
 ################################################
 # MakeStaticSite info
 ################################################
-version=0.30.8
-version_date='3 October 2024'
+version=0.30.9-alpha1
+version_date='11 October 2024'
 version_header="MakeStaticSite version $version, released on $version_date."
 mss_license="GNU Affero General Public License version 3"
 mss_download="https://makestaticsite.sh/download/makestaticsite_latest.tar.gz"
@@ -271,7 +271,8 @@ wayback_newsfeed_clean=yes      # Delete references to Wayback Machine host for 
                                 #  - 'yes' to restore the original link
                                 #  - otherwise convert to a relative link
 wayback_code_clean=yes          # Delete (JavaScript) Playback code inserted by Wayback Machine (y/n)?
-wayback_code_re='<head>[ \n]*<script type="text\/javascript".*bundle-playback\.js.*<!-- End Wayback Rewrite JS Include -->' # Code inserted by the Wayback Machine (regular expression)
+wayback_code_toolbar_re='<!-- BEGIN WAYBACK TOOLBAR INSERT -->.*<!-- END WAYBACK TOOLBAR INSERT -->' # HTML Toolbar Code inserted by the Wayback Machine (regular expression)
+wayback_code_re='<head>[ \n]*<script.*<!-- End Wayback Rewrite JS Include -->' # JavaScript code inserted by the Wayback Machine (regular expression)
 wayback_comments_clean=yes      # Delete HTML comments inserted by Wayback Machine (y/n)?
 wayback_comments_re='<\/html>.*JAVASCRIPT APPENDED BY WAYBACK MACHINE.*load_resource.*-->' # Comments appended by the Wayback Machine (regular expression)
 wayback_links_clean=no          # Restore original URL links in web pages, removing Wayback prefixes (y/n)?

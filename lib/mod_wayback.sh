@@ -761,6 +761,7 @@ wayback_output_clean() {
     for opt in "${webpages_clean[@]}"; do
       tmp_file="$opt.tmp"
       if [ -f "$opt" ]; then
+        awk -v RS='\x7' '{sub(/'"$wayback_code_toolbar_re"'/,""); print}' "$opt" > "$tmp_file" && mv "$tmp_file" "$opt"
         awk -v RS='\x7' '{sub(/'"$wayback_code_re"'/,"<head>"); print}' "$opt" > "$tmp_file" && mv "$tmp_file" "$opt"
       else
         echolog "$msg_warning: File $opt not found, so not running awk on it." "1"
