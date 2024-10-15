@@ -251,7 +251,7 @@ initialise_mirror_archive_dir() {
 initialise_layout() {
   # Set up logging
   log_file_dir="$script_dir/log"
-  [ -d "$log_file_dir" ] || mkdir -p "$log_file_dir"
+  mkdir -p "$log_file_dir"
   log_file="$log_file_dir/$log_filename"
   touchmod "$log_file"
 
@@ -261,9 +261,8 @@ initialise_layout() {
 
   # Set up temporary directory
   tmp_dir_path="$script_dir/$tmp_dir"
-  [ -d "$tmp_dir_path" ] || mkdir -p "$tmp_dir_path"
-  tmp_mirror_path="$script_dir/$tmp_dir/mirror"
-  [ -d "$tmp_mirror_path" ] || mkdir -p "$tmp_mirror_path"
+  tmp_mirror_path="$tmp_dir_path/mirror"
+  mkdir -p "$tmp_mirror_path"
 
   timestamp_start=$(timestamp "$timezone")
   timestamp_human=$(date)
@@ -273,7 +272,7 @@ initialise_layout() {
 
   # Local target directory and web server deployment
   mirror_dir="$script_dir/mirror"         # path to Wget output root folder
-  [ -d "$mirror_dir" ] || { mkdir -p "$mirror_dir"; echolog "Created folder for mirror files at $mirror_dir."; }
+  mkdir -p "$mirror_dir"; echolog "Created folder for mirror files at $mirror_dir."
 
   # Substitute files for zip download (used for embeds, etc.)
   sub_dir=subs                            # This must be sit under $script_dir
@@ -2218,18 +2217,18 @@ clean_mirror() {
 
 process_snippets() {
   # Create necessary directories for substitution files and snippets
-  [ -d "$sub_files_path" ] || { mkdir -p "$sub_files_path"; echolog "Created folders for substitute files at $sub_files_path."; }
-  [ -d "$snippets_dir" ] || { mkdir -p "$snippets_dir"; echolog "Created folder for snippet files at $snippets_dir."; }
+  mkdir -p "$sub_files_path"; echolog "Created folders for substitute files at $sub_files_path."
+  mkdir -p "$snippets_dir"; echolog "Created folder for snippet files at $snippets_dir."
 
   # Change to subs directory
   cd_check "$script_dir/$sub_dir" "can't access substitutes directory ($script_dir/$sub_dir). No substitutions can be made." || { echolog "Aborting."; exit 1; }
 
   # Create a substitutions area replicating the mirrored folder
-  [ -d "$mirror_archive_dir" ] || mkdir -p "$mirror_archive_dir"
+  mkdir -p "$mirror_archive_dir"
 
   # Replicate the mirrored folder for the host [and port]
   subs_hostport_dir="$mirror_archive_dir$hostport_dir"
-  [ -d "$subs_hostport_dir" ] || mkdir -p "$subs_hostport_dir"
+  mkdir -p "$subs_hostport_dir"
 
   # Carry out snippet substitutions:
   echolog "current directory: $(pwd)" "1"
