@@ -185,6 +185,9 @@ wayback_url_paths() {
   url_base_regex=$(regex_escape "$url_base")
   url_path_original_regex=$(regex_escape "$url_path_original")
   url_timeless=${url/\/${wayback_date_from}/\/[0-9]+[a-z]\{0,2\}_\?} # This could be tightened - use $wayback_datetime_regex
+  if [ "$wayback_merge_httphttps" = "yes" ]; then
+    url_timeless=${url_timeless/\/https:/\/https\?:} # allow support for http and https links
+  fi
   url_timeless=$(regex_escape "$url_timeless")
   url_timeless=$(regex_apply "$url_timeless")
   url_timeless=${url_timeless//\\[/[} # final adjustment to remove '\' in front of '['
@@ -419,9 +422,25 @@ consolidate_assets() {
   snapshot_path_list=()
   while IFS= read -r line; do
     line="${line#./}"
-    [ "${line%%\/*}" != "$wayback_date_from" ] &&  snapshot_path_list+=("$line")
+    [ "$line" != "$url_path_snapshot_root" ] && snapshot_path_list+=("$line")
   done <<<"$(find . -mindepth $wayback_snapshot_path_depth -maxdepth $wayback_snapshot_path_depth -type d -print)"
 
+  # Check for mixed http and https snapshots and advise accordingly
+  if [ "$protocol_original" = "https" ]; then
+    url_path_snapshot_root2=${url_path_snapshot_root/\/https:/\/http:}
+  else
+    url_path_snapshot_root2=${url_path_snapshot_root/\/http:/\/https:}
+  fi
+  if [ -d "$url_path_snapshot_root2" ] && ls "$url_path_snapshot_root2" >/dev/null 2>&1; then
+    msg_mixed_content="The snapshots that have been have downloaded by the Wayback Machine include both encrypted and unencrypted content, i.e. they have been retrieved from https://$domain_original and http://$domain_original."
+    if [ "$wayback_merge_httphttps" = "yes" ]; then
+      echolog "$msg_info: $msg_mixed_content Will proceed to merge the snapshots under the main branch."
+    else        
+      echolog "$msg_warning: $msg_mixed_content However, in the main branch, only the content under $url_path_snapshot_root will be processed because in constants.sh, wayback_merge_httphttps is set to $wayback_merge_httphttps.  To incorporate all the snapshot content, please set it to 'yes' and re-run."
+      confirm_continue "no"
+    fi
+  fi
+  
   # Log snapshots info
   snapshot_path_list_sorted=("$wayback_date_from")
   while IFS='' read -r line; do snapshot_path_list_sorted+=("$line"); done < <(for item in "${snapshot_path_list[@]}"; do printf "%s\n" "${item%%\/*}"; done | sort -u)
@@ -509,7 +528,7 @@ consolidate_assets() {
 
   cd_check "$src_path_snapshot" || { echolog "Aborting."; exit; }
 
-  ## Copy over directories and folders to URL Path.
+  ## Copy over directories and files to URL Path.
   for snapshot_dir in "${snapshot_path_list[@]}"; do
     this_domain="${snapshot_dir##*/}" # remove everything before trailing slash
     # Create a directory for $this_domain inside the 'imports' directory under the 'destination' path.
