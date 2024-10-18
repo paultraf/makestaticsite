@@ -276,6 +276,11 @@ wayback_augment_urls(){
 # (Currently, there is no filtering based on wayback_timestamp_policy.)
 wayback_filter_domains() {
   url_regex=$(printf "%s" "$url"|sed 's|\(/\)'"$wayback_datetime_regex"'|\1'"$wayback_datetime_regex"'|') # turn original URL into wildcard expression
+  # Remove anything after last '/'
+  if [ "$url_original" != "$url_original_base/" ]; then
+    url_regex="${url_regex%\/*}"  
+    url_regex+="/"
+  fi
   url_regex=${url_regex/"$url_base"/} # trim the URL base to support relative links
   if [ "$wayback_merge_httphttps" = "yes" ]; then
     url_regex=${url_regex/\/https:/\/https?:} # allow support for http and https links
