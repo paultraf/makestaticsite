@@ -19,35 +19,69 @@
 ##########################################################################
 
 
+0.30.9 (released on 2024-10-18)
+       * System maintenance and extended validation and tidy options. *
+        [lib/constants.sh]
+         Added constant, wayback_code_toolbar_re, for static HTML block
+         inserted by Wayback Machine.  Simplified wayback_code_re to
+         match more liberally.
+         Added constant wayback_merge_httphttps to support links to
+         resources on original domain originally under both http and https.
+         Loosened pattern matching in wayback_code_re.
+         Added constants wayback_folders and wayback_folders_clean to
+         support options to delete extra directories created by the Wayback
+         Machine.
+        [lib/mod_wayback.sh]
+         wayback_url_paths():
+         consolidate_assets(): Added support for mixed http and https
+         snapshots for primary domain (depending on the value of
+         wayback_merge_httphttps) with notices of status; in generating
+         snapshot_path_list, only omit the url_path_snapshot_root directory
+         (to allow http[s] variants).
+         wayback_output_clean(): refined routine to ensure that mailto:
+         links modified by the Wayback Machine are always restored; added 
+         search and replace based on wayback_code_toolbar_re. Added option
+         to tidy up downloaded Wayback Machine support code and styles.
+        [lib/validate.sh]
+         validate_url_range(): only call validate_http() when start phase
+         will involve Wget requests to target host, i.e. less than 4.
+        [makestaticsite.sh]
+         initialise_mirror_archive_dir(): when creating a mirror, check if
+         mirror directory already exists and automatically append a version
+         (auto increments).
+         initialise_variables(): Added check on Wayback mirror's principal
+         timestamp matching the 'from' date in the URL supplied from the
+         configuration file.
+
 0.30.8 (released on 2024-10-03)
-         * System maintenance and extended Wayback output options. *
-          [lib/constants.sh]
-           Set wget_user_agent=default.
-           New constants: wayback_sitename_hosts, wayback_sitename_timestamps
-           to configure the format of mirror and zipfile names;
-           wayback_links_clean (yes/no) for removing Wayback host prefixes
-           from URL links.
-          [setup.sh]
-           read_option(): for Wayback URLs, set host variable (and hence
-           local_sitename to depend on the value of wayback_sitename_hosts.
-          [makestaticsite.sh]
-           initialise_include-excludes() renamed initialise_include_excludes()
-           to conform to valid Bash names (hyphen is not a valid character).
-           New function initialise_mirror_archive_dir() to generate
-           mirror directory and zipfile names, called just once from
-           initialise_variables().
-           clean_mirror(): changed how the domain directory inside
-           mirror_archive_dir is renamed, with error trap.
-           cut_mss_dirs(): added error trap for 'mv' command.
-          [lib/validate.sh]
-           validate_http(): added check for HTTP response code 404 (file not
-           found). 
-          [lib/mod_wayback.sh]
-           Replaced calls to echo() by echolog().
-           wayback_output_clean(): regenerated web pages in consolidated
-           layout, stored in webpages_clean array.  Added routine to delete 
-           occurrences of Wayback host URL prefix inserted by Wayback Machine
-           depending on value of wayback_links_clean.
+       * System maintenance and extended Wayback output options. *
+        [lib/constants.sh]
+         Set wget_user_agent=default.
+         New constants: wayback_sitename_hosts, wayback_sitename_timestamps
+         to configure the format of mirror and zipfile names;
+         wayback_links_clean (yes/no) for removing Wayback host prefixes
+         from URL links.
+        [setup.sh]
+         read_option(): for Wayback URLs, set host variable (and hence
+         local_sitename to depend on the value of wayback_sitename_hosts.
+        [makestaticsite.sh]
+         initialise_include-excludes() renamed initialise_include_excludes()
+         to conform to valid Bash names (hyphen is not a valid character).
+         New function initialise_mirror_archive_dir() to generate
+         mirror directory and zipfile names, called just once from
+         initialise_variables().
+         clean_mirror(): changed how the domain directory inside
+         mirror_archive_dir is renamed, with error trap.
+         cut_mss_dirs(): added error trap for 'mv' command.
+        [lib/validate.sh]
+         validate_http(): added check for HTTP response code 404 (file not
+         found).
+        [lib/mod_wayback.sh]
+         Replaced calls to echo() by echolog().
+         wayback_output_clean(): regenerated web pages in consolidated
+         layout, stored in webpages_clean array.  Added routine to delete 
+         occurrences of Wayback host URL prefix inserted by Wayback Machine
+         depending on value of wayback_links_clean.
 
 0.30.7 (released on 2024-09-26)
        * System refinements and maintenance *

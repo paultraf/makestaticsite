@@ -22,7 +22,7 @@
 ################################################
 # MakeStaticSite info
 ################################################
-version=0.30.9-beta4
+version=0.30.9
 version_date='18 October 2024'
 version_header="MakeStaticSite version $version, released on $version_date."
 mss_license="GNU Affero General Public License version 3"
@@ -274,8 +274,8 @@ wayback_newsfeed_clean=yes      # Delete references to Wayback Machine host for 
 wayback_code_clean=yes          # Delete (JavaScript) Playback code inserted by Wayback Machine (y/n)?
 wayback_code_toolbar_re='<!-- BEGIN WAYBACK TOOLBAR INSERT -->.*<!-- END WAYBACK TOOLBAR INSERT -->' # HTML Toolbar Code inserted by the Wayback Machine (regular expression)
 wayback_code_re='<head>.*<script.*<!-- End Wayback Rewrite JS Include -->' # JavaScript code inserted by the Wayback Machine (regular expression)
-wayback_folders_clean=yes       # Delete supporting directories created by the Wayback Machine that appear in the mirror
-wayback_folders=_superstat,_static         # Comma-separated list of Wayback Machine directory names that may appear in the mirror
+wayback_folders_clean=yes       # Delete supporting directories created by the Wayback Machine that appear in the mirror (y/n)?
+wayback_folders=_static         # Comma-separated list of Wayback Machine directory names that may appear in the mirror
 wayback_comments_clean=yes      # Delete HTML comments inserted by Wayback Machine (y/n)?
 wayback_comments_re='<\/html>.*JAVASCRIPT APPENDED BY WAYBACK MACHINE.*load_resource.*-->' # Comments appended by the Wayback Machine (regular expression)
 wayback_links_clean=no          # Restore original URL links in web pages, removing Wayback prefixes (y/n)?
@@ -616,8 +616,8 @@ options_allow_empty=(asset_domains page_element_domains wget_extra_options input
 options_check_cmd=(wget_cmd htmltidy_cmd) # Command line applications that need to be checked for existence
 options_check_dir=(site_path)   # Directories that need to be checked for existence
 options_check_url=(url)         # URLs that need to be validated
-options_check_yesno=(ssl_checks require_login wget_extra_urls site_post_processing archive wp_cli wp_cli_remote wp_helper_plugins add_search wp_restore_settings prune_query_strings use_snippets upload_zip deploy deploy_remote deploy_remote_rsync htmltidy add_extras url_wildcard_capture cors_enable wayback_cli use_wayback_id wayback_memento_check wayback_mementos_only wayback_anchors_original_domain wayback_merge_httphttps wayback_domain_original wayback_domain_original_sitemap wayback_code_clean wayback_comments_clean wget_protocol_relative_urls extra_assets_allow_query_strings zip_omit_download clean_query_extensions credentials_cleanup wget_cookies_nullify_user_agent rename_wget_tmps relativise_primarydomain_assets web_print_runtime_data wayback_code_clean) # Options that take yes/no values
+options_check_yesno=(ssl_checks require_login wget_extra_urls site_post_processing archive wp_cli wp_cli_remote wp_helper_plugins add_search wp_restore_settings prune_query_strings use_snippets upload_zip deploy deploy_remote deploy_remote_rsync htmltidy add_extras url_wildcard_capture cors_enable wayback_cli use_wayback_id wayback_memento_check wayback_mementos_only wayback_anchors_original_domain wayback_merge_httphttps wayback_domain_original wayback_domain_original_sitemap wayback_code_clean wayback_folders_clean wayback_comments_clean wget_protocol_relative_urls extra_assets_allow_query_strings zip_omit_download clean_query_extensions credentials_cleanup wget_cookies_nullify_user_agent rename_wget_tmps relativise_primarydomain_assets web_print_runtime_data wayback_code_clean) # Options that take yes/no values
 options_check_remote=(site_path) # options that need to be checked on a remote server
 options_credentials=(site_user) # credentials that may/should be encrypted
 
-options_nodeps_load=(add_search deploy deploy_remote use_snippets upload_zip ssl_checks url asset_domains page_element_domains require_login local_sitename url_wildcard_capture input_urls_file site_post_processing prune_query_strings archive web_source_exclude_dirs htmltidy add_extras wp_cli site_path zip_filename zip_download_folder deploy_path deploy_domain cors_enable wayback_cli use_wayback_id wayback_memento_check wayback_mementos_only wayback_anchors_original_domain wayback_merge_httphttps wayback_domain_original wayback_domain_original_sitemap wayback_code_clean wayback_comments_clean extra_assets_allow_query_strings zip_omit_download clean_query_extensions credentials_cleanup wget_protocol_relative_urls wget_cookies_nullify_user_agent rename_wget_tmps relativise_primarydomain_assets web_print_runtime_data wayback_code_clean) # Options that are not dependent on others
+options_nodeps_load=(add_search deploy deploy_remote use_snippets upload_zip ssl_checks url asset_domains page_element_domains require_login local_sitename url_wildcard_capture input_urls_file site_post_processing prune_query_strings archive web_source_exclude_dirs htmltidy add_extras wp_cli site_path zip_filename zip_download_folder deploy_path deploy_domain cors_enable wayback_cli use_wayback_id wayback_memento_check wayback_mementos_only wayback_anchors_original_domain wayback_merge_httphttps wayback_domain_original wayback_domain_original_sitemap wayback_code_clean wayback_folders_clean wayback_comments_clean extra_assets_allow_query_strings zip_omit_download clean_query_extensions credentials_cleanup wget_protocol_relative_urls wget_cookies_nullify_user_agent rename_wget_tmps relativise_primarydomain_assets web_print_runtime_data wayback_code_clean) # Options that are not dependent on others
