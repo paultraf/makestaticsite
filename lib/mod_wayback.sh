@@ -275,9 +275,11 @@ wayback_augment_urls(){
 # and remove URLs originally from external domains.
 # (Currently, there is no filtering based on wayback_timestamp_policy.)
 wayback_filter_domains() {
-  webassets_wayback=()
   url_regex=$(printf "%s" "$url"|sed 's|\(/\)'"$wayback_datetime_regex"'|\1'"$wayback_datetime_regex"'|') # turn original URL into wildcard expression
   url_regex=${url_regex/"$url_base"/} # trim the URL base to support relative links
+  if [ "$wayback_merge_httphttps" = "yes" ]; then
+    url_regex=${url_regex/\/https:/\/https?:} # allow support for http and https links
+  fi
 
   # Add a constraint on Wget searches
   if (( wget_extra_urls_count == 1 )); then
@@ -287,6 +289,7 @@ wayback_filter_domains() {
 
   # Constrain further Wget runs to Wayback URLs involving the primary domain
   # and not got a valid asset extension
+  webassets_wayback0=()
   for opt in "${webassets_http[@]}"; do
     opt_regex=$(printf "%s" "$opt"|sed 's|\(/\)'"$wayback_datetime_regex"'|\1'"$wayback_datetime_regex"'|') # turn original URL into wildcard expression
     # First check if we are fetching a page requisite

@@ -1249,8 +1249,6 @@ wget_extra_urls() {
   # But for Wayback URLs, consider web pages as allowable assets
   # and carry out special filtering
   if [ "$wayback_url" = "yes" ]; then
-    assets_or=${assets_or/)/|htm|html)}
-    assets_or_external=${assets_or_external/)/|htm|html)}
     src_path_snapshot="$working_mirror_dir/$url_path_snapshot_prefix"
     wayback_filter_domains
   fi
@@ -1265,7 +1263,10 @@ wget_extra_urls() {
     print_progress "$subcount" "$num_webasset_steps"
   done < <(for i in "${!webassets_http[@]}"; do
     opt="${webassets_http[$i]}"
-    if [ "$asset_extensions" != "" ]; then
+    if [ "$wayback_url" = "yes" ]; then
+      # Wayback URLs have already been filtered for asset extensions, etc., we assume all such URLs are valid candidates for mirroring.
+      printf "%s|%s\n" "$i" "$opt";    
+    elif [ "$asset_extensions" != "" ]; then
       # Loop over an inclusion list of allowable extensions
       opt_domain=$(printf "%s\n" "$opt" | awk -F/ '{print $3}' | awk -F: '{print $1}')
       if [[ ' '${page_element_domains_array[*]}' ' =~ ' '$opt_domain' ' ]]; then # satisfied vacuously for all Wayback URLs
@@ -1273,15 +1274,12 @@ wget_extra_urls() {
       else
         echo "$opt" | grep -Ei "$assets_or$" > /dev/null && printf "%s|%s\n" "$i" "$opt";
       fi
-    elif [ "$wayback_url" != "yes" ]; then
-      # Remove HTML assets unless a Wayback URL
+    else
+      # When no allowable extensions specified, remove HTML assets according to content type.
       type=$(curl -skI "$opt" -o/dev/null -w '%{content_type}\n')
       if [[ "$type" != *"text/html"* ]] && [[ "$type" != *"application/rss+xml"* ]] && [[ "$type" != *"application/atom+xml"* ]]; then
         printf "%s|%s\n" "$i" "$opt"
       fi
-    else
-      # For the Wayback URLs, if no asset_extensions list is defined, then we assume all such URLs are valid candidates for mirroring.
-      echo "$opt" > /dev/null && printf "%s|%s\n" "$i" "$opt";
     fi
   done)
   (( webasset_step_count=subcount+1 ))
