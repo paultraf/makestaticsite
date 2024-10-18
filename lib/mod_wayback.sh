@@ -829,6 +829,19 @@ wayback_output_clean() {
     done
   fi
 
+  if [ "$wayback_folders_clean" = "yes" ]; then
+    IFS=',' read -ra wayback_folders_list <<< "$wayback_folders"
+    for wayback_folder in "${wayback_folders_list[@]}"; do
+      wayback_folder_path="$working_mirror_dir/$wayback_folder"
+      if ls -l "$wayback_folder_path" >> /dev/null 2>&1; then
+        rm -rf "$wayback_folder_path"
+        echolog "Removed Wayback folder $wayback_folder_path" "1"
+      else
+        echolog "No Wayback folder $wayback_folder_path found for deletion." "1"
+      fi
+    done
+  fi
+
   if [ "$num_webpages_clean" != "0" ]; then
     echolog "Done."
   fi

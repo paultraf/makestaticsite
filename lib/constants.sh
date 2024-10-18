@@ -22,7 +22,7 @@
 ################################################
 # MakeStaticSite info
 ################################################
-version=0.30.9-beta3
+version=0.30.9-beta4
 version_date='18 October 2024'
 version_header="MakeStaticSite version $version, released on $version_date."
 mss_license="GNU Affero General Public License version 3"
@@ -274,6 +274,8 @@ wayback_newsfeed_clean=yes      # Delete references to Wayback Machine host for 
 wayback_code_clean=yes          # Delete (JavaScript) Playback code inserted by Wayback Machine (y/n)?
 wayback_code_toolbar_re='<!-- BEGIN WAYBACK TOOLBAR INSERT -->.*<!-- END WAYBACK TOOLBAR INSERT -->' # HTML Toolbar Code inserted by the Wayback Machine (regular expression)
 wayback_code_re='<head>.*<script.*<!-- End Wayback Rewrite JS Include -->' # JavaScript code inserted by the Wayback Machine (regular expression)
+wayback_folders_clean=yes       # Delete supporting directories created by the Wayback Machine that appear in the mirror
+wayback_folders=_superstat,_static         # Comma-separated list of Wayback Machine directory names that may appear in the mirror
 wayback_comments_clean=yes      # Delete HTML comments inserted by Wayback Machine (y/n)?
 wayback_comments_re='<\/html>.*JAVASCRIPT APPENDED BY WAYBACK MACHINE.*load_resource.*-->' # Comments appended by the Wayback Machine (regular expression)
 wayback_links_clean=no          # Restore original URL links in web pages, removing Wayback prefixes (y/n)?
