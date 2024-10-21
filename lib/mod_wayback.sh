@@ -292,8 +292,8 @@ wayback_filter_domains() {
     wget_extra_options+=("--max-redirect=1") # Reduce the risk of Wget fetching external resources whilst allowing the possibility for a standard internal redirect to fetch nearest timestamp 
   fi
 
-  # Constrain further Wget runs to Wayback URLs involving the primary domain
-  # and not got a valid asset extension
+  # Constrain candidate Wayback URLs for Wget to those that have 
+  # a valid asset extension and/or involve the primary domain.
   webassets_wayback0=()
   for opt in "${webassets_http[@]}"; do
     opt_regex=$(printf "%s" "$opt"|sed 's|\(/\)'"$wayback_datetime_regex"'|\1'"$wayback_datetime_regex"'|') # turn original URL into wildcard expression
@@ -301,7 +301,8 @@ wayback_filter_domains() {
     wayback_ext="$(printf "%s" ".${opt##*.}" | grep -Ei "$assets_or$")"
     if [ "$wayback_ext" != "" ]; then
       webassets_wayback0+=("$opt")
-    # Or if the asset is in the list modulo timestamps
+    # Or if the asset satisfies a no-parent condition
+    # and not already in the list modulo timestamps.
     elif [[ $opt =~ $url_regex ]] && [[ ! ${webassets_wayback0[*]} =~ $opt_regex ]]; then
       opt=$(printf "%s" "$opt" | sed 's/#[[:alnum:]]*$//') # remove internal anchors
       webassets_wayback0+=("$opt") 
@@ -311,7 +312,7 @@ wayback_filter_domains() {
   done
 
   # Add further filters based on a list of existing downloaded URLs.
-  # Wget run 1 will only generate one timestamped folder with web pages,
+  # Wget's first run only generates one timestamped folder with web pages,
   # but subsequent runs will potentially generate many more, depending on
   # the URLs harvested from the initially downloaded pages.
   # For web pages, timestamped folder names contain only numbers.
@@ -323,7 +324,7 @@ wayback_filter_domains() {
     snapshot_path_list+=("$line")
   done <<<"$(find . -mindepth $wayback_snapshot_path_depth -maxdepth $wayback_snapshot_path_depth -print)"
 
-  wayback_domain_exceptions=()
+  wayback_download_exceptions=()
   for snapshot_dir in "${snapshot_path_list[@]}"; do
     while IFS= read -r item; do
       item="${item#.}"
@@ -336,25 +337,23 @@ wayback_filter_domains() {
       item_regex=$(printf "%s" "$item"|sed 's|\(/\)'"$wayback_datetime_regex"'|\1'"$wayback_datetime_regex"'|')
 
       # If the candidate item is not already in the list of Wayback domain-based exceptions, then add it
-      if [[ ! ${wayback_domain_exceptions[*]} =~ $item_regex ]]; then
-        wayback_domain_exceptions+=("$item_regex")
+      if [[ ! ${wayback_download_exceptions[*]} =~ $item_regex ]]; then
+        wayback_download_exceptions+=("$item_regex")
       fi
 
       # Take account of index pages implicit by requests to URLs ending in '/'
       # by truncating Wget default page (usually index.html), as appropriate
       if [[ $item =~ $wget_default_page$ ]]; then
         item_regex="${item_regex/%\/$wget_default_page/\/}" # (need to avoid false positives such as cindex.html and index.htmlx)
-        if [[ ! " ${wayback_domain_exceptions[*]} " =~ [[:space:]]${item_regex}[[:space:]] ]]; then
-          wayback_domain_exceptions+=("$item_regex")
+        if [[ ! " ${wayback_download_exceptions[*]} " =~ [[:space:]]${item_regex}[[:space:]] ]]; then
+          wayback_download_exceptions+=("$item_regex")
         fi
       fi
     done <<<"$(find "." -type f ! -empty -print)"
   done
 
-  temp_IFS="$IFS"
 # shellcheck disable=SC2207
-  IFS=$'\n' wayback_exceptions=($(sort -u <<<"${wayback_domain_exceptions[*]}"))
-  IFS="$temp_IFS"
+  IFS=$'\n' wayback_exceptions=($(sort -u <<<"${wayback_download_exceptions[*]}"))
   
   ## Apply filter
   webassets_wayback=()
@@ -370,10 +369,8 @@ wayback_filter_domains() {
     printf "%s\n" "$opt"
   done)
 
-  temp_IFS="$IFS"
 # shellcheck disable=SC2207
   IFS=$'\n' webassets_http=($(sort -u <<<"${webassets_wayback[*]}"))
-  IFS="$temp_IFS"
   
   cd_check "$mirror_dir" || echolog " "
 }
