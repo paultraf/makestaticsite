@@ -67,7 +67,7 @@ main() {
   (( phase < 8 )) && (( end_phase >= 7 )) && [ "$use_snippets" = "yes" ] && process_snippets
 
   # Phase 7-8 Interval: MSS cut directories
-  (( phase < 8 )) && (( end_phase >= 4 )) && [ "$mss_cut_dirs" = "yes" ] && cut_mss_dirs
+  (( phase < 8 )) && (( end_phase >= 4 )) && { [ "$mss_cut_dirs" = "yes" ] || [ "$wayback_url" = "yes" ]; } && cut_mss_dirs
 
   # Phase 8: Create an offline zip archive
   (( phase < 9 )) && (( end_phase >= 8 )) && [ "$upload_zip" = "yes" ] && create_zip || { echolog "Creation of ZIP archive skipped, as per preferences." "1"; }
@@ -532,12 +532,22 @@ initialise_variables() {
     url_path_dir="$url_path"
   fi
 
+  mss_cut_dirs=$(yesno "$mss_cut_dirs" "1")
+  deploy_domain="$(config_get deploy_domain "$myconfig")"
   # Define URL to be used in robots.txt file
   if [ "$wayback_url" = "yes" ] && [ "$wayback_domain_original_sitemap" = "yes" ]; then
-    url_robots="${url_original}robots.txt"
-    url_sitemap="${url_original}$sitemap_file"
+    if [ "$mss_cut_dirs" = "no" ]; then
+      url_original_root="$url_original"
+      if [ "$url_add_slash" != "no" ]; then
+        url_original_root="${url_original_root%\/*}/"  # Remove anything after last '/' for URLs not ending in '/'.
+      fi
+    else
+      url_original_root="$url_original_base/"
+    fi
+    url_robots="$url_original_base/robots.txt"
+    url_sitemap="$url_original_base/$sitemap_file"
   else
-    url_robots="$url/robots.txt"
+    url_robots="https://$deploy_domain/robots.txt"
     url_sitemap="https://$deploy_domain/$sitemap_file"
   fi
     
@@ -613,16 +623,15 @@ initialise_variables() {
     hostport_dir="/$hostport"
   fi
 
-  # Define a timestamp and then initialise (generate the name of) the mirror archive directory
-  timestamp=$(timestamp "$timezone")
-  initialise_mirror_archive_dir
-  
-  mss_cut_dirs=$(yesno "$mss_cut_dirs" "1")
   cut_dirs=0
   if [[ $wget_extra_options_tmp =~ "--cut-dirs" ]]; then
     cut_dirs=$(printf "%s" "$wget_extra_options_tmp" | grep -o "cut-dirs=[0-9]*" | cut -d '=' -f2)
   fi
 
+  # Define a timestamp and then initialise (generate the name of) the mirror archive directory
+  timestamp=$(timestamp "$timezone")
+  initialise_mirror_archive_dir
+  
   # For deployment on a remote server
   if [ "$deploy_remote" != "yes" ]; then
     deploy_host="on your local computer"
@@ -641,7 +650,6 @@ initialise_variables() {
     fi
   fi
   deploy_path="$(config_get deploy_path "$myconfig")"
-  deploy_domain="$(config_get deploy_domain "$myconfig")"
   [ "$wayback_url" != "yes" ] && echolog "Done."
   if [ "$cut_dirs" != "0" ]; then
     echolog "$msg_warning: You have specified Wget --cut-dirs option. Ignoring mss_cut_dirs."
@@ -2095,13 +2103,7 @@ clean_mirror() {
       sitemap_content+="$tab<url>"$'\n'
       loc=$(printf "%s" "$loc" | sed "s/index.html//" | sed "s/.\///") # remove any trailing filename from $loc
       if [ "$wayback_url" = "yes" ] && [ "$wayback_domain_original_sitemap" = "yes" ]; then
-        loc_full=$(printf "%s" "$loc" | cut -d':' -f2-)
-        if [[ $url_path == *"http:"* ]]; then
-          http_prefix="http:/"
-        else
-          http_prefix="https:/"
-        fi
-        loc_full="$http_prefix$loc_full"
+        loc_full="$url_original_base/$loc" 
       else  
         loc_full="https://$deploy_domain/$loc"
       fi
@@ -2326,15 +2328,20 @@ cut_mss_dirs() {
   fi
   cd_check "$working_mirror_dir" || { echolog "Aborting."; exit; }
   dir_path="$working_mirror_dir/$url_path_dir"
-  if mv "$dir_path/"* "$working_mirror_dir/"; then 
-    echolog "Moved files and folders from $dir_path to $working_mirror_dir/" "1"
-  elif (( phase > 4 )); then
-    echolog "$msg_warning: unable to move the contents of $dir_path/ to $working_mirror_dir/.  Assume this is because content was moved in a previous run."
+  if [ "$mss_cut_dirs" = "no" ]; then
+    dest_path="$working_mirror_dir/$url_path_original"
+    mkdir -p "$dest_path"
   else
-    echolog "$msg_error: unable to move the contents of $dir_path/ to $working_mirror_dir/"
-    confirm_continue
+    dest_path="$working_mirror_dir"
   fi
-
+  if (( phase < 5 )); then
+    if mv "$dir_path/"* "$dest_path/"; then 
+       echolog "Moved files and folders from $dir_path to $dest_path/" "1"
+    else
+      echolog "$msg_error: unable to move the contents of $dir_path/ to $dest_path/"
+      confirm_continue
+    fi
+  fi
   # remove top-level folder of $url_path
   url_root_dir=$(printf "%s" "$url_path_dir" | cut -d/ -f1)
   if [ -d "$url_root_dir" ]; then
