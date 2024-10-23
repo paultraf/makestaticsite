@@ -55,7 +55,7 @@ read_config() {
   cfg_string=
   log_filename=
   local OPTIND
-  while getopts ":o:l:L:u" option; do
+  while getopts ":o:l:L:q:u" option; do
     case "$option" in
       l)
         level="$OPTARG"
@@ -63,6 +63,9 @@ read_config() {
         ;;
       L)
         log_filename="$OPTARG"
+        ;;
+      q)
+        end_phase="$OPTARG"
         ;;
       u)
         level=0
@@ -92,6 +95,11 @@ read_config() {
     url="$*";
     validate_url "$url" || { printf "Sorry, the syntax of the URL appears to be invalid. Aborting - please try again. \n"; exit; }
     echo
+  fi
+
+  # If an end phase (number) has been specified, but is too small, then not much will be done
+  if [ "$end_phase" != "" ] && ((end_phase < 2)); then
+    echolog "Note: No site will be output because the supplied end phase (q) is too low."
   fi
 
   if [ -n "${level+x}" ]; then
@@ -502,6 +510,7 @@ conclude() {
       echo "Proceeding to make the static site ... "
       args=(-i "$cfgfile")
       [ "$log_filename" != "" ] && args+=(-L "$log_filename")
+      [ "$end_phase" != "" ] && args+=(-q "$end_phase")
       [ "$run_unattended" = "yes" ] && args+=(-u)
       ./makestaticsite.sh "${args[@]}"
       echo
