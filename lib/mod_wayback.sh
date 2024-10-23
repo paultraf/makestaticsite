@@ -786,7 +786,11 @@ wayback_output_clean() {
       tmp_file="$opt.tmp"
       if [ -f "$opt" ]; then
         awk -v RS='\x7' '{sub(/'"$wayback_code_toolbar_re"'/,""); print}' "$opt" > "$tmp_file" && mv "$tmp_file" "$opt"
-        awk -v RS='\x7' '{sub(/'"$wayback_code_re"'/,"<head>"); print}' "$opt" > "$tmp_file" && mv "$tmp_file" "$opt"
+        wayback_tags_list=()
+        IFS=',' read -ra wayback_tags_list <<< "$wayback_code_tags"
+        for tag in "${wayback_tags_list[@]}"; do
+          awk -v RS='\x7' -v var="<$tag>" '{sub(/<'"$tag>$wayback_code_re"'/,var); print}' "$opt" > "$tmp_file" && mv "$tmp_file" "$opt"
+        done
       else
         echolog "$msg_warning: File $opt not found, so not running awk on it." "1"
       fi
