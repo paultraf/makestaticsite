@@ -29,8 +29,8 @@ source "lib/$mod_wayback";
 
 main() {
   # Step 0: Initialisation
-  read_config "$@"
   get_inks
+  read_config "$@"
   print_welcome
   init_mssconfig
 
@@ -59,7 +59,7 @@ read_config() {
     case "$option" in
       l)
         level="$OPTARG"
-        validate_range 0 "$max_setup_level" "$level" ||{ printf "Sorry, the setup level of $level is out of range (it should be an integer between 0 and %s).  Please try again.\n" "$max_setup_level"; exit; }
+        validate_range 0 "$max_setup_level" "$level" ||{ printf "$msg_error: Sorry, the setup level of $level is out of range (it should be an integer between 0 and %s).  Please try again.\n" "$max_setup_level"; exit; }
         ;;
       L)
         log_filename="$OPTARG"
@@ -99,19 +99,15 @@ read_config() {
 
   # If an end phase (number) has been specified, but is too small, then not much will be done
   if [ "$end_phase" != "" ] && ((end_phase < 2)); then
-    echolog "Note: No site will be output because the supplied end phase (q) is too low."
-  fi
-
-  if [ -n "${level+x}" ]; then
-    validate_range 0 "$max_setup_level" "$level" || { printf "Sorry, the setup level is out of range (it should be an integer between 0 and %s).  Please try again.\n" "$max_setup_level"; return; }
+    printf "$msg_warning: No site will be output because the supplied end phase (q) is too low.\n"
   fi
 
   if [ "$run_unattended" = "yes" ] && [ -z ${url+x} ]; then
-    printf "You have run setup in unattended mode (-u flag), but not supplied a URL. Aborting - please try again. \n"; exit;
+    printf "$msg_error: You have run setup in unattended mode (-u flag), but not supplied a URL. Aborting - please try again. \n"; exit;
   fi
 
   if [ "$run_unattended" = "yes" ] && (( level > 0 )); then
-    printf "You can only run setup in unattended mode (-u flag) at level 0. Aborting - please try again.\n"; exit;
+    printf "$msg_error: You can only run setup in unattended mode (-u flag) at level 0. Aborting - please try again.\n"; exit;
   fi
   
 }
