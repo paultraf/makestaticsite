@@ -57,6 +57,12 @@ main() {
   # Phase 4: Refine the static site
   (( phase < 5 )) && (( end_phase >= 4 )) && [ "$site_post_processing" = "yes" ] && site_postprocessing
 
+  # Ensure that if 'no host directory' is set, the working directories are set accordingly after postprocessing
+  if [ "$host_dir" = "" ] || [ "$host_dir" = "no" ]; then
+    hostport_dir=
+    working_mirror_dir="$mirror_dir/$mirror_archive_dir"
+  fi
+
   # Phase 5: Further additions from an extras folder
   (( phase < 6 )) && (( end_phase >= 5 )) && [ "$add_extras" = "yes" ] && add_extras
 
@@ -578,6 +584,21 @@ initialise_variables() {
     fi
   fi
 
+  # Path of the mirror archive, if archive directory is already defined
+  # check for -nH option in wget_extra_options
+  if [[ $wget_extra_options_tmp =~ "-nH" ]] || [[ $wget_extra_options_tmp =~ "--no-host-directories" ]]; then
+    # remove the argument, but set host_dir, so that it becomes effective later
+    wget_extra_options_tmp=${wget_extra_options_tmp//-nH /}
+    if [ "$host_dir" = "yes" ]; then
+      echolog "$msg_warning: Resetting constant, host_dir=no, as you have specified '-nH' as an argument to Wget."
+    fi
+    host_dir=no
+    (( phase < 4 )) && echolog "$msg_info: Wget will be run with without '-nH' argument; host directory will be removed after post-processing."
+  else
+    host_dir=yes
+  fi
+  hostport_dir="/$hostport"
+
   # Ensure that login pages are rejected by appending Wget --reject clause
   grep_clause="\-R[[:space:]][^[:space:]]*\|\-\-reject[[:space:]][^[:space:]]*"
   rmatch0=$({ printf "%s" "$wget_extra_options_tmp" | grep -o "$grep_clause"; } || echo )
@@ -609,17 +630,6 @@ initialise_variables() {
       wget_http_user="${BASH_REMATCH[1]}" # determined by last expression in conditional
       wget_process_credentials
     fi
-  fi
-
-  # Path of the mirror archive, if archive directory is already defined
-  # check for -nH option in wget_extra_options
-  hostport_dir=
-  if [[ $wget_extra_options_tmp =~ "-nH" ]] || [[ $wget_extra_options_tmp =~ "--no-host-directories" ]]; then
-    host_dir=
-  fi
-
-  if [ "$host_dir" != "" ] && [ "$(yesno "$host_dir")" != "no" ] && [ "$use_wayback_cli" != "yes" ]; then
-    hostport_dir="/$hostport"
   fi
 
   cut_dirs=0
@@ -1956,6 +1966,20 @@ site_postprocessing() {
     done
     echolog "Done."
   fi
+
+# Apply host directory directive, as appropriate
+if [ "$host_dir" = "" ] || [ "$host_dir" = "no" ]; then
+  # Shift content up one level and removed host directory.
+  if ! mv "$working_mirror_dir/"* "$mirror_dir/$mirror_archive_dir/"; then
+    echolog "$msg_error: Unable to move files to the root directory."
+  else
+    if ! rmdir "$working_mirror_dir"; then
+      echolog "$msg_error: Unable to remove the working mirror directory, $working_mirror_dir."
+    else
+      echolog "Shifted content up one level and removed host directory." "1"
+    fi
+  fi
+fi
 
   cd_check "$mirror_dir" || { echolog "Aborting."; exit; }
 }
