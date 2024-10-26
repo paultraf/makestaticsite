@@ -488,7 +488,7 @@ initialise_variables() {
   # For backwards-compatibility check whether URL defined instead in url_base
   if [ "$url_domain" = "example.com" ]; then
     url="$(config_get url_base "$myconfig")"
-    if [ "$url" = "" ]; then { printf "\n%s: the URL supplied in %s (example.com) needs to be changed!\nAborting.\n" "$msg_error" "$myconfig"; exit; }
+    if [ "$url" = "" ]; then { printf "\n%s: Unable to determine a URL. Please check the arguments you have supplied at the command line and then the value of url in %s.cfg (if it's example.com, then it needs to be changed!)\nAborting.\n" "$msg_error" "$myconfig"; exit; }
     fi
   fi
 
@@ -532,7 +532,6 @@ initialise_variables() {
     url_path_dir="$url_path"
   fi
 
-  mss_cut_dirs=$(yesno "$mss_cut_dirs" "1")
   deploy_domain="$(config_get deploy_domain "$myconfig")"
   # Define URL to be used in robots.txt file
   if [ "$wayback_url" = "yes" ] && [ "$wayback_domain_original_sitemap" = "yes" ]; then
@@ -1150,8 +1149,7 @@ wget_extra_urls() {
       done
       echolog " " "1"
     fi
-    
-    wget_protocol_relative_urls=$(yesno "$wget_protocol_relative_urls")
+
     if [ "$wget_protocol_relative_urls" = "yes" ]; then
       echolog "Prefixing protocol-relative URLs with $wget_protocol_prefix" "1"
       # Define BRE version of domain_bre0 
@@ -1890,10 +1888,13 @@ site_postprocessing() {
         confirm=${confirm:0:1}
       fi
       if [ "$confirm" = "y" ] || [ "$confirm" = "Y" ]; then
+        domain_match_prefix_esc=${domain_match_prefix//\//\\\\\/} # \\\\\ to match one backslash ...
+        domain_subs_prefix_esc=${domain_subs_prefix//\//\\\\\/}
         echolog -n "Replacing remaining occurrences of $domain with $deploy_domain ... "
-        sed_subs=('s|'"$domain_match_prefix$domain"'|'"$domain_subs_prefix$deploy_domain"'|g')
-        for file_ext in "${asset_find_names[@]}"; do 
-          find . -type f -name "$file_ext" "${asset_exclude_dirs[@]}" -print0 | xargs "${xargs_options[@]}" sed "${sed_options[@]}" "${sed_subs[@]}"
+        sed_subs1=('s|'"$domain_match_prefix$domain"'|'"$domain_subs_prefix$deploy_domain"'|g')
+        sed_subs2=('s|'"$domain_match_prefix_esc$domain"'|'"$domain_subs_prefix_esc$deploy_domain"'|g')
+        for file_ext in "${asset_find_names[@]}"; do
+          find . -type f -name "$file_ext" "${asset_exclude_dirs[@]}" -print0 | xargs "${xargs_options[@]}" sed "${sed_options[@]}" -e "${sed_subs1[@]}" "${sed_options[@]}" -e "${sed_subs2[@]}" 
         done
         echolog "Done."
       fi
