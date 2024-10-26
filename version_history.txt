@@ -19,6 +19,40 @@
 ##########################################################################
 
 
+0.30.10 (released on 2024-10-26)
+        * Further refinements, with improved support for no host directory. *
+         [lib/constants.sh]
+          Added mss_cut_dirs to options_check_yesno and options_nodeps_load
+          arrays; added constant wayback_code_tags to store a list of HTML
+          document tags (in reverse depth order), removed opening tag from
+          wayback_code_re.
+         [lib/mod_wayback.sh]
+          wayback_filter_domains(): renamed wayback_domain_exceptions to
+          wayback_download_exceptions.
+          wayback_output_clean(): extended the removal of JavaScript Playback
+          code inserted by Wayback Machine to loop over wayback_code_tags.
+         [setup.sh]
+          read_config(): added support for '-q' option;
+          conclude(): invoke makestaticsite.sh with '-q' option, if defined.
+         [makestaticsite.sh]
+          main(): Added call to cut_mss_dirs for Wayback URLs. After call to
+          phase 4 (site postprocessing), ensure that if 'no host directory' is
+          set, the working directories are set accordingly.
+          initialise_variables(): Brought forward assignment of mss_cut_dirs;
+          reworked assignment of url_robots and url_sitemap to take account
+          of mss_cut_dirs. Reworked handling of 'no host directory' option
+          to delay the effect by removing from Wget options, leaving it to
+          phase 4 to apply separately.
+          site_postprocessing(): added a routine (for use in scripts) to
+          extend replacement of instances of domain with deploy_domain by
+          escaping protocol slashes.  Apply host directory directive, moving
+          web content up one level, as appropriate.
+          Streamlined a few variable assignments. 
+          clean_mirror(): simplified generation of sitemap.xml
+          cut_mss_dirs(): reworked the move of the main mirror branch to
+          properly take account of mss_cut_dirs; only attempt a directory
+          move before further additions from an extras folder (phase 5).
+
 0.30.9 (released on 2024-10-18)
        * System maintenance and extended validation and tidy options. *
         [lib/constants.sh]
