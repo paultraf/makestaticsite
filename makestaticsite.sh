@@ -1898,13 +1898,12 @@ site_postprocessing() {
         confirm=${confirm:0:1}
       fi
       if [ "$confirm" = "y" ] || [ "$confirm" = "Y" ]; then
-        domain_match_prefix_esc=${domain_match_prefix//\//\\\\\/} # \\\\\ to match one backslash ...
-        domain_subs_prefix_esc=${domain_subs_prefix//\//\\\\\/}
+        domain_match_prefix_esc=${domain_match_prefix//\//\\\\\/}        # \\\\\ to insert a backslash in search pattern
+        domain_match_prefix_esc=${domain_match_prefix_esc//\\\\/\\\\\\?} # to make backslash match optional
         echolog -n "Replacing remaining occurrences of $domain with $deploy_domain ... "
-        sed_subs1=('s|'"$domain_match_prefix$domain"'|'"$domain_subs_prefix$deploy_domain"'|g')
-        sed_subs2=('s|'"$domain_match_prefix_esc$domain"'|'"$domain_subs_prefix_esc$deploy_domain"'|g')
+        sed_subs=('s|'"\($domain_match_prefix_esc\)$domain"'|'"\1$deploy_domain"'|g')
         for file_ext in "${asset_find_names[@]}"; do
-          find . -type f -name "$file_ext" "${asset_exclude_dirs[@]}" -print0 | xargs "${xargs_options[@]}" sed "${sed_options[@]}" -e "${sed_subs1[@]}" "${sed_options[@]}" -e "${sed_subs2[@]}" 
+          find . -type f -name "$file_ext" "${asset_exclude_dirs[@]}" -print0 | xargs "${xargs_options[@]}" sed "${sed_options[@]}" -e "${sed_subs[@]}"
         done
         echolog "Done."
       fi
