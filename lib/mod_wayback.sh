@@ -552,13 +552,10 @@ consolidate_assets() {
       if [ "$copy_dir" != "" ] && { [[ ! $url_path_original == $copy_dir/* ]] || [ "$url_path_original" = "" ]; }; then
         if [ "$this_domain" != "$domain_original" ]; then
           this_dest_path="$dest_path/$imports_directory/$this_domain/$copy_dir"
-        elif [[ ! $copy_dir == $url_path_original* ]]; then
-          this_dest_path="$dest_path/$assets_directory/$copy_dir"
-        else
-          this_dest_path="$dest_path/$copy_dir"
-        fi
-        if [[ $copy_dir == $url_path_original* ]]; then
+        elif [[ $copy_dir == $url_path_original* ]]; then
           this_dest_path="$dest_path_root/$copy_dir"
+        else
+          this_dest_path="$dest_path/$assets_directory/$copy_dir"
         fi
         echolog "mkdir -p $this_dest_path" "1"
         mkdir -p "$this_dest_path" || echolog "$msg_error: Unable to create directory $this_dest_path."
@@ -566,11 +563,11 @@ consolidate_assets() {
         # loop over files in subdirectory
         while IFS= read -r item; do
           [ "$item" = "" ] && continue
-          if [[ $item == $url_path_original* ]]; then
-            file_dest="$dest_path_root/$item"
           # check for internal URL path copying and adjust accordingly
-          elif [ "$this_domain" != "$domain_original" ]; then
+          if [ "$this_domain" != "$domain_original" ]; then
             file_dest="$dest_path/$imports_directory/$this_domain/$item"
+          elif [[ $item == $url_path_original* ]]; then
+            file_dest="$dest_path_root/$item"
           elif [[ ! $copy_dir == $url_path_original* ]]; then
             file_dest="$dest_path/$assets_directory/$item"
           else
