@@ -447,13 +447,16 @@ consolidate_assets() {
   fi
   
   # Log snapshots info
-  snapshot_path_list_sorted=("$wayback_date_from")
-  while IFS='' read -r line; do snapshot_path_list_sorted+=("$line"); done < <(for item in "${snapshot_path_list[@]}"; do printf "%s\n" "${item%%\/*}"; done | sort -u)
+  snapshot_path_list_sorted=()
+  snapshot_path_list_plus=("$wayback_date_from" "${snapshot_path_list[@]}")
+  while IFS='' read -r line; do snapshot_path_list_sorted+=("$line"); done < <(for item in "${snapshot_path_list_plus[@]}"; do printf "%s\n" "${item%%\/*}"; done | sort -u)
   num_snapshot_dirs="${#snapshot_path_list_sorted[@]}"
+  first_snapshot_dir="${snapshot_path_list_sorted[0]}"
+  first_snapshot_dir_root="${first_snapshot_dir//[[:alpha:]\_]/}"
   (( last_snapshot_dir_index=num_snapshot_dirs-1 ))
   last_snapshot_dir="${snapshot_path_list_sorted[$last_snapshot_dir_index]}"
   last_snapshot_dir_root="${last_snapshot_dir//[[:alpha:]\_]/}"
-  date_from_readable="$(timestamp_readable "$wayback_date_from")"
+  date_from_readable="$(timestamp_readable "$first_snapshot_dir_root")"
   date_to_readable="$(timestamp_readable "$last_snapshot_dir_root")"
   msg_wayback="The site was generated from a Wayback Machine and used $num_snapshot_dirs snapshots, ranging from $wayback_date_from to $last_snapshot_dir, i.e. from $date_from_readable to $date_to_readable."
 
