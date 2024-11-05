@@ -177,37 +177,46 @@ validate_http() {
   curl_options+=(--head -w "%{http_code}" "$1" -o /dev/null)
   status="$(curl "${curl_options[@]}")"
   if [ "$status" = "200" ]; then
-    echolog "Connection established OK." "$e"
+    echolog "Connection established OK."
     return
   elif [ "$status" = "301" ] || [ "$status" = "302" ] || [ "$status" = "307" ] || [ "$status" = "308" ]; then
-    echolog -n $'\n'"$msg_warning: redirect detected (HTTP code $status). "
-    # Require the user to confirm (y/n):
-    if [ "$run_unattended" != "yes" ]; then
-      read -r -e -p "Do you wish to proceed with the redirection? [Y/n] " confirm < /dev/tty
-      confirm=${confirm:0:1}
+    url_effective=$(curl -s -k -L --max-redirs "$max_redirects" -o /dev/null -w "%{url_effective}" "$1") || { echolog "$msg_error: Unable to follow the redirection"; return 1; } # -L: follow redirects up to the value of max_redirects
+    msg_redirect="Redirect detected (HTTP code $status) from $1 to $url_effective. "
+    # If url simply adds a trailing slash to url_effective, then don't change it
+    # because we need to respect Wget --no-parent option
+    if [ "$1" = "$url_effective/" ]; then
+      msg_redirect="$msg_info: $msg_redirect Retaining the URL as the server will just remove the trailing slash, whilst we need to the slash for Wget --no-parent option ... "
+      echolog -n "$msg_redirect"
     else
-      confirm=Y
-    fi
-    if [ "$confirm" != "Y" ] && [ "$confirm" != "y" ] && [ "$confirm" != "" ]; then
-      printf "%s\n" "OK. Will not redirect."
-    else
-      url_effective=$(curl -s -k -L --max-redirs "$max_redirects" -o /dev/null -w "%{url_effective}" "$1") || { echolog "$msg_error: Unable to follow the redirection"; return 1; } # -L: follow redirects up to the value of max_redirects
-      echolog "URL effectively redirected from $1 to $url_effective."
-      status_redirect="$(curl -s -k  --max-redirs "$max_redirects" --head -w "%{http_code}" "$url_effective" -o /dev/null)"
-      if [ -n "${2+x}" ]; then
-        printf -v "$2" '%s' "$url_effective"
-        msg_redirect="Following redirection, value of '$2' changed to $url_effective."
-        [ "${BASH_SOURCE[1]}" = './makestaticsite.sh' ] && msg_redirect+=" Please ensure that this value is stored in the configuration file to avoid potential issues in generating the mirror."
-        echolog "$msg_redirect"; return
-      fi
-      if [ "$status_redirect" = "200" ]; then
-        echolog "Connection established OK." "$e"
-        return
-      elif [ "$status_redirect" = "401" ]; then
-        echolog "$msg_warning: unauthorised (HTTP code $status). This means that you will need to enter a username and password as wget parameters for wget_extra_options (which you can set a bit later)."
+      echolog "$msg_warning: $msg_redirect"
+      # Require the user to confirm (y/n):
+      if [ "$run_unattended" != "yes" ]; then
+        read -r -e -p "Do you wish to proceed with the redirection? [Y/n] " confirm < /dev/tty
+        confirm=${confirm:0:1}
       else
-        echolog "$msg_error: failed to connect; the response code was $status (exit code: $?). Please try again."
-        return 1
+        confirm=Y
+      fi
+      if [ "$confirm" != "Y" ] && [ "$confirm" != "y" ] && [ "$confirm" != "" ]; then
+        printf "%s\n" "OK. Will not redirect."
+      else
+        echolog "OK.  URL effectively redirected from $1 to $url_effective."
+        # Having specified the effective URL, checks its status
+        status_redirect="$(curl -s -k  --max-redirs "$max_redirects" --head -w "%{http_code}" "$url_effective" -o /dev/null)"
+        if [ -n "${2+x}" ]; then
+          printf -v "$2" '%s' "$url_effective"
+          msg_redirect="Following redirection, value of variable $2 changed to $url_effective."
+          [ "${BASH_SOURCE[1]}" = './makestaticsite.sh' ] && msg_redirect+=" Please ensure that this value is stored in the configuration file to avoid potential issues in generating the mirror."
+          echolog "$msg_redirect"; return
+        fi
+        if [ "$status_redirect" = "200" ]; then
+          echolog "Connection established OK."
+          return
+        elif [ "$status_redirect" = "401" ]; then
+          echolog "$msg_warning: unauthorised (HTTP code $status). This means that you will need to enter a username and password as wget parameters for wget_extra_options (which you can set a bit later)."
+        else
+          echolog "$msg_error: failed to connect; the response code was $status (exit code: $?). Please try again."
+          return 1
+        fi
       fi
     fi
   elif [ "$status" = "401" ]; then
