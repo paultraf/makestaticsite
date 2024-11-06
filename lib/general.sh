@@ -385,7 +385,7 @@ assets_search_string() {
       url_path+="|[\"'=]https?://$opt/$path" # the '?' is intended for ERE 0 or 1
 
       # Or by prefixing with specified separator characters and optionally [\"'=]
-      url_path+="|[[:space:]]*$url_separator_chars[[:space:]]*[\"=']?https?://$opt/$path" # the '?' is intended for ERE 0 or 1
+      url_path+="|[[:space:]]*${url_separator_chars}[[:space:]]*[\"=']?https?://$opt/$path" # the '?' is intended for ERE 0 or 1
     done
   fi
   [ "$url_path" != "" ] && url_path="${url_path:1}" # Remove the first separator character using parameter expansion
@@ -569,7 +569,7 @@ stopclock() {
   timer_seconds=$1
   (( hrs=timer_seconds/3600, mins=(timer_seconds%3600)/60, secs=(timer_seconds%3600)%60 ))
   hour_s=$(pluralize $hrs); min_s=$(pluralize $mins); sec_s=$(pluralize $secs);
-  (( hrs > 0 )) && echolog -n "%s" "$hrs hour$hour_s"
+  (( hrs > 0 )) && echolog -n "$hrs hour$hour_s"
   if (( mins > 0 )); then
     if (( hrs > 0 )); then
       (( secs > 0 )) && echolog -n ", " || echolog -n " and "

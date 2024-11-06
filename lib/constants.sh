@@ -22,7 +22,7 @@
 ################################################
 # MakeStaticSite info
 ################################################
-version=0.30.11-beta2
+version=0.30.11-beta3
 version_date='6 November 2024'
 version_header="MakeStaticSite version $version, released on $version_date."
 mss_license="GNU Affero General Public License version 3"
@@ -157,7 +157,7 @@ url_grep_search_pattern="[^\\\"'<) ]" # URL terminating characters in grep searc
 webpage_file_extensions="html,htm,xhtm,xhtml,dhtml,cgi,php,php2,php4,phtml,asp,aspx,jsp" # A list of common web page file extensions, not exhaustive. (Note that any list of file extensions in this document assume a preceding dot '.')
 
 # Specification of assets eligible for downloading by Wget in phase 3.
-web_source_extensions="htm,html,xml,txt" # list of web document file extensions intended for assets search
+web_source_extensions="htm,html,xml,txt,css" # list of web document file extensions intended for assets search
 web_source_exclude_dirs=        # list of directories to exclude from search and replace (relative to working mirror directory - prefix will be determined automatically). Dev note: this ought to be refined to be extension dependent
 web_element_extensions="js,css,svg,map,ico" # list of file extensions for standard Web page components 
 font_extensions="cff,ttf,eot,woff,woff2" # list of file extensions for Web fonts 
