@@ -669,7 +669,7 @@ initialise_variables() {
     wayback_url_paths
     # Check that the principal timestamp of the mirror matches the URL in the config file
     wayback_primary_snapshot_dir="$mirror_dir/$mirror_archive_dir$hostport_dir/$url_path_snapshot_prefix/$wayback_date_from"
-    if (( phase > 2 )) && (( phase < 5 )) && [ ! -d "$wayback_primary_snapshot_dir" ]; then
+    if (( phase == 3 )) && [ ! -d "$wayback_primary_snapshot_dir" ]; then
       echolog "$msg_error: The mirror does not have a timestamp that matches the 'from' date in the URL of the configuration (.cfg) file you have supplied. Suggest changing the -i or -m argument."
       confirm_continue "no" 
     fi
@@ -1150,8 +1150,8 @@ wget_extra_urls() {
         find "$working_mirror_dir" -type f -name "*\.$opt\?*" -exec sh -c 'mv "$0" "${0%%\?*}"' {} \;   
 
         # Prune the corresponding links
-        sed_subs0=('s|\([\"'\''][^>\"'\'']*\.'"$opt"'\)%3F[^'\''\"]*|\1|g')
-        sed_subs=('s|\([\"'\''][^>\"'\'']*\.'"$opt"'\)?[^'\''\"]*|\1|g')
+        sed_subs0=('s|\([\"'\''][^>\"'\'']*\.'"$opt"'\)%3F[^'\''\"[:space:]]*|\1|g')
+        sed_subs=('s|\([\"'\''][^>\"'\'']*\.'"$opt"'\)?[^'\''\"[:space:]]*|\1|g')
         for file_ext in "${asset_find_names[@]}"; do
           find "$working_mirror_dir" -type f -name "$file_ext" "${asset_exclude_dirs[@]}" -print0 | xargs "${xargs_options[@]}" sed "${sed_options[@]}" "${sed_subs0[@]}"
           find "$working_mirror_dir" -type f -name "$file_ext" "${asset_exclude_dirs[@]}" -print0 | xargs "${xargs_options[@]}" sed "${sed_options[@]}" "${sed_subs[@]}"
@@ -1452,6 +1452,13 @@ wget_extra_urls() {
   if [ "$wayback_url" = "yes" ]; then
     wayback_wget_postprocess
   fi
+
+  # Prune file names on disk, removing superfluous extensions added by Wget to query strings
+  IFS=',' read -ra prune_wget_extensions <<< "$wget_adjust_extensions"
+  for opt in "${prune_wget_extensions[@]}"; do
+    find "$working_mirror_dir" -type f -name "*\.$opt\?*\.$opt" -exec sh -c 'mv "$0" "${0%\.$opt*}"' {} \;
+    find "$working_mirror_dir" -type f -name "*\.$opt%3F*\.$opt" -exec sh -c 'mv "$0" "${0%\.$opt*}"' {} \;
+  done
 }
 
 

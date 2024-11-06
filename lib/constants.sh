@@ -22,7 +22,7 @@
 ################################################
 # MakeStaticSite info
 ################################################
-version=0.30.11-beta1
+version=0.30.11-beta2
 version_date='6 November 2024'
 version_header="MakeStaticSite version $version, released on $version_date."
 mss_license="GNU Affero General Public License version 3"
@@ -122,6 +122,7 @@ wget_mirror_options=(--recursive --timestamping --level=inf --no-remove-listing)
 wget_core_options=("${wget_mirror_options[@]}" --convert-links --adjust-extension --page-requisites --tries=3)
 wget_wayback_core_options=()    # Specify additional recursion options in () brackets, e.g. (--recursive --level=2)
 wget_default_page=index.html    # The Wget --default-page option (index.html by default)
+wget_adjust_extensions="html,css" # The Wget list of file extensions that have the extension appended to match the HTTP response header when the extension doesn't exist.
 
 wget_no_parent=auto             # Should capturing URLs with directories include the --no-parent option?
                                 # auto or yes - check and add automatically
