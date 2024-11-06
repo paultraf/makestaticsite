@@ -19,6 +19,35 @@
 ##########################################################################
 
 
+0.30.11 (released on 2024-11-06)
+        * Further refinements for more accurate site mirroring. *
+         [lib/constants.sh]
+          Added constant wget_adjust_extensions to list extensions for assets
+          (HTML, CSS) affected by the corresponding Wget option. Added css 
+          to web_source_extensions list.
+         [lib/validate.sh]
+          validate_http(): brought forward the calculation of url_effective
+          to help user decided whether or not to proceed with redirection.
+          For the special case that url_effective just removes the trailing
+          slash, keep url as is.
+         [lib/mod_wayback.sh]
+          consolidate_assets(): bug fixes: modified routine for moving items
+          into imports directory of main trunk, preventing directories and
+          files erroneously ending up in root directory; modified the
+          determination of first and last snapshots.
+         [lib/general.sh]
+          stopclock(): Bug fix: reporting of hour reinstated after change from
+          printf to echolog
+         [makestaticsite.sh]
+          initialise_variables(): bug fix: only display error message about
+          the mirror not having a timestamp when start phase=3.
+          wget_extra_urls(): added whitespace as a delimiter when pruning
+          links to assets that have query strings appended.  Refined filtering
+          of candidate asset URLs with query strings appended to take account
+          of prune_query_strings setting.
+          site_postprocessing(): reworked the escaping of protocol slashes
+          and combined two sed commands into one.
+
 0.30.10 (released on 2024-10-26)
         * Further refinements, with improved support for no host directory. *
          [lib/constants.sh]
