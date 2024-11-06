@@ -1286,9 +1286,19 @@ wget_extra_urls() {
       # Loop over an inclusion list of allowable extensions
       opt_domain=$(printf "%s\n" "$opt" | awk -F/ '{print $3}' | awk -F: '{print $1}')
       if [[ ' '${page_element_domains_array[*]}' ' =~ ' '$opt_domain' ' ]]; then # satisfied vacuously for all Wayback URLs
-        echo "$opt" | grep -Ei "$assets_or_external$" > /dev/null && printf "%s|%s\n" "$i" "$opt";
+        if [ "$prune_query_strings" = "yes" ]; then
+          echo "$opt" | grep -Ei "$assets_or_external$" > /dev/null && printf "%s|%s\n" "$i" "$opt";
+        else
+# probably should tack on ? or %3F to restrict the search ...
+          echo "$opt" | grep -Ei "$assets_or_external" > /dev/null && printf "%s|%s\n" "$i" "$opt";        
+
+        fi
       else
-        echo "$opt" | grep -Ei "$assets_or$" > /dev/null && printf "%s|%s\n" "$i" "$opt";
+        if [ "$prune_query_strings" = "yes" ]; then
+          echo "$opt" | grep -Ei "$assets_or$" > /dev/null && printf "%s|%s\n" "$i" "$opt";
+        else
+          echo "$opt" | grep -Ei "$assets_or" > /dev/null && printf "%s|%s\n" "$i" "$opt";        
+        fi
       fi
     else
       # When no allowable extensions specified, remove HTML assets according to content type.
