@@ -402,6 +402,11 @@ initialise_variables() {
   [ "$ssl_checks" = "no" ] && wget_ssl="--no-check-certificate" || wget_ssl=''
   session_data+=("Wget version|$wget_cmd_version")
 
+  # Generate user agent when option set to 'mss'
+  if [ "$wget_user_agent" = "mss" ]; then
+    wget_user_agent="MakeStaticSite/$version (Wget/$wget_cmd_version)"
+  fi
+
   # Web server details (to be snapped by Wget, etc.)
   IFS="," read -ra webpage_file_exts <<< "$webpage_file_extensions"
 
@@ -863,7 +868,7 @@ wget_mirror() {
 
   # Test whether source host is available
   wget_test_options=(-q "$wget_ssl")
-  if [ "$wget_user_agent" != "" ] && [ "$wget_user_agent" != "default" ]; then
+  if [ "$wget_user_agent" != "" ] && [ "$wget_user_agent" != "wget" ]; then
     if [ "$require_login" != "yes" ] || [ "$wget_cookies_nullify_user_agent" = "no" ]; then
       wget_test_options+=(-U "$wget_user_agent")
     fi
@@ -937,7 +942,7 @@ wget_mirror() {
     wget_sitemap_options+=("$wvol")
   fi
 
-  if [ "$wget_user_agent" != "default" ]; then
+  if [ "$wget_user_agent" != "wget" ]; then
     if [ "$require_login" != "yes" ] || [ "$wget_cookies_nullify_user_agent" = "no" ]; then
       wget_extra_options+=(-U "$wget_user_agent")
       wget_extra_options_print+=(-U \""$wget_user_agent"\")
