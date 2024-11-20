@@ -404,7 +404,7 @@ initialise_variables() {
 
   # Generate user agent when option set to 'mss'
   if [ "$wget_user_agent" = "mss" ]; then
-    wget_user_agent="MakeStaticSite/$version (Wget/$wget_cmd_version)"
+    wget_user_agent="MakeStaticSite/$version (Wget/$wget_cmd_version; +$mss_site)"
   fi
 
   # Web server details (to be snapped by Wget, etc.)
