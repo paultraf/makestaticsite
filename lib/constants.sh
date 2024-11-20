@@ -22,7 +22,7 @@
 ################################################
 # MakeStaticSite info
 ################################################
-version=0.30.12-alpha2
+version=0.30.12-alpha3
 version_date='20 November 2024'
 version_header="MakeStaticSite version $version, released on $version_date."
 mss_license="GNU Affero General Public License version 3"
@@ -95,7 +95,9 @@ credentials_path_prefix="$credentials_storage_namespace$credentials_namespace_su
 # main run (phase 2) and extra URLs (phase 3)
 ################################################
 wget_cmd=wget                   # [Path to] wget binary
-wget_version_atleast=1.21
+wget_version_atleast=1.21       # The version needed to support full functionality
+wget_version_secure_atleast=1.25 # The version needed to support better security
+wget_version_security_ref=CVE-2024-10524 # Security advisory reference for user to review
 wget_error_level=4              # The lowest Wget error code tolerated or else aborts (>8 for no tolerance)
 wget_protocol_relative_urls=yes # Allow protocol-relative URLs to be fetched by Wget by prefixing a protocol (y/n)
 wget_protocol_prefix=https      # Protocol to prefix protocol-relative URLs

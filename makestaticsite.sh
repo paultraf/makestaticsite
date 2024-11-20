@@ -397,8 +397,19 @@ initialise_variables() {
   cmd_check "curl" || { printf "%s%s: Unable to find binary: curl ("'$'"PATH contains %s).\nThis command is essential for checking connectivity.  It may be downloaded from https://curl.se/.\nAborting.\n" "$msg_checking" "$msg_error" "$PATH"; exit; }
   cmd_check "$wget_cmd" "1" || { printf "%s: Unable to carry out a snapshot\nPlease review the value of the wget_cmd option.\nAborting.\n" "$msg_error"; exit; }
   echolog "OK" "1"
+  echo $'\n'"$msg_checking"
   wget_cmd_version="$(which_version "$wget_cmd" "GNU Wget")"
-  version_check "$wget_cmd_version" "$wget_version_atleast" || { printf "%s%s. The version of %s is %s, which is old, so some functionality may be lost.  Version %s or later is recommended.\n" "$msg_checking" "$msg_warning" "$wget_cmd" "$wget_cmd_version" "$wget_version_atleast";}
+  version_status=
+  version_check "$wget_cmd_version" "$wget_version_atleast" || { version_status=error; echo "$msg_warning The version of $wget_cmd is $wget_cmd_version, which is old, so some functionality may be lost. Version $wget_version_atleast or later is recommended for full functionality.";}
+  version_check "$wget_cmd_version" "$wget_version_secure_atleast" ||
+  {
+    security_notice="has known security issues, depending on your usage (see advisory $wget_version_security_ref)"
+    if [ "$version_status" = "error" ]; then
+      echo "$msg_warning This version also $security_notice. Version $wget_version_secure_atleast or later is recommended to improve security.";
+    else
+      echo "$msg_warning The version of $wget_cmd is $wget_cmd_version, which $security_notice. Version $wget_version_secure_atleast or later is recommended to improve security.";
+    fi
+  }  
   [ "$ssl_checks" = "no" ] && wget_ssl="--no-check-certificate" || wget_ssl=''
   session_data+=("Wget version|$wget_cmd_version")
 
