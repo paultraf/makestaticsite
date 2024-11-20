@@ -19,6 +19,22 @@
 ##########################################################################
 
 
+0.30.12 (released on 2024-11-20)
+        * Wget-related maintenance; security check added on Wget version *
+         [lib/constants.sh]
+          Added constant mss_site for MakeStaticSite project URL;
+          added constant option 'mss' to wget_user_agent, to denote
+          MakeStaticSite as the Web crawler, based on Wget; changed constant
+          option 'default' to 'wget'; made 'mss' default option.
+          Added constants wget_version_secure_atleast (version containing the
+          latest security patch) and wget_version_security_ref (corresponding
+          reference).
+         [makestaticsite.sh]
+          initialise_variables(): Added line to generate composite user agent
+          (MakeStaticSite and Wget) when option set to 'mss'.
+          Reworked the checks on Wget version to also include a version check
+          on security (wget_version_secure_atleast).
+
 0.30.11 (released on 2024-11-06)
         * Further refinements for more accurate site mirroring. *
          [lib/constants.sh]
