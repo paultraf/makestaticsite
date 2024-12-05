@@ -600,7 +600,41 @@ initialise_variables() {
     fi
   fi
 
-  # Path of the mirror archive, if archive directory is already defined
+  # Define a timestamp and then initialise (generate the name of) the mirror archive directory
+  timestamp=$(timestamp "$timezone")
+  initialise_mirror_archive_dir
+
+  # WARC support
+  if [ "$warc_output" = "yes" ]; then
+    if [ "$warc_cdx" = "yes" ]; then
+      wget_core_options+=(--warc-cdx)
+    fi
+    if [ "$warc_compress" = "no" ]; then
+      wget_core_options+=(--no-warc-compression)
+    fi    
+    if [ "$warc_header_format" = "mss" ]; then
+      wget_core_options+=(--warc-header "software: $wget_user_agent")
+      wget_core_options+=(--warc-header "operator: $USER")
+      wget_core_options+=(--warc-header "hostname: $HOSTNAME")
+    elif [ "$warc_header_format" != "default" ]; then
+      IFS="|" read -ra warc_header_list <<< "$warc_header_format"
+      for warc_header in "${warc_header_list[@]}"; do
+        wget_core_options+=(--warc-header "$warc_header")
+      done
+    fi
+    wget_core_options+=(--warc-file="warc-$mirror_archive_dir")
+    wget_core_options=( "${wget_core_options[@]/--timestamping}" )
+    if [ "$archive" = "no" ]; then
+      archive=yes
+      echo "$msg_warning: To support WARC, have changed the constant 'archive' to be 'yes'."
+    fi
+  fi
+
+  # For site captures with fixed directories, enable timestamping for efficient Wget mirroring
+  if [ "$archive" = "no" ]; then
+     wget_core_options+=(--timestamping)
+  fi
+
   # check for -nH option in wget_extra_options
   if [[ $wget_extra_options_tmp =~ "-nH" ]] || [[ $wget_extra_options_tmp =~ "--no-host-directories" ]]; then
     # remove the argument, but set host_dir, so that it becomes effective later
@@ -653,10 +687,6 @@ initialise_variables() {
     cut_dirs=$(printf "%s" "$wget_extra_options_tmp" | grep -o "cut-dirs=[0-9]*" | cut -d '=' -f2)
   fi
 
-  # Define a timestamp and then initialise (generate the name of) the mirror archive directory
-  timestamp=$(timestamp "$timezone")
-  initialise_mirror_archive_dir
-  
   # For deployment on a remote server
   if [ "$deploy_remote" != "yes" ]; then
     deploy_host="on your local computer"
