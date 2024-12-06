@@ -349,6 +349,25 @@ wget_level_comment() {
   fi
 }
 
+# Add Wget WARC options  
+wget_warc_entry() {
+  if [ -z ${1+x} ]; then
+    echolog "$msg_error: missing a parameter required in wget_warc_entry().  Aborting"; exit
+  fi
+  case "$1" in
+    "option")
+      wget_warc_options+=(--"$2")
+      ;;
+    "file")
+      # support multiple WARC files, one for each run of Wget
+      wget_warc_options+=(--warc-file="warc${warc_count}-$mirror_archive_dir")
+      (( warc_count++ ))
+      ;;
+    "header")
+      wget_warc_options+=(--warc-header "$2")
+      ;;
+  esac
+}
 
 # Input (encrypted) password
 # Takes one optional parameter:

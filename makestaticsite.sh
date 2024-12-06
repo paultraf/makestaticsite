@@ -605,29 +605,32 @@ initialise_variables() {
   initialise_mirror_archive_dir
 
   # WARC support
+  wget_warc_options=()
+  (( warc_count=0 ))
   if [ "$warc_output" = "yes" ]; then
+    wget_core_options=( "${wget_core_options[@]/--timestamping}" ) # remove timestamping as a core option
     if [ "$warc_cdx" = "yes" ]; then
-      wget_core_options+=(--warc-cdx)
+      wget_warc_entry "option" "warc-cdx"
     fi
     if [ "$warc_compress" = "no" ]; then
-      wget_core_options+=(--no-warc-compression)
+      wget_warc_entry "option" "no-warc-compression"
     fi    
     if [ "$warc_header_format" = "mss" ]; then
-      wget_core_options+=(--warc-header "software: $wget_user_agent")
-      wget_core_options+=(--warc-header "operator: $USER")
-      wget_core_options+=(--warc-header "hostname: $HOSTNAME")
+      wget_warc_entry "header" "software: $wget_user_agent"
+      wget_warc_entry "header" "operator: $USER"
+      wget_warc_entry "header" "hostname: $HOSTNAME"
     elif [ "$warc_header_format" != "default" ]; then
       IFS="|" read -ra warc_header_list <<< "$warc_header_format"
       for warc_header in "${warc_header_list[@]}"; do
-        wget_core_options+=(--warc-header "$warc_header")
+        wget_warc_entry "header" "$warc_header"
       done
     fi
-    wget_core_options+=(--warc-file="warc-$mirror_archive_dir")
-    wget_core_options=( "${wget_core_options[@]/--timestamping}" )
+    wget_warc_entry "file"
     if [ "$archive" = "no" ]; then
       archive=yes
       echo "$msg_warning: To support WARC, have changed the constant 'archive' to be 'yes'."
     fi
+    wget_core_options+=("${wget_warc_options[@]}")
   fi
 
   # For site captures with fixed directories, enable timestamping for efficient Wget mirroring
@@ -1484,6 +1487,13 @@ wget_extra_urls() {
   print_progress
   echolog "Done."
 
+  # Insert WARC options, where applicable
+  if [ "$warc_output" = "yes" ]; then
+    wget_warc_options=("${wget_warc_options[@]/--warc-file="warc"*$mirror_archive_dir/--warc-file="warc$warc_count-$mirror_archive_dir"}")
+    (( warc_count++ ))
+    wget_extra_core_options+=("${wget_warc_options[@]}")
+  fi
+  
   echolog "Running Wget on these additional URLs with options: " "${wget_extra_core_options[@]}" "${wget_extra_options[@]}" "${wget_asset_options[@]}"
   error_set +e
   if (( wget_threads > 1 )); then
