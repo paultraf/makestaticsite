@@ -1431,7 +1431,18 @@ wget_extra_urls() {
 
   [ "${#webassets_filtered[@]}" -eq 0 ] && { echolog "None found (webassets_filtered). " "1"; (( wget_extra_urls_count=wget_extra_urls_depth+1 )); print_progress; echolog "Done."; return 0; }
 
-  printf "%s\n" "${webassets_filtered[@]}" > "$input_file_extra"
+  # Remove URLs from list that already have a corresponding file download
+  webassets_no_file_duplicates=()
+  for line in "${webassets_filtered[@]}"; do
+    filepath=$(echo "$line"|sed 's~^http[s]\?://~~'|sed 's~\(http[s]\?:/\)/~\1~');
+    if [ ! -f "$mirror_archive_dir/$filepath" ]; then
+      # asset not already downloaded, so retain it in list
+      webassets_no_file_duplicates+=("$line")
+    fi
+  done
+  [ "${#webassets_no_file_duplicates[@]}" -eq 0 ] && { echolog "None found (webassets_no_file_duplicates). " "1"; (( wget_extra_urls_count=wget_extra_urls_depth+1 )); print_progress; echolog "Done."; return 0; }
+  printf "%s\n" "${webassets_no_file_duplicates[@]}" > "$input_file_extra"
+
   if (( wget_extra_urls_count == 1 )); then
     cp_check "$input_file_extra" "$input_file_extra_all" "unable to make a copy of the Wget input file, $input_file_extra, to $input_file_extra_all."
   else
