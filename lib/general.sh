@@ -288,6 +288,25 @@ cp_check() {
   cp "$1" "$2" || { echolog "$msg_error: $msg_copy_error"; return 1; }
 }
 
+# Delete a list of elements from an array.
+# Expects two parameters: name refs for respectively 
+# target array and array with elements for deletion.
+# Generates an array array_reduced, which can be
+# copied to another variable.
+array_elements_delete(){
+  array_name=$1[@]
+  deletions_name=$2[@]
+  array_reduced=("${!array_name}")
+  deletions=("${!deletions_name}")
+  for target in "${deletions[@]}"; do
+    for i in "${!array_reduced[@]}"; do
+      if [[ ${array_reduced[i]} = $target ]]; then
+        unset 'array_reduced[i]'
+      fi
+    done
+  done
+}
+
 get_phase_desc() {
   local opt var
   for opt in "${all_phases[@]}"; do

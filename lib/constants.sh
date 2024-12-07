@@ -22,8 +22,8 @@
 ################################################
 # MakeStaticSite info
 ################################################
-version=0.30.13+alpha2
-version_date='6 December 2024'
+version=0.30.13+alpha3
+version_date='7 December 2024'
 version_header="MakeStaticSite version $version, released on $version_date."
 mss_license="GNU Affero General Public License version 3"
 mss_site="https://makestaticsite.sh"
@@ -122,7 +122,7 @@ rename_wget_tmps=yes            # Remove .tmp.html suffixes from (Wget temp) fil
 # Core options for Wget (array)
 #  In Wget, --mirror is equivalent to '--recursive --timestamping --level=inf --no-remove-listing'
 #  or, in short form, ‘-r -N -l inf --no-remove-listing’, where -r: recursive; -N: timestamping; -l inf: infinite depth
-wget_mirror_options=(--recursive --level=inf --no-remove-listing)
+wget_mirror_options=(--recursive -N --level=inf --no-remove-listing)
 wget_core_options=("${wget_mirror_options[@]}" --convert-links --adjust-extension --page-requisites --tries=3)
 wget_wayback_core_options=()    # Specify additional recursion options in () brackets, e.g. (--recursive --level=2)
 wget_default_page=index.html    # The Wget --default-page option (index.html by default)

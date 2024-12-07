@@ -608,7 +608,12 @@ initialise_variables() {
   wget_warc_options=()
   (( warc_count=0 ))
   if [ "$warc_output" = "yes" ]; then
-    wget_core_options=( "${wget_core_options[@]/--timestamping}" ) # remove timestamping as a core option
+    # Remove remove timestamping as a core option for Wget when fetching URLs
+# shellcheck disable=SC2034
+    wget_core_removals=("--timestamping" "-N")
+    array_elements_delete wget_core_options wget_core_removals
+    wget_core_options=("${array_reduced[@]}")
+
     if [ "$warc_cdx" = "yes" ]; then
       wget_warc_entry "option" "warc-cdx"
     fi
@@ -1503,6 +1508,11 @@ wget_extra_urls() {
     wget_warc_options=("${wget_warc_options[@]/--warc-file="warc"*$mirror_archive_dir/--warc-file="warc$warc_count-$mirror_archive_dir"}")
     (( warc_count++ ))
     wget_extra_core_options+=("${wget_warc_options[@]}")
+    # Remove --no-clobber from Wget options when fetching extra URLs
+# shellcheck disable=SC2034
+    wget_extra_core_removals=("--no-clobber" "-nc")
+    array_elements_delete wget_extra_core_options wget_extra_core_removals
+    wget_extra_core_options=("${array_reduced[@]}")
   fi
   
   echolog "Running Wget on these additional URLs with options: " "${wget_extra_core_options[@]}" "${wget_extra_options[@]}" "${wget_asset_options[@]}"
