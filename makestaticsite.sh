@@ -51,9 +51,8 @@ main() {
   (( phase < 3 )) && (( end_phase >= 2 )) && mirror_site
 
   # Phase 3: Augment the static site
-  (( phase < 4 )) && (( end_phase >= 3 )) && [ "$wget_extra_urls" = "yes" ] && { while (( wget_extra_urls_count <= wget_extra_urls_depth )); do wget_extra_urls; done
-  }
-  
+  (( phase < 4 )) && (( end_phase >= 3 )) && augment_mirror
+   
   # Phase 4: Refine the static site
   (( phase < 5 )) && (( end_phase >= 4 )) && [ "$site_post_processing" = "yes" ] && site_postprocessing
 
@@ -600,49 +599,6 @@ initialise_variables() {
     fi
   fi
 
-  # Define a timestamp and then initialise (generate the name of) the mirror archive directory
-  timestamp=$(timestamp "$timezone")
-  initialise_mirror_archive_dir
-
-  # WARC support
-  wget_warc_options=()
-  (( warc_count=0 ))
-  if [ "$warc_output" = "yes" ]; then
-    # Remove remove timestamping as a core option for Wget when fetching URLs
-# shellcheck disable=SC2034
-    wget_core_removals=("--timestamping" "-N")
-    array_elements_delete wget_core_options wget_core_removals
-    wget_core_options=("${array_reduced[@]}")
-
-    if [ "$warc_cdx" = "yes" ]; then
-      wget_warc_entry "option" "warc-cdx"
-    fi
-    if [ "$warc_compress" = "no" ]; then
-      wget_warc_entry "option" "no-warc-compression"
-    fi    
-    if [ "$warc_header_format" = "mss" ]; then
-      wget_warc_entry "header" "software: $wget_user_agent"
-      wget_warc_entry "header" "operator: $USER"
-      wget_warc_entry "header" "hostname: $HOSTNAME"
-    elif [ "$warc_header_format" != "default" ]; then
-      IFS="|" read -ra warc_header_list <<< "$warc_header_format"
-      for warc_header in "${warc_header_list[@]}"; do
-        wget_warc_entry "header" "$warc_header"
-      done
-    fi
-    wget_warc_entry "file"
-    if [ "$archive" = "no" ]; then
-      archive=yes
-      echo "$msg_warning: To support WARC, have changed the constant 'archive' to be 'yes'."
-    fi
-    wget_core_options+=("${wget_warc_options[@]}")
-  fi
-
-  # For site captures with fixed directories, enable timestamping for efficient Wget mirroring
-  if [ "$archive" = "no" ]; then
-     wget_core_options+=(--timestamping)
-  fi
-
   # check for -nH option in wget_extra_options
   if [[ $wget_extra_options_tmp =~ "-nH" ]] || [[ $wget_extra_options_tmp =~ "--no-host-directories" ]]; then
     # remove the argument, but set host_dir, so that it becomes effective later
@@ -695,6 +651,50 @@ initialise_variables() {
     cut_dirs=$(printf "%s" "$wget_extra_options_tmp" | grep -o "cut-dirs=[0-9]*" | cut -d '=' -f2)
   fi
 
+  # Define a timestamp and then initialise (generate the name of) the mirror archive directory
+  timestamp=$(timestamp "$timezone")
+  initialise_mirror_archive_dir
+
+  # WARC support
+  wget_warc_options=()
+  (( warc_count=0 ))
+  if [ "$warc_output" = "yes" ]; then
+    # Remove remove timestamping as a core option for Wget when fetching URLs
+# shellcheck disable=SC2034
+    wget_core_removals=("--timestamping" "-N")
+    array_elements_delete wget_core_options wget_core_removals
+    wget_core_options=("${array_reduced[@]}")
+
+    if [ "$warc_cdx" = "yes" ]; then
+      wget_warc_entry "option" "warc-cdx"
+    fi
+    if [ "$warc_compress" = "no" ]; then
+      wget_warc_entry "option" "no-warc-compression"
+    fi    
+    if [ "$warc_header_format" = "mss" ]; then
+      wget_warc_entry "header" "software: $wget_user_agent"
+      wget_warc_entry "header" "operator: $USER"
+      wget_warc_entry "header" "hostname: $HOSTNAME"
+    elif [ "$warc_header_format" != "default" ]; then
+      IFS="|" read -ra warc_header_list <<< "$warc_header_format"
+      for warc_header in "${warc_header_list[@]}"; do
+        wget_warc_entry "header" "$warc_header"
+      done
+    fi
+    wget_warc_entry "file"
+    if [ "$archive" = "no" ]; then
+      archive=yes
+      echo "$msg_warning: To support WARC, have changed the constant 'archive' to be 'yes'."
+    fi
+    wget_core_options+=("${wget_warc_options[@]}")
+  fi
+
+  # For site captures with fixed directories, enable timestamping for efficient Wget mirroring
+  if [ "$archive" = "no" ]; then
+     wget_core_options+=(--timestamping)
+  fi
+
+  
   # For deployment on a remote server
   if [ "$deploy_remote" != "yes" ]; then
     deploy_host="on your local computer"
@@ -1106,6 +1106,9 @@ wget_mirror() {
     fi
   fi
 
+  if [ "$warc_output" = "yes" ]; then
+    echolog "$msg_warning: The progress bars may display oddly, as dots and spaces. This is a known technical issue when supplying Wget with both the -q (quiet) option and WARC options."
+  fi
   $wget_cmd "${wget_core_options[@]}" "${wget_progress_indicator[@]}" "${wget_extra_options[@]}" "${wget_options[@]}"
   wget_error_codes "$?"
   error_set -e
@@ -1505,7 +1508,12 @@ wget_extra_urls() {
 
   # Insert WARC options, where applicable
   if [ "$warc_output" = "yes" ]; then
-    wget_warc_options=("${wget_warc_options[@]/--warc-file="warc"*$mirror_archive_dir/--warc-file="warc$warc_count-$mirror_archive_dir"}")
+    if (( warc_count < 10 )); then
+      warc_prefix="warc0$warc_count"
+    else
+      warc_prefix="warc$warc_count"
+    fi
+    wget_warc_options=("${wget_warc_options[@]/--warc-file="warc"*$mirror_archive_dir/--warc-file="$warc_prefix-$mirror_archive_dir"}")
     (( warc_count++ ))
     wget_extra_core_options+=("${wget_warc_options[@]}")
     # Remove --no-clobber from Wget options when fetching extra URLs
@@ -1516,6 +1524,9 @@ wget_extra_urls() {
   fi
   
   echolog "Running Wget on these additional URLs with options: " "${wget_extra_core_options[@]}" "${wget_extra_options[@]}" "${wget_asset_options[@]}"
+  if [ "$warc_output" = "yes" ] && (( phase >2 )); then
+    echolog "$msg_warning: The progress bars may display oddly. This is a known technical issue with Wget when WARC and other options are supplied together."
+  fi 
   error_set +e
   if (( wget_threads > 1 )); then
     xargs -a "$input_file_extra" -n 1 -P $wget_threads $wget_cmd "${wget_extra_core_options[@]}" "${wget_progress_indicator[@]}" "${wget_extra_options[@]}" "${wget_asset_options[@]}"
@@ -1538,6 +1549,21 @@ wget_extra_urls() {
   done
 }
 
+
+augment_mirror() {
+  if [ "$wget_extra_urls" = "yes" ]; then
+    while (( wget_extra_urls_count <= wget_extra_urls_depth )); do
+      wget_extra_urls;
+    done
+  fi
+
+  if [ "$warc_output" = "yes" ]; then
+    # Concatenate WARC files
+    warc_location="$mirror_dir/warc-$mirror_archive_dir.warc.gz"
+    cat "$mirror_dir/warc"*"-$mirror_archive_dir.warc.gz" > "$warc_location"
+    msg_warc="A WARC web archive has also been generated, saved at $warc_location. "    
+  fi
+}
 
 process_assets() {
   echolog "Processing asset storage locations ... "
@@ -2619,6 +2645,9 @@ conclude() {
   echolog "A static mirror of $url has been created in $working_mirror_dir"
   if [ "$wayback_url" = "yes" ] && [ -n "${msg_wayback+x}" ]; then
     echolog $'\n'"$msg_wayback"
+  fi
+  if [ "$warc_output" = "yes" ] && [ -n "${msg_warc+x}" ]; then
+    echolog $'\n'"$msg_warc"
   fi
   if [ -n "${msg_deploy+x}" ]; then
     echolog $'\n'"$msg_deploy"

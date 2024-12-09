@@ -22,8 +22,8 @@
 ################################################
 # MakeStaticSite info
 ################################################
-version=0.30.13+alpha3
-version_date='7 December 2024'
+version=0.30.13+beta1
+version_date='9 December 2024'
 version_header="MakeStaticSite version $version, released on $version_date."
 mss_license="GNU Affero General Public License version 3"
 mss_site="https://makestaticsite.sh"
@@ -159,6 +159,7 @@ warc_header_format=mss          # Header format for WARC files:
                                 # Reference: https://iipc.github.io/warc-specifications/specifications/warc-format/warc-1.1/#warcinfo
 warc_cdx=yes                    # Write CDX index files (y/n)?
 warc_compress=yes               # Compress WARC files using gzip (y/n)?
+warc_combine_output=yes         # Combined enumerated WARC files into one file (y/n)?
 
 ################################################
 # Capture and processing of asset URLS and paths

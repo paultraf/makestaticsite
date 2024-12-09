@@ -379,7 +379,12 @@ wget_warc_entry() {
       ;;
     "file")
       # support multiple WARC files, one for each run of Wget
-      wget_warc_options+=(--warc-file="warc${warc_count}-$mirror_archive_dir")
+      if (( warc_count < 10 )); then
+        warc_prefix="warc0$warc_count"
+      else
+        warc_prefix="warc$warc_count"
+      fi
+      wget_warc_options+=(--warc-file="$warc_prefix-$mirror_archive_dir")
       (( warc_count++ ))
       ;;
     "header")
