@@ -1755,10 +1755,10 @@ process_assets() {
       # Case: URL path
       #  with --no-parent, we need to limit matches to be within the tree
       elif [ "$url_has_path" = "yes" ]; then
-       sed_subs1=('s|\([a-zA-Z0_9][[:space:]]*=[[:space:]]*["'"']"'\?\)https\?://'"$hostport/$url_path/"'|'"\1$dir_pathpref"'|g' "$opt") # trims strictly
+       sed_subs1=('s|\([a-zA-Z0_9][[:space:]]*=[[:space:]]*["'"']"'\?\)https\?://'"$hostport/$url_path_dir/"'|'"\1$dir_pathpref"'|g' "$opt") # trims strictly
         sed "${sed_options[@]}" "${sed_subs1[@]}"
         if (( url_asset_capture_level > 2 )); then
-          sed_subs2=('s|\([[:space:]]*'"$url_separator_chars"'[[:space:]]*["'"']"'\?\)https\?://'"$hostport/$url_path/"'|'"\1$dir_pathpref"'|g' "$opt") # trims loosely
+          sed_subs2=('s|\([[:space:]]*'"$url_separator_chars"'[[:space:]]*["'"']"'\?\)https\?://'"$hostport/$url_path_dir/"'|'"\1$dir_pathpref"'|g' "$opt") # trims loosely
           sed "${sed_options[@]}" "${sed_subs2[@]}"
         fi
       fi
@@ -1803,8 +1803,7 @@ process_assets() {
               if [ "$wayback_url" = "yes" ]; then
                 asset_rel_path=$(printf "%s" "$asset_rel_path" | cut -d/ -f2-)
                 if [ "$wayback_assets_mode" = "original" ]; then
-(( asset_depth=url_path_depth+2 ))
-
+                  (( asset_depth=url_path_depth+2 ))
                   asset_rel_path=$(printf "%s" "$asset_rel_path" | cut -d/ -f$asset_depth-)
                   asset_rel_path="$pathpref$asset_rel_path"
                 else
@@ -1879,7 +1878,8 @@ process_assets() {
   # Special case: mirroring a directory not a whole domain: readjust internal links
   if [ "$url_has_path" = "yes" ] && [ "$cut_dirs" = "0" ] && [ "$wayback_url" != "yes" ] ; then
     extra_dirs_list=()
-    while IFS= read -r line; do extra_dirs_list+=("$line"); done <<<"$(find "." -name "*" -type d -print | grep -v "$url_path" | grep -vx "." | sed s'/^..//')"
+    while IFS= read -r line; do extra_dirs_list+=("$line"); done <<<"$(find "." -name "*" -type d -print | grep -vx "." | sed s'/^..//')"
+
     # Determine which web pages to search and replace
     find_web_pages '.'
     count=1
@@ -1888,7 +1888,8 @@ process_assets() {
       { [ -z ${opt+x} ] || [ "$opt" = "" ]; } && continue; # trap the case there are no web pages to process
       print_progress "$count" "$num_webpages"; (( count++ ))
       # but don't process XML files in guise of HTML files
-      if grep -q "<?xml version" "$opt"; then
+      # (assume document type specified in first non-empty line)
+      if grep -m 1 . "$opt" | grep -q "<?xml version"; then
         continue
       fi
       pathpref=
@@ -1930,15 +1931,14 @@ process_assets() {
     # Move directories and files
     if [ ${#extra_dirs_list[@]} -ne 0 ] && [ "$parent_dirs_mode" = "contain" ]; then
       if [ "$assets_directory" != "" ]; then
-        mirror_assets_directory="$working_mirror_dir/$url_path/$assets_directory"
-        mkdir -p "$mirror_assets_directory"
+        mirror_assets_directory="$working_mirror_dir/$url_path_dir/$assets_directory"
       else
-        mirror_assets_directory="$working_mirror_dir/$url_path"
+        mirror_assets_directory="$working_mirror_dir/$url_path_dir"
       fi
-      mkdir -p "$mirror_assets_directory/$url_path" # and avoid moving into itself later
+      mkdir -p "$mirror_assets_directory"
       for extra_dir in "${extra_dirs_list[@]}"; do
         mv_dir="$working_mirror_dir/$extra_dir"
-        if [ "$url_path" != "" ] && [[ $url_path =~ $extra_dir ]] && [ "$extra_dir" != "" ]; then
+         if [ "$url_path_dir" != "" ] && [[ $url_path_dir =~ $extra_dir/ ]] && [ "$extra_dir" != "" ]; then
           # Move files
           cd_check "$extra_dir" || { echolog "Aborting."; exit; }
           for x in *; do
@@ -1951,7 +1951,7 @@ process_assets() {
             fi
           done
           cd_check "$working_mirror_dir" || { echolog "Aborting."; exit; }
-        elif [ -d "$mv_dir" ]; then
+        elif [ -d "$mv_dir" ] && [[ ! $extra_dir =~ $url_path_dir ]]; then
           # Move directories
           asset_move="$mv_dir to $mirror_assets_directory/"
           # special case: when the directory is a parent, ensure we make corresponding directory in destination
