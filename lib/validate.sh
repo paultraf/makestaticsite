@@ -227,7 +227,6 @@ validate_http() {
   elif [ "$run_unattended" = "yes" ]; then
     echolog "$msg_error: failed to connect; the HTTP response code was $status (exit code: $?). Aborting.  Please check the URL and your network connectivity."; exit
   else
-    echolog " "; echolog "$msg_status"
     echolog -n "$msg_error: Unable to connect to $1. The response code was $status (exit code: $?). "
     ! validate_internet && echolog -n "There doesn't appear to be any Internet connectivity. Is the server up and running? Perhaps you are offline? "
     return 1

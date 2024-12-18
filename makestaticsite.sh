@@ -2316,7 +2316,7 @@ clean_mirror() {
     hostport_dir="/$domain_original"
     working_mirror_dir="$mirror_dir/$mirror_archive_dir$hostport_dir"
     if [ -d "$domain_original" ]; then
-      echolog "$msg_warning: The working mirror directory is already in place, using the original domain, at $working_mirror_dir. Leaving as is."
+      echolog "$msg_warning: The working mirror directory is already in place, using the original domain, at $working_mirror_dir. Leaving as is, but you should consider renaming the existing output and running afresh."
     elif [ -d "$domain" ]; then
       if mv "$domain" "$domain_original"; then
         echolog "Renamed $working_mirror_dir_old to $working_mirror_dir." "1"
@@ -2478,7 +2478,7 @@ cut_mss_dirs() {
   else
     dest_path="$working_mirror_dir"
   fi
-  if (( phase < 5 )); then
+  if (( phase < 5 )) && [ "$dir_path" != "$dest_path" ]; then
     if mv "$dir_path/"* "$dest_path/"; then 
        echolog "Moved files and folders from $dir_path to $dest_path/" "1"
     else

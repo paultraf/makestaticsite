@@ -477,7 +477,11 @@ consolidate_assets() {
   # Replace the relative links created by Wget (that point to levels higher up in the directory hierarchy)
   count=0
   if (( "${#snapshot_path_list[@]}" > 0 )); then
-    mkdir "$dest_path/$imports_directory" || echolog "$msg_error: Unable to create the 'imports' directory."
+    if [ -d "$dest_path/$imports_directory" ]; then
+      echolog "$msg_warning: A directory at $dest_path/$imports_directory already exists, so not creating it."
+    else
+      mkdir "$dest_path/$imports_directory" || echolog "$msg_error: Unable to create the 'imports' directory."
+    fi
   fi
   for opt in "${webpages[@]}"; do
     print_progress "$count" "$num_webpages";
