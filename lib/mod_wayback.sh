@@ -119,7 +119,8 @@ process_wayback_url() {
     url_original_base_regex=$(regex_escape "$url_original_base")
     url_original_base_singleslash=${url_original_base/:\/\//:\/}  # adjust for Wget directory mapping
     url_path_original=$(printf "%s" "$url_original" | cut -d/ -f4-)
-    url_path_original="${url_path_original%\/*}"  # remove anything after last '/'
+    url_path_original="${url_path_original%\/*}"  # else remove anything after last '/'
+    url_path_original_dir=$(echo "$url_path_original" | grep '/') # Set url_path_original as url_path_original or empty if it contains no trailing slashes,
 
     if [ "$url_stem_dates" = "" ] || ! validate_url "$url_original"; then
       printf "%s: The extracted URL, %s, is considered invalid.\n" "$msg_error" "$url_original"
@@ -463,7 +464,7 @@ consolidate_assets() {
   cd_check "$working_mirror_dir" "msg_error: Unable to return to $working_mirror_dir." || { echolog "Aborting."; exit; } 
 
   # Initialised source and destination paths (trunks)
-  dest_path="$working_mirror_dir/$url_path"
+  dest_path="$working_mirror_dir/$url_path_dir"
   dest_path_root="$working_mirror_dir/$url_path_root"
   if [ "$url_path_original" != "" ]; then
     [ "$url_add_slash" = "avoid" ] && dest_path="${dest_path%\/*}"  # remove anything after last '/'
@@ -556,10 +557,10 @@ consolidate_assets() {
 
     while IFS= read -r copy_dir; do
       copy_dir="${copy_dir#./}"
-      if [ "$copy_dir" != "" ] && { [[ ! $url_path_original == $copy_dir/* ]] || [ "$url_path_original" = "" ]; }; then
+      if [ "$copy_dir" != "" ] && { [[ ! $url_path_original_dir == $copy_dir/* ]] || [ "$url_path_original_dir" = "" ]; }; then
         if [ "$this_domain" != "$domain_original" ]; then
           this_dest_path="$dest_path/$imports_directory/$this_domain/$copy_dir"
-        elif [[ $copy_dir == $url_path_original* ]]; then
+        elif [[ $copy_dir == $url_path_original_dir* ]]; then
           this_dest_path="$dest_path_root/$copy_dir"
         else
           this_dest_path="$dest_path/$assets_directory/$copy_dir"
@@ -573,9 +574,9 @@ consolidate_assets() {
           # check for internal URL path copying and adjust accordingly
           if [ "$this_domain" != "$domain_original" ]; then
             file_dest="$dest_path/$imports_directory/$this_domain/$item"
-          elif [[ $item == $url_path_original* ]]; then
+          elif [[ $item == $url_path_original_dir* ]]; then
             file_dest="$dest_path_root/$item"
-          elif [[ ! $copy_dir == $url_path_original* ]]; then
+          elif [[ ! $copy_dir == $url_path_original_dir* ]]; then
             file_dest="$dest_path/$assets_directory/$item"
           else
             file_dest="$dest_path/$item"
@@ -596,7 +597,7 @@ consolidate_assets() {
           item="${item#./}"
           if [ "$this_domain" != "$domain_original" ]; then
             file_dest="$dest_path/$imports_directory/$this_domain/$item"
-          elif [[ ! $copy_dir == $url_path_original* ]]; then
+          elif [[ ! $copy_dir == $url_path_original_dir* ]]; then
             file_dest="$dest_path/$assets_directory/$item"
           else
             file_dest="$dest_path/$item"
@@ -621,8 +622,8 @@ consolidate_assets() {
     line=${line:2}
   done < <(find "." -type d "${asset_exclude_dirs[@]}" -print)
   cd_check "$src_path_snapshot" || { echolog "Aborting"; exit; }
-  if [ "$url_path_original" != "" ]; then
-    folder_exclude="$url_path_original/"
+  if [ "$url_path_original_dir" != "" ]; then
+    folder_exclude="$url_path_original_dir/"
     folder_exclude="${folder_exclude%\/*}"
     folder_exclude_not_path="-not -path ./$folder_exclude"
   else
@@ -630,12 +631,12 @@ consolidate_assets() {
   fi
 
   cd_check "$url_path_snapshot_root" || echolog " "
-  if [ "$url_path_original" != "" ]; then
+  if [ "$url_path_original_dir" != "" ]; then
     while IFS= read -r line; do
       line="${line#./}"
-      parent_assets_path="$url_path_original"
-      [[ ! $url_path_original == $line* ]] && parent_assets_path+="/$assets_directory"
-      if [ "$line" != "" ] && [[ ! $url_path_original == $line/* ]]; then
+      parent_assets_path="$url_path_original_dir"
+      [[ ! $url_path_original_dir == $line* ]] && parent_assets_path+="/$assets_directory"
+      if [ "$line" != "" ] && [[ ! $url_path_original_dir == $line/* ]]; then
         if [ -d "$parent_assets_path/$line" ]; then
           echolog "$msg_info: the directory $parent_assets_path/$line already exists." "1"
           cp -n -r "$line/"* "$parent_assets_path/$line/" || true; echolog "$msg_warning: An error occurred in copying files/directories under $line to $parent_assets_path/" "1"
@@ -691,7 +692,7 @@ process_asset_anchors() {
     
     pathpref=
     opt_path_stem=${opt:2}
-    [ "$url_path_original" != "" ] && opt_path_stem=${opt_path_stem##*"$url_path_original"}  # Path (directory hierarchy) relative to the original URL
+    [ "$url_path_original_dir" != "" ] && opt_path_stem=${opt_path_stem##*"$url_path_original_dir"}  # Path (directory hierarchy) relative to the original URL
     opt_rel_depth=${opt_path_stem//[!\/]};
     opt_rel_depth_num=${#opt_rel_depth} # measure the relative depth of opt_path_stem
     for ((i=1;i<=opt_rel_depth_num;i++)); do
