@@ -19,6 +19,50 @@
 ##########################################################################
 
 
+0.30.13 (released on 2024-12-18)
+        * WARC archives support, improved handling of URLs with paths. *
+         [lib/constants.sh]
+          Added constants: warc_output (yes/no) to enable WARC output;
+          warc_name_format indicates the format for the WARC filename;
+          warc_header_format specifies the format of the header for the
+          WARC file as a whole; warc_cdx to write a content index;
+          warc_compress (yes/no) to gzip the resulting WARC file.
+          Removed --timestamping parameter from wget_mirror_options (will be
+          added if archive=no).
+         [lib/general.sh]
+          Added function array_elements_delete() to delete a list of elements
+          from an array (supplied via name).
+          Added function wget_warc_entry() to add Wget WARC options.
+         [lib/mod_wayback.sh]
+          process_wayback_url(): Defined url_path_original_dir variable to
+          store precisely the path to the directory containing the requested
+          resource.
+          consolidate_assets(): Generally replaced occurrences of url_path by
+          url_path_dir and url_path_original by url_path_original_dir for
+          move and copy operations.
+          Added check to see if 'imports' directory in
+          destination path already exists.
+         [lib/validate.sh]
+          validate_http(): removed superfluous terminal output
+         [makestaticsite.sh]
+          main(): Phase 3 now invoked by simple call to augment_mirror(), an
+          additional function  to orchestrate additional runs of Wget and to
+          include WARC concatenation, as appropriate.
+          initialise_variables(): modified the handling of timestamps for
+          MakeStaticSite archives, removing --timestamping option from Wget
+          when archive=no.
+          Added routine to generate WARC header parameters for Wget.
+          wget_extra_urls(): Insert WARC options as Wget parameters, where
+          applicable and remove --no-clobber from Wget options.
+          Added routine to remove URLs from Wget candidate list that already
+          have a corresponding file download.
+          process_assets(): reworked handling of URLs with paths, based on
+          url_paths_dir instead of url_paths to ensure proper handling of
+          URLs containing paths to web pages with file extensions specified.
+          Condition for non-processing of XML files made stricter.
+          Added further constraint on moving files and directories to ensure
+          that non-asset directories are not moved.
+
 0.30.12 (released on 2024-11-20)
         * Wget-related maintenance; security check added on Wget version *
          [lib/constants.sh]
