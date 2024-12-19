@@ -19,6 +19,14 @@
 ##########################################################################
 
 
+0.30.13.1 (released on 2024-12-19)
+          * Bug fix for processing assets for URLs with paths. *
+           [makestaticsite.sh]
+            process_assets(): Conditionally restored grep exclude clause in
+            'find' pipeline for generating extra_dirs_list array.
+           [README.md]
+            Updated with information about WARC support.
+            
 0.30.13 (released on 2024-12-18)
         * WARC archives support, improved handling of URLs with paths. *
          [lib/constants.sh]
