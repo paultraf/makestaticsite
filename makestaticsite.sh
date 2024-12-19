@@ -1878,7 +1878,7 @@ process_assets() {
   # Special case: mirroring a directory not a whole domain: readjust internal links
   if [ "$url_has_path" = "yes" ] && [ "$cut_dirs" = "0" ] && [ "$wayback_url" != "yes" ] ; then
     extra_dirs_list=()
-    while IFS= read -r line; do extra_dirs_list+=("$line"); done <<<"$(find "." -name "*" -type d -print | grep -vx "." | sed s'/^..//')"
+    while IFS= read -r line; do extra_dirs_list+=("$line"); done <<<"$(find "." -name "*" -type d -print | ( [ "$url_path_dir" != "" ] && grep -v "$url_path_dir" || cat ) | grep -vx "." | sed s'/^..//')"
 
     # Determine which web pages to search and replace
     find_web_pages '.'
