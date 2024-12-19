@@ -27,9 +27,11 @@ MakeStaticSite (project site [https://makestaticsite.sh/](https://makestaticsite
 
 ## About
 
-MakeStaticSite provides a convenient means to set up and manage the automated creation and deployment of static (or flat) versions of websites.  These include content management systems (such as [WordPress](https://wordpress.org/) and [Drupal](https://drupal.org/)) that can, for example, be administered locally and then deployed remotely to a hosting provider or Content Distribution Network (CDN).  It delivers a version of the site that preserves content and look and feel, in a static format that is inherently fast and secure.
+MakeStaticSite provides a convenient means to set up and manage the automated creation and deployment of static (or flat) versions of websites.  These include content management systems (such as [WordPress](https://wordpress.org/) and [Drupal](https://drupal.org/)) that can, for example, be administered locally and then deployed remotely to a hosting provider or Content Distribution Network (CDN).
 
-MakeStaticSite is not intended as a strict archival tool as the output is not an exact mirror &mdash; for example, it has its own canonical layout and modifies internal links accordingly; further files may be added; RSS feeds are saved and then renamed with `.xml` extensions, and so on. Nevertheless, it has been recently extended to provide native support for the Wayback Machine, focused mainly on the [Internet Archive Service](https://web.archive.org/).
+It delivers a version of the site that preserves content and look and feel, in a static format that is inherently fast and secure.  In this mode, MakeStaticSite is not intended as a strict archival tool as the output is not an exact mirror &mdash; for example, it has its own canonical layout and modifies internal links accordingly; further files may be added; RSS feeds are saved and then renamed with `.xml` extensions, and so on.
+
+Nevertheless, a couple of more recent developments have been concerned with archival. With the first, MakeStaticSite has been extended to provide native support for the Wayback Machine, focused mainly on the [Internet Archive Service](https://web.archive.org/).  Secondly, basic support has been added for generating [WARC (Web ARChive)](https://iipc.github.io/warc-specifications/) files (leveraging [Wget's support](https://www.gnu.org/software/wget/manual/wget.html#index-WARC)) with an option to concatenate multiple archives (one for each run of Wget) as a single compressed `.warc.gz` file.  The result can be played back with tools such as [ReplayWeb.page](https://replayweb.page/).
 
 The goal is for anyone who has a little familiarity with the command line to be able to use the tool to assist in maintaining their sites.  Similarly, a scripting-based approach has been chosen to make the code widely accessible for developers to further fine-tune;
 a number of refinements are already included that augment the standard use of [Wget](https://www.gnu.org/software/wget/), such as support for arbitrary attributes and, in the case of WordPress, the use of [WP-CLI](https://wp-cli.org/) to prepare sites beforehand.
@@ -38,9 +40,9 @@ MakeStaticSite is available under AGPL version 3 license.  See the COPYING file 
 
 ### Requirements
 
-This software should work on version 3 of GNU [Bash](https://www.gnu.org/software/bash/), though version 4+ is recommended. 
+This software should work on version 3.2 of GNU [Bash](https://www.gnu.org/software/bash/), though version 4+ is recommended. 
 
-It depends on GNU [Wget](https://www.gnu.org/software/wget/) and [rsync](https://rsync.samba.org/), for which the latest versions are recommended.  For optimising WordPress sites ahead of running Wget, [WP-CLI](https://wp-cli.org/) is needed; and [HTML Tidy](https://www.html-tidy.org/) is used to refine HTML output for better conformance with W3C standards.  Otherwise, apart from Internet connectivity, there are few dependencies beyond what the shell already provides.
+MakeStaticSite depends on GNU [Wget](https://www.gnu.org/software/wget/).  Other requirements are: [rsync](https://rsync.samba.org/) for remote deployment; [WP-CLI](https://wp-cli.org/) for optimising WordPress sites ahead of running Wget; and [HTML Tidy](https://www.html-tidy.org/) for refining HTML output for better conformance with W3C standards.  The latest versions are generally recommended.  Otherwise, apart from Internet connectivity, there are few dependencies beyond what the shell already provides.
 
 Please note that the system is not designed for [Wget2](https://gitlab.com/gnuwget/wget2), though it would be useful to support that in future.
 
@@ -57,7 +59,8 @@ Please note that the system is not designed for [Wget2](https://gitlab.com/gnuwg
 * Deep search for orphaned Web assets, later retrieved in further runs of Wget
 * Suitable for batch processes, allowing operations to be scaled up so that any or all of the sites are updated in one process.
 * Support for HTTP basic authentication and/or CMS login (experimental, only tested with WordPress)
-* Partial support for sites archived by the [Wayback Machine](https://web.archive.org/) 
+* Partial support for sites archived by the [Wayback Machine](https://web.archive.org/)
+* Basic support for generating WARC files (and also content indexes).
 * Runtime settings include verbosity (amount of information) for terminal output and logging to file
 * Option of a downloadable copy of the entire site (ZIP file) for offline use 
 * Local and remote (server) deployment options, including rsync over ssh and [Netlify](https://netlify.com).
