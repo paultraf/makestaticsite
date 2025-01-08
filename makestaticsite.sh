@@ -3,7 +3,7 @@
 ##########################################################################
 #
 # MakeStaticSite --- a shell script to create and deploy static websites
-# Copyright 2022-2024 Paul Trafford <pt@ptworld.net>
+# Copyright 2022-2025 Paul Trafford <pt@ptworld.net>
 #
 # makestaticsite.sh - main script for MakeStaticSite
 # This file is part of MakeStaticSite.
@@ -1541,12 +1541,6 @@ wget_extra_urls() {
     wayback_wget_postprocess
   fi
 
-  # Prune file names on disk, removing superfluous extensions added by Wget to query strings
-  IFS=',' read -ra prune_wget_extensions <<< "$wget_adjust_extensions"
-  for opt in "${prune_wget_extensions[@]}"; do
-    find "$working_mirror_dir" -type f -name "*\.$opt\?*\.$opt" -exec sh -c 'mv "$0" "${0%\.$opt*}"' {} \;
-    find "$working_mirror_dir" -type f -name "*\.$opt%3F*\.$opt" -exec sh -c 'mv "$0" "${0%\.$opt*}"' {} \;
-  done
 }
 
 
@@ -1568,7 +1562,24 @@ augment_mirror() {
 process_assets() {
   echolog "Processing asset storage locations ... "
 
-  # First, generate a list of all the web pages that contain relevant URLs to process
+  if [ "$prune_filename_extensions_querystrings" = "yes" ]; then
+    # Remove file name extensions added by Wget where filenames have query strings appended
+    IFS=',' read -ra prune_wget_extensions <<< "$wget_adjust_extensions"
+    for opt in "${prune_wget_extensions[@]}"; do
+      # Rename files
+      find "$working_mirror_dir" -type f -name "*\.$opt\?*\.$opt" -exec sh -c 'mv "$0" "${0%\.$opt*}"' {} \;
+      find "$working_mirror_dir" -type f -name "*\.$opt%3F*\.$opt" -exec sh -c 'mv "$0" "${0%\.$opt*}"' {} \;
+      # Prune the corresponding links
+      sed_subs0=('s|\([\"'\''][^>\"'\'']*\.'"$opt"'%3F[^'\''\"[:space:]]*\)\.'"$opt"'|\1|g')
+      sed_subs=('s|\([\"'\''][^>\"'\'']*\.'"$opt"'?[^'\''\"[:space:]]*\)\.'"$opt"'|\1|g')
+      for file_ext in "${asset_find_names[@]}"; do
+        find "$working_mirror_dir" -type f -name "$file_ext" "${asset_exclude_dirs[@]}" -print0 | xargs "${xargs_options[@]}" sed "${sed_options[@]}" "${sed_subs0[@]}"
+        find "$working_mirror_dir" -type f -name "$file_ext" "${asset_exclude_dirs[@]}" -print0 | xargs "${xargs_options[@]}" sed "${sed_options[@]}" "${sed_subs[@]}"
+      done
+    done
+  fi
+
+  # Generate a list of all the web pages that contain relevant URLs to process
   # (makes subsequent sed replacements more targeted than searching all web pages).
   extra_domains_array=()
   while IFS= read -r line; do
