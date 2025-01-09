@@ -1871,8 +1871,16 @@ process_assets() {
 
   # Special case: mirroring a directory not a whole domain: readjust internal links
   if [ "$url_has_path" = "yes" ] && [ "$cut_dirs" = "0" ] && [ "$wayback_url" != "yes" ] ; then
-    extra_dirs_list=()
-    while IFS= read -r line; do extra_dirs_list+=("$line"); done <<<"$(find "." -name "*" -type d -print | ( [ "$url_path_dir" != "" ] && grep -v "$url_path_dir" || cat ) | grep -vx "." | sed s'/^..//')"
+    IFS='/' read -ra url_path_dir_list <<< "$url_path_dir"
+    extra_dirs_list=("${url_path_dir_list[0]}")
+    url_path_dir_prefix=
+    for ((i=0;i<url_path_depth;i++)); do
+      child_dir=${url_path_dir_list[$i]}
+      while IFS= read -r line; do [ "$line" != "" ] && extra_dirs_list+=("$url_path_dir_prefix$line"); done <<<"$(find "." -maxdepth 1 -name "*" -type d -print | ( [ "$url_path_dir" != "" ] && grep -v "^$child_dir$" || cat ) | grep -vx "." | sed s'/^..//')"
+      url_path_dir_prefix+="$child_dir/"
+      cd_check "$child_dir"
+    done
+    cd_check "$working_mirror_dir" || { echolog "Unable to return after traversing URL path directories. Aborting."; exit; }
 
     # Determine which web pages to search and replace
     find_web_pages '.'
