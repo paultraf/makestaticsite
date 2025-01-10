@@ -249,6 +249,16 @@ initialise_mirror_archive_dir() {
     # Update mirror variable
     working_mirror_dir="$mirror_dir/$mirror_archive_dir$hostport_dir"
   fi
+
+  if (( phase = 4 )) && [ ! -d "$working_mirror_dir/$url_path_dir" ]; then
+    if [ -d "$working_mirror_dir" ]; then
+      msg_compare=" and compare with the actual contents of $working_mirror_dir"
+    else
+      msg_compare=" (and also why $working_mirror_dir doesn't exist)"
+    fi
+    echolog "$msg_error: Directory $working_mirror_dir/$url_path_dir not found. Please check $myconfig.cfg$msg_compare, especially that the value of url ($url) is compatible. If there was originally a URL redirect involved, then url should be assigned that value.  Aborting"; exit 
+  fi
+  
   zip_archive="$mirror_archive_dir.zip"
   initialise_include_excludes
 }
