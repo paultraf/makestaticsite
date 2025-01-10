@@ -250,7 +250,7 @@ initialise_mirror_archive_dir() {
     working_mirror_dir="$mirror_dir/$mirror_archive_dir$hostport_dir"
   fi
 
-  if (( phase = 4 )) && [ ! -d "$working_mirror_dir/$url_path_dir" ]; then
+  if (( phase == 4 )) && [ ! -d "$working_mirror_dir/$url_path_dir" ]; then
     if [ -d "$working_mirror_dir" ]; then
       msg_compare=" and compare with the actual contents of $working_mirror_dir"
     else
