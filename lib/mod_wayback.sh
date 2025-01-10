@@ -1,7 +1,7 @@
 ##########################################################################
 # 
 # MakeStaticSite --- a shell script to create and deploy static websites 
-# Copyright 2022-2024 Paul Trafford <pt@ptworld.net>
+# Copyright 2022-2025 Paul Trafford <pt@ptworld.net>
 # 
 # mod_wayback.sh - Wayback Machine module for MakeStaticSite
 # This file is part of MakeStaticSite.
@@ -472,7 +472,7 @@ consolidate_assets() {
       echolog -n "$msg_warning: website already contains a directory, $assets_directory.  To avoid confusion (and errors), a timestamp is being appended to the MakeStaticSite-generated assets directory, but it is recommended that you modify the assets_directory constant and re-run. ... "
       assets_directory="$assets_directory$timestamp"
     fi
-    mkdir "$dest_path/$assets_directory" || echolog "Unable to created directory"
+    mkdir "$dest_path/$assets_directory" || echolog "Unable to create directory"
   fi
 
   # Replace the relative links created by Wget (that point to levels higher up in the directory hierarchy)

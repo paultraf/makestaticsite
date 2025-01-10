@@ -1,7 +1,7 @@
 ##########################################################################
 #
 # MakeStaticSite --- a shell script to create and deploy static websites 
-# Copyright 2022-2024 Paul Trafford <pt@ptworld.net>
+# Copyright 2022-2025 Paul Trafford <pt@ptworld.net>
 #
 # version_history.txt - version history (or changelog) for MakeStaticSite
 # This file is part of MakeStaticSite.
@@ -18,6 +18,17 @@
 #
 ##########################################################################
 
+
+0.30.13.2 (released on 2025-01-08)
+          * Bug fix for removing superflous Web asset file extensions. *
+           [lib/constants.sh]
+            Added constant, prune_filename_extensions_querystrings, to
+            indicate whether or not to prune (mainly CSS) filenames with
+            query strings where Wget has appended a file extension.
+           [makestaticsite.sh]
+            Moved the optional pruning of filenames of Web assets with query
+            strings, file extension from wget_extra_urls() to process_assets();
+            added a routine to rename linked files using sed substitutions. 
 
 0.30.13.1 (released on 2024-12-19)
           * Bug fix for processing assets for URLs with paths. *
