@@ -560,7 +560,11 @@ initialise_variables() {
   fi
 
   if [ "$url_add_slash" = "avoid" ]; then
-    url_path_dir="${url_path%\/*}"  # Remove anything after last '/' for URLs not ending in '/'.
+    if [[ $url_path != */* ]]; then
+      url_path_dir=''                 # Set to empty directory if there is no slash
+    else
+      url_path_dir="${url_path%\/*}"  # Remove anything after last '/' for URLs not ending in '/'.
+    fi
   else
     url_path_dir="$url_path"
   fi
