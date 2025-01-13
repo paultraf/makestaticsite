@@ -287,7 +287,9 @@ initialise_layout() {
 
   # Local target directory and web server deployment
   mirror_dir="$script_dir/mirror"         # path to Wget output root folder
-  mkdir -p "$mirror_dir"; echolog "Created folder for mirror files at $mirror_dir."
+  if [ ! -d "$mirror_dir" ]; then
+    mkdir -p "$mirror_dir"; echolog "Created folder for mirror files at $mirror_dir."
+  fi
 
   # Substitute files for zip download (used for embeds, etc.)
   sub_dir=subs                            # This must be sit under $script_dir
@@ -792,7 +794,7 @@ wget_error_codes() {
       wget_error_check 5
       ;;
     "4")
-      echolog "Wget $msg_error code 4: Network failure.  It may be a network configuration issue.  Check in particular if there are any firewalls."
+      echolog "Wget $msg_error code 4: Network failure.  It may be a network configuration or authentication issue.  Check in particular if there are any firewalls."
       wget_error_check 4
       ;;
     "3")
@@ -1632,7 +1634,8 @@ process_assets() {
       if [ "$shorten_longlines" = "auto" ]; then
         item_chars=$(wc -m "$item" | awk '{print $1}')
         item_newlines=$(wc -l "$item" | awk '{print $1}')
-        item_longest_line=$(longest_line "$item")        
+        item_longest_line=$(longest_line "$item")
+        (( item_newlines = 0 )) && continue
         if (( item_chars/item_newlines <= average_linelength_max )) && (( item_longest_line <= longest_linelength_max )); then { (( count++ )); continue; }
         else
           echolog "Shortening lines in $item" "1"
