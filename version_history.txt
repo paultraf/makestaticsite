@@ -19,6 +19,28 @@
 ##########################################################################
 
 
+0.31 (released on 2025-01-13)
+     * Consolidation, including bug fixes and performance enhancements. *
+      [lib/mod_wayback.sh]
+       Refinements of file/web paths to be processed for URL rewrites. 
+       wayback_url_paths(): Modified definitions of url_path_original_dir and
+       url_path_root to properly take account of different URL scenarios.
+       consolidate_assets(): Replaced occurrences of url_path_original with 
+       url_path_original_dir plus modifications of some conditional clauses
+       to ensure correct scope of sed replacements.
+       process_asset_anchors(): simplified a couple of labels.
+      [makestaticsite.sh]
+       Moved optional pruning based on prune_filename_extensions_querystrings
+       from process_assets() to site_postprocessing()
+       initialise_variables(): Modified definitions of url_path_dir to
+       properly take account of different URL scenarios.
+       initialise_mirror_archive_dir(): Added routine to check compatibility
+       of supplied URL and existing archive directory.
+       process_assets(): Reworked the generation of extra_dirs_list() to
+       contain only the parent directories necessary for processing.
+       Added division by zero trap when computing long filenames.
+       clean_mirror(): corrected link tag canonical attribute rewrite.
+
 0.30.13.2 (released on 2025-01-08)
           * Bug fix for removing superflous Web asset file extensions. *
            [lib/constants.sh]
