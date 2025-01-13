@@ -118,9 +118,6 @@ process_wayback_url() {
     url_original_base="$protocol_original://$hostport_original"
     url_original_base_regex=$(regex_escape "$url_original_base")
     url_original_base_singleslash=${url_original_base/:\/\//:\/}  # adjust for Wget directory mapping
-    url_path_original=$(printf "%s" "$url_original" | cut -d/ -f4-)
-    url_path_original="${url_path_original%\/*}"  # else remove anything after last '/'
-    url_path_original_dir=$(echo "$url_path_original" | grep '/') # Set url_path_original as url_path_original or empty if it contains no trailing slashes,
 
     if [ "$url_stem_dates" = "" ] || ! validate_url "$url_original"; then
       printf "%s: The extracted URL, %s, is considered invalid.\n" "$msg_error" "$url_original"
@@ -184,6 +181,16 @@ initialise_wayback() {
 wayback_url_paths() {
   # Wayback-related URLs
   url_base_regex=$(regex_escape "$url_base")
+  url_path_original=$(printf "%s" "$url_original" | cut -d/ -f4-)
+  if [ "$url_add_slash" = "avoid" ]; then
+    if [[ $url_path_original != */* ]]; then
+      url_path_original_dir=''       # set to empty directory if there is no slash
+    else
+      url_path_original_dir="${url_path_original%\/*}"  # Remove anything after last '/' for URLs not ending in '/'.
+    fi
+  else
+    url_path_original_dir="$url_path_original"
+  fi
   url_path_original_regex=$(regex_escape "$url_path_original")
   url_timeless=${url/\/${wayback_date_from}/\/[0-9]+[a-z]\{0,2\}_\?} # This could be tightened - use $wayback_datetime_regex
   if [ "$wayback_merge_httphttps" = "yes" ]; then
@@ -201,7 +208,9 @@ wayback_url_paths() {
   url_base_timeless_generic=$(echo "$url_base_timeless_generic" | sed 's|\(https\?:/\)\([^/]\)|\1/\2|') # Ensure http[s] is followed by a colon and two slashes
 
   # Locate source directories to copy
-  url_path_root="$url_path"
+  url_path_root=$(printf "%s" "$url_path" | cut -d'/' -f1,2 )
+  url_path_root="$url_path_root/$url_original_root"
+  url_path_root=${url_path_root//\/\//\/} # replace double slashes with single slash
   if [ "$url_path_original" != "" ]; then
     [ "$url_add_slash" = "avoid" ] && url_path_root="${url_path_root%\/*}"  # Remove anything after last '/' for URLs not ending in '/'.
     url_path_root="${url_path_root/$url_path_original/}" 
@@ -467,7 +476,6 @@ consolidate_assets() {
   dest_path="$working_mirror_dir/$url_path_dir"
   dest_path_root="$working_mirror_dir/$url_path_root"
   if [ "$url_path_original" != "" ]; then
-    [ "$url_add_slash" = "avoid" ] && dest_path="${dest_path%\/*}"  # remove anything after last '/'
     if [ "$(find . -name "$assets_directory" -type d -print)" != "" ]; then
       echolog -n "$msg_warning: website already contains a directory, $assets_directory.  To avoid confusion (and errors), a timestamp is being appended to the MakeStaticSite-generated assets directory, but it is recommended that you modify the assets_directory constant and re-run. ... "
       assets_directory="$assets_directory$timestamp"
@@ -503,14 +511,14 @@ consolidate_assets() {
       snapshot_src_path=$(regex_escape "$snapshot_src_path")
       snapshot_src_path=$(printf "%s" "$snapshot_src_path" | sed 's|'"$wayback_datetime_regex"'|'"$wayback_datetime_regex"'|g') 
       snapshot_src_path=$(regex_apply "$snapshot_src_path")
-      if [ "$url_path_original" != "" ]; then
+      if [ "$url_path_original_dir" != "" ]; then
         # this variants targets specifically URLs that contain the URL path
         opt_item_slashes=${opt_item//[!\/]};
         opt_item_slashes_num=${#opt_item_slashes};
         this_path="$opt_item"
         if [ "$this_domain" != "$domain_original" ]; then
           this_path_prefix="$imports_directory/$this_domain"
-        elif [[ ! $url_path_original == $opt_item* ]]; then
+        elif [[ ! $url_path_original_dir == $opt_item* ]]; then
           this_path_prefix="$assets_directory"
         else
           this_path_prefix=
@@ -527,7 +535,7 @@ consolidate_assets() {
       this_folder_path=
       if [ "$this_domain" != "$domain_original" ]; then
         this_folder_path="$imports_directory/$this_domain/"
-      elif [ "$url_path_original" != "" ]; then
+      elif [ "$url_path_original_dir" != "" ]; then
         # First substitute on any match under url_path_original
         sed_subs1=('s|'"$snapshot_src_path/$url_path_original/"'|'""'|g' "$opt") # first convert assets that are underneath the trunk
         sed "${sed_options[@]}" "${sed_subs1[@]}"
@@ -557,7 +565,7 @@ consolidate_assets() {
 
     while IFS= read -r copy_dir; do
       copy_dir="${copy_dir#./}"
-      if [ "$copy_dir" != "" ] && { [[ ! $url_path_original_dir == $copy_dir/* ]] || [ "$url_path_original_dir" = "" ]; }; then
+      if [ "$copy_dir" != "" ] && { [[ ! $url_path_original_dir == $copy_dir/* ]] || [ "$url_path_original_dir" != "" ]; }; then
         if [ "$this_domain" != "$domain_original" ]; then
           this_dest_path="$dest_path/$imports_directory/$this_domain/$copy_dir"
         elif [[ $copy_dir == $url_path_original_dir* ]]; then
@@ -597,7 +605,7 @@ consolidate_assets() {
           item="${item#./}"
           if [ "$this_domain" != "$domain_original" ]; then
             file_dest="$dest_path/$imports_directory/$this_domain/$item"
-          elif [[ ! $copy_dir == $url_path_original_dir* ]]; then
+          elif [[ ! $copy_dir == $url_path_original_dir* ]] || { [ "$copy_dir" = "" ] && [ "$url_path_original_dir" != "" ]; }; then
             file_dest="$dest_path/$assets_directory/$item"
           else
             file_dest="$dest_path/$item"
@@ -657,29 +665,29 @@ process_asset_anchors() {
 
   # Generate lists of webasset paths
   cd_check "$url_path_dir" "$msg_warning: Unable to enter $working_mirror_dir" || echolog " "
-  webpages_output1=() # to store file paths to web pages only
-  webpaths_output1=() # to store file paths to web assets for internal links
+  webpages_output=() # to store file paths to web pages only
+  webpaths_output=() # to store file paths to web assets for internal links
 
   while IFS='' read -r line; do
     line=${line:2}
-    webpages_output1+=("$line")
+    webpages_output+=("$line")
   done < <(
   for file_ext in "${asset_find_names[@]}"; do
     find "." -type f -name "$file_ext" "${asset_exclude_dirs[@]}" -print
   done)
-  num_webpages1="${#webpages_output1[@]}"
+  num_webpages_output="${#webpages_output[@]}"
 
   while IFS='' read -r line; do
     line=${line:2}
     # Percent encode spaces
     line=${line// /%20}
-    webpaths_output1+=("$line")
+    webpaths_output+=("$line")
   done < <(find "." -type f "${asset_exclude_dirs[@]}" -print)
 
   # Carry out substitutions in web pages
   count=0
-  for opt in "${webpages_output1[@]}"; do
-    print_progress "$count" "$num_webpages1";  
+  for opt in "${webpages_output[@]}"; do
+    print_progress "$count" "$num_webpages_output";  
 
     if grep -q '&#' "$opt"; then 
       # Convert character entities to percent-encoded equivalents
@@ -698,7 +706,7 @@ process_asset_anchors() {
     for ((i=1;i<=opt_rel_depth_num;i++)); do
       pathpref+="../";
     done
-    for item in "${webpaths_output1[@]}"; do
+    for item in "${webpaths_output[@]}"; do
       url_stem_timeless="$url_timeless_slash"
       url_stem_timeless_nodomain="$url_timeless_nodomain"
       if [[ $item == $imports_directory* ]]; then
