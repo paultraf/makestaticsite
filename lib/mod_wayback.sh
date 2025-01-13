@@ -626,8 +626,8 @@ consolidate_assets() {
   cd_check "$url_path_dir" || echolog " "
   webpaths_output2=() # to store directory paths for internal links, creating array before moving supporting assets here
   while IFS='' read -r line; do
-    webpaths_output2+=("$line")
-    line=${line:2}
+    line=${line:2} # remove any ./ prefix
+    webpaths_output2+=("$line")    
   done < <(find "." -type d "${asset_exclude_dirs[@]}" -print)
   cd_check "$src_path_snapshot" || { echolog "Aborting"; exit; }
   if [ "$url_path_original_dir" != "" ]; then
@@ -681,6 +681,8 @@ process_asset_anchors() {
     line=${line:2}
     # Percent encode spaces
     line=${line// /%20}
+    # escape dots
+    line=${line//./\\.}
     webpaths_output+=("$line")
   done < <(find "." -type f "${asset_exclude_dirs[@]}" -print)
 
@@ -751,7 +753,6 @@ process_asset_anchors() {
     sed "${sed_options[@]}" "${sed_subs2[@]}"
     # (2) Non-empty case
     for item in "${webpaths_output2[@]}"; do
-      item=${item:2}
       item=$(regex_escape "$item")
       [[ ${item:length-1:1} != "/" ]] && item+="/"
       sed_subs1=('s|\('"$url_timeless"'\)\('"$item"'\)\([\"'\'']\)|'"$pathpref\2index.html\3"'|g' "$opt")
