@@ -1639,7 +1639,9 @@ process_assets() {
         item_chars=$(wc -m "$item" | awk '{print $1}')
         item_newlines=$(wc -l "$item" | awk '{print $1}')
         item_longest_line=$(longest_line "$item")
-        (( item_newlines = 0 )) && continue
+        if { (( item_newlines == 0 )) || [ "$item_newlines" = "" ]; }; then
+         (( count++ )); continue
+        fi
         if (( item_chars/item_newlines <= average_linelength_max )) && (( item_longest_line <= longest_linelength_max )); then { (( count++ )); continue; }
         else
           echolog "Shortening lines in $item" "1"
