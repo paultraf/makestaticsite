@@ -93,7 +93,7 @@ read_config() {
 
   if [ "$*" != "" ]; then
     url="$*";
-    validate_url "$url" || { printf "Sorry, the syntax of the URL appears to be invalid. Aborting - please try again. \n"; exit; }
+    validate_url "$url" || { printf "Sorry, the URL appears to contain one or more invalid characters. Aborting - please check and try again. \n"; exit; }
     echo
   fi
 

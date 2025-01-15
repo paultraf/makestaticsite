@@ -22,7 +22,7 @@
 ################################################
 # MakeStaticSite info
 ################################################
-version=0.31+1
+version=0.31+2
 version_date='15 January 2025'
 version_header="MakeStaticSite version $version, released on $version_date."
 mss_license="GNU Affero General Public License version 3"
@@ -174,7 +174,7 @@ url_asset_capture_level=3       # (0 fewest, 5 most) for URL matching in determi
 url_wildcard_capture=no         # Use a wildcard for matching URLs in asset processing (y/n)?  If set to 'yes', when capturing asset URLs on pages, a simple regex capture group will be used instead of the input file of itemised URLs generated in phases 2 and 3
 url_separator_chars="[,:(]"     # additional class of separator characters (regular expression capture class) of URLs to be captured: for example, data-src (comma) and JSON (colon).  Leave empty to omit.
 url_grep_search_pattern="[^\\\"'<) ]" # URL terminating characters in grep searches (ERE notation); if link text contain ')', then this character can be removed
-webpage_file_extensions="html,htm,xhtm,xhtml,dhtml,cgi,php,php2,php4,phtml,asp,aspx,jsp" # A list of common web page file extensions, not exhaustive. (Note that any list of file extensions in this document assume a preceding dot '.')
+webpage_file_extensions="html,htm,xhtm,xhtml,dhtml,cgi,php,php2,php4,phtml,asp,aspx,jsp,cfm,cfml" # A list of common web page file extensions, not exhaustive. (Note that any list of file extensions in this document assume a preceding dot '.')
 
 # Specification of assets eligible for downloading by Wget in phase 3.
 web_source_extensions="htm,html,xml,txt,css" # list of web document file extensions intended for assets search

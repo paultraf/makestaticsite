@@ -436,9 +436,10 @@ initialise_variables() {
   if [[ ${url:length-1:1} != "/" ]]; then
     url_add_slash=yes # Now assume yes, unless ...
     for ext in "${webpage_file_exts[@]}"; do
+      url_noquery=${url%\?*}
       ext_length=${#ext}
       (( ext_length++ ))
-      if [[ ${url:length-$ext_length:$ext_length} = ".$ext" ]]; then # URL ends in a recognised file extension that can't have slash added.
+      if [[ ${url_noquery:length-$ext_length:$ext_length} = ".$ext" ]]; then # URL ends in a recognised file extension that can't have slash added.
         url_add_slash=avoid; break
       fi
     done
@@ -1722,7 +1723,10 @@ process_assets() {
         if [ "$url_has_path" = "no" ] || [ "$relativise_primarydomain_assets" = "no" ]; then
           while IFS= read -r line; do line=${line//&/&amp;}; urls_array+=("$line"); done < <(grep -v "//$domain_BRE" "$input_file_extra_all_BRE")
         else
-          while IFS= read -r line; do line=${line//&/&amp;}; urls_array+=("$line"); done < "$input_file_extra_all_BRE"
+          while IFS= read -r line; do
+            line=${line//&/&amp;}
+            [ "$line" != "" ] && urls_array+=("$line")
+          done < "$input_file_extra_all_BRE"
         fi
       fi
     fi
