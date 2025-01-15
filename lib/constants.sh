@@ -22,8 +22,8 @@
 ################################################
 # MakeStaticSite info
 ################################################
-version=0.31
-version_date='13 January 2025'
+version=0.31+1
+version_date='15 January 2025'
 version_header="MakeStaticSite version $version, released on $version_date."
 mss_license="GNU Affero General Public License version 3"
 mss_site="https://makestaticsite.sh"
@@ -44,14 +44,18 @@ max_redirects=5                 # Maximum number of redirects allowed for determ
 # a "name" (Net, Host, Gateway, or Domain name) is a text string...
 # drawn from the alphabet (A-Z), digits (0-9), minus sign (-), and period (.).  
 # https://datatracker.ietf.org/doc/html/rfc952
-# May start with a digit:
+# and may start with a digit:
 # https://datatracker.ietf.org/doc/html/rfc1123#page-13
+# URL syntax, with a list of acceptable (unreserved and reserved) characters based on Internet Society, URI, RFC 3986
+# https://www.rfc-editor.org/rfc/rfc3986#section-2 
+# For bracketed expressions, see
+# https://pubs.opengroup.org/onlinepubs/009696899/basedefs/xbd_chap09.html#tag_09_03_05
 ip4re="^[[:space:]]*#*[[:space:]]*\([0-9]\{0,1\}[0-9]\{0,1\}[0-9]\.\)\{3\}[0-9]\{0,1\}[0-9]\{0,1\}[0-9][[:space:]]*"
 ip6re="^[[:space:]]*#*[[:space:]]*\([0-9a-fA-F]\{1,4\}::\{0,1\}\)\{1,7\}[0-9a-fA-F]\{1,4\}[[:space:]]*"
 # Unlike hostnames, Internet domains contain at least one dot.
 domain_re0="[[:alnum:]][-[:alnum:]+\.]*\.[-[:alnum:]+]*[[:alnum:]]"
 domain_re="^$domain_re0"'$'     # Anchored domain match (add first and last characters)
-url_re='^(https?|ftp|file)://[-[:alnum:]\+&@#/%?=~_|!:,.;]+$'
+url_re='^(https?|ftp|file)://[][:alnum:]\+&@#/%?=~_|!:,.;\(\)\[\$'\''*-]+$' # URL syntax
 datetime_regex='[1-2][0-9]\{3\}[0-1][0-9][0-3][0-9][0-2][0-9][0-5][0-9][0-5][0-9]'
 wayback_datetime_regex='[1-2][0-9]\{3\}[0-1][0-9][0-3][0-9][0-2][0-9][0-5][0-9][0-5][0-9][a-z]\{0,2\}_\?' # regex for Wayback datetime folder (with support for suffix indicating asset types)
 etc_hosts=/etc/hosts            # Location of hosts file
