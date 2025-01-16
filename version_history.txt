@@ -19,6 +19,16 @@
 ##########################################################################
 
 
+0.31.1 (released on 2025-01-16)
+     * Maintenance, with fixes for basic limitations in functionality. *
+      [lib/constants.sh]
+       Definition of url_re extended to include all unreserved and reserved
+       characters in URI definition, RFC 3986 
+      [makestaticsite.sh]
+       initialise_variables(): added line to remove any query string when
+       checking for web page file extension.
+       process_assets(): only add non-empty entries to urls_array.
+
 0.31 (released on 2025-01-13)
      * Consolidation, including bug fixes and performance enhancements. *
       [lib/mod_wayback.sh]
