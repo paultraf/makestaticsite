@@ -1267,7 +1267,6 @@ wget_extra_urls() {
   (( num_webasset_steps=9*10 )) # 9 phases with multiplier of 10 for granularity
   webasset_step_count=1
   count=0
-  col_width=$(tput cols);
 
   webassets_all=()
   url_grep_array=()

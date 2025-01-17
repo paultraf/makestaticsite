@@ -120,9 +120,8 @@ pluralize() {
 }
 
 colorize() {
-  if [ -z "$TERM" ] || [ "$TERM" = "dumb" ]; then
-    printf ""; return 0;
-  fi
+  [ -z "$TERM" ] && export TERM=dumb
+  [ "$TERM" = "dumb" ] && return 0
   case "$1" in
     black)
       printf "%s" "$(tput setaf 0)"
@@ -579,6 +578,8 @@ EOT
 # If no parameters are passed, then it calls itself for a
 # full-width progress bar, adds a newline and returns (i.e. done).
 print_progress() {
+  [ -z "$TERM" ] && export TERM=dumb
+  [ "$TERM" = "dumb" ] && return 0
   if [ -z ${1+x} ]; then
     print_progress "100" "100"; printf "\n"; return
   fi
