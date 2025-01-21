@@ -512,6 +512,13 @@ initialise_variables() {
     asset_find_names+=( \*."$item" )
   done
 
+  # Static web page file extensions
+  IFS=',' read -ra list <<< "$static_webpage_file_extensions"
+  html_file_exts=()
+  for item in "${list[@]}"; do
+    html_file_exts+=(  \*."$item" )
+  done
+  
   # Extensions supported by HTML Tidy
   IFS=',' read -ra list <<< "$htmltidy_source_extensions"
   htmltidy_file_exts=()
@@ -2080,8 +2087,15 @@ site_postprocessing() {
   else
     newsfeed_domain=
   fi
-  while IFS='' read -r line; do webpages+=("$line"); done < <(find . -type f -name "*.html")
+  while IFS='' read -r line; do webpages+=("$line"); done <<<"$(for file_ext in "${html_file_exts[@]}"; do find . -type f -name "$file_ext" -print; done)"
   for opt in "${webpages[@]}"; do
+
+    # Remove any <base> tags
+    if [ "$base_tags_remove" = "yes" ]; then
+      sed_subs=('s/<base[[:space:]][[:space:]]*href[^>][^>]*>//gi' "$opt")
+      sed "${sed_options[@]}" "${sed_subs[@]}"
+    fi
+  
     # Provisionally append index.html to internal anchors ending with trailing slash
     # The canonical form will be set later
     sed_subs=('s|\(=["'\''][^:\\[:space:]"'\'']*/\)\([\"'\'']\)|\1index.html\2|g' "$opt")
@@ -2390,9 +2404,8 @@ clean_mirror() {
     IFS="$old_ifs"
     cd_check "$mirror_dir/$mirror_archive_dir/" || { echolog "Aborting."; exit; }
     # Regenerate list of web pages
-    while IFS= read -r line; do webpages_final+=("$line"); done <<<"$(for file_ext in "${htmltidy_file_exts[@]}"; do find . -type f -name "$file_ext" "${asset_exclude_dirs[@]}" -print; done)"
+    while IFS= read -r line; do webpages_final+=("$line"); done <<<"$(for file_ext in "${html_file_exts[@]}"; do find . -type f -name "$file_ext" "${asset_exclude_dirs[@]}" -print; done)"
     for opt in "${webpages_final[@]}"; do
-      tmp_file="$opt.tmp"
       printf "%b" "\n$makestaticsite_session_comment" >> "$opt"
     done
   fi

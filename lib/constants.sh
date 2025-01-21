@@ -22,8 +22,8 @@
 ################################################
 # MakeStaticSite info
 ################################################
-version=0.31.1
-version_date='16 January 2025'
+version=0.31.1+1
+version_date='21 January 2025'
 version_header="MakeStaticSite version $version, released on $version_date."
 mss_license="GNU Affero General Public License version 3"
 mss_site="https://makestaticsite.sh"
@@ -174,7 +174,8 @@ url_asset_capture_level=3       # (0 fewest, 5 most) for URL matching in determi
 url_wildcard_capture=no         # Use a wildcard for matching URLs in asset processing (y/n)?  If set to 'yes', when capturing asset URLs on pages, a simple regex capture group will be used instead of the input file of itemised URLs generated in phases 2 and 3
 url_separator_chars="[,:(]"     # additional class of separator characters (regular expression capture class) of URLs to be captured: for example, data-src (comma) and JSON (colon).  Leave empty to omit.
 url_grep_search_pattern="[^\\\"'<) ]" # URL terminating characters in grep searches (ERE notation); if link text contain ')', then this character can be removed
-webpage_file_extensions="html,htm,xhtm,xhtml,dhtml,cgi,php,php2,php4,phtml,asp,aspx,jsp,cfm,cfml" # A list of common web page file extensions, not exhaustive. (Note that any list of file extensions in this document assume a preceding dot '.')
+static_webpage_file_extensions="html,htm,xhtm,xhtml" # A list of common static web page file extensions. (Note that any file extension in this document assume a preceding dot '.')
+webpage_file_extensions="$static_webpage_file_extensions,dhtml,cgi,php,php2,php4,phtml,asp,aspx,jsp,cfm,cfml" # A list of common web page file extensions, including those for server-side scripts. Not exhaustive.
 
 # Specification of assets eligible for downloading by Wget in phase 3.
 web_source_extensions="htm,html,xml,txt,css" # list of web document file extensions intended for assets search
@@ -188,6 +189,7 @@ asset_extensions="$web_element_extensions,$image_extensions,$audiovideo_extensio
 asset_extensions_external="$web_element_extensions,$image_extensions,$font_extensions" # a more limited set for assets gleaned from external domains
 
 # Other processing
+base_tags_remove=yes            # Remove any <base> tags (y/n)? 
 relativise_primarydomain_assets=yes # Convert absolute links to relative links for primary domain assets (y/n)?
 shorten_longlines=auto          # Break apart long lines to reduce processing time
                                 # - 'off' to not touch any files
@@ -638,8 +640,8 @@ options_allow_empty=(asset_domains page_element_domains wget_extra_options input
 options_check_cmd=(wget_cmd htmltidy_cmd) # Command line applications that need to be checked for existence
 options_check_dir=(site_path)   # Directories that need to be checked for existence
 options_check_url=(url)         # URLs that need to be validated
-options_check_yesno=(ssl_checks require_login wget_extra_urls site_post_processing archive wp_cli wp_cli_remote wp_helper_plugins add_search wp_restore_settings prune_query_strings use_snippets upload_zip deploy deploy_remote deploy_remote_rsync htmltidy host_dir mss_cut_dirs add_extras url_wildcard_capture cors_enable prune_filename_extensions_querystrings warc_output wayback_cli use_wayback_id wayback_memento_check wayback_mementos_only wayback_anchors_original_domain wayback_merge_httphttps wayback_domain_original wayback_domain_original_sitemap wayback_code_clean wayback_folders_clean wayback_comments_clean wget_protocol_relative_urls extra_assets_allow_query_strings zip_omit_download clean_query_extensions credentials_cleanup wget_cookies_nullify_user_agent rename_wget_tmps relativise_primarydomain_assets web_print_runtime_data wayback_code_clean) # Options that take yes/no values
+options_check_yesno=(ssl_checks require_login wget_extra_urls site_post_processing archive wp_cli wp_cli_remote wp_helper_plugins add_search wp_restore_settings prune_query_strings use_snippets upload_zip deploy deploy_remote deploy_remote_rsync htmltidy host_dir mss_cut_dirs add_extras wget_span_subdomains url_wildcard_capture cors_enable prune_filename_extensions_querystrings warc_output wayback_cli use_wayback_id wayback_memento_check wayback_mementos_only wayback_anchors_original_domain wayback_merge_httphttps wayback_domain_original wayback_domain_original_sitemap wayback_code_clean wayback_folders_clean wayback_comments_clean wget_protocol_relative_urls extra_assets_allow_query_strings zip_omit_download clean_query_extensions credentials_cleanup wget_cookies_nullify_user_agent rename_wget_tmps relativise_primarydomain_assets web_print_runtime_data wayback_code_clean) # Options that take yes/no values
 options_check_remote=(site_path) # options that need to be checked on a remote server
 options_credentials=(site_user) # credentials that may/should be encrypted
 
-options_nodeps_load=(add_search deploy deploy_remote use_snippets upload_zip ssl_checks url asset_domains page_element_domains require_login local_sitename url_wildcard_capture input_urls_file site_post_processing prune_query_strings archive web_source_exclude_dirs htmltidy host_dir mss_cut_dirs add_extras wp_cli site_path zip_filename zip_download_folder deploy_path deploy_domain cors_enable prune_filename_extensions_querystrings warc_output warc_header_format wayback_cli use_wayback_id wayback_memento_check wayback_mementos_only wayback_anchors_original_domain wayback_merge_httphttps wayback_domain_original wayback_domain_original_sitemap wayback_code_clean wayback_folders_clean wayback_comments_clean extra_assets_allow_query_strings zip_omit_download clean_query_extensions credentials_cleanup wget_protocol_relative_urls wget_cookies_nullify_user_agent rename_wget_tmps relativise_primarydomain_assets web_print_runtime_data wayback_code_clean) # Options that are not dependent on others
+options_nodeps_load=(add_search deploy deploy_remote use_snippets upload_zip ssl_checks url asset_domains page_element_domains require_login local_sitename wget_span_subdomains url_wildcard_capture input_urls_file site_post_processing prune_query_strings archive web_source_exclude_dirs htmltidy host_dir mss_cut_dirs add_extras wp_cli site_path zip_filename zip_download_folder deploy_path deploy_domain cors_enable prune_filename_extensions_querystrings warc_output warc_header_format wayback_cli use_wayback_id wayback_memento_check wayback_mementos_only wayback_anchors_original_domain wayback_merge_httphttps wayback_domain_original wayback_domain_original_sitemap wayback_code_clean wayback_folders_clean wayback_comments_clean extra_assets_allow_query_strings zip_omit_download clean_query_extensions credentials_cleanup wget_protocol_relative_urls wget_cookies_nullify_user_agent rename_wget_tmps relativise_primarydomain_assets web_print_runtime_data wayback_code_clean) # Options that are not dependent on others
