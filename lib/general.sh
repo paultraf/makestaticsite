@@ -681,6 +681,21 @@ touchmod() {
   fi
 }
 
+# Apply backslash prefix to certain characters 
+# to retain literal meaning and prevent globbing 
+glob_escape() {
+  local string="$1"
+  local char
+  local charlist=("?" "*" "[")
+  for char in "${charlist[@]}"; do
+    search="$char"; replace='\'"$char"
+    string=${string//"$search"/"$replace"}
+    search='\\'"$char"; replace="$char"    # revert if already prefixed
+    string=${string//"$search"/"$replace"}
+  done
+  printf "%s" "$string"
+}
+
 # Apply backslash prefix to enable regex metacharacters (BRE only)
 regex_apply() {
   local string="$1"

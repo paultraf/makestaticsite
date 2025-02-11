@@ -22,8 +22,8 @@
 ################################################
 # MakeStaticSite info
 ################################################
-version=0.31.1+1
-version_date='21 January 2025'
+version=0.31.2-beta1
+version_date='11 February 2025'
 version_header="MakeStaticSite version $version, released on $version_date."
 mss_license="GNU Affero General Public License version 3"
 mss_site="https://makestaticsite.sh"
@@ -64,6 +64,10 @@ etc_hosts=/etc/hosts            # Location of hosts file
 ################################################
 # File and Layout settings
 ################################################
+offline_file_system=default     # The target file system for offline output (viewing, etc.) as distinct from output hosted on a server
+                                #  - 'default' (or empty) for use on file systems on common desktop operating system, particularly Unix and similar (including Linux and macOS) and Microsoft Windows
+                                #  - 'unix' for file systems on Unix and similar
+                                #  - 'windows' for file systems on Microsoft Windows
 mss_file_permissions=600        # Default Unix file permissions for file creation
 mss_dir_permissions=700         # Default Unix file permissions for directory creation
 tmp_dir=tmp                     # Directory where temporary files are to be stored
@@ -128,7 +132,7 @@ rename_wget_tmps=yes            # Remove .tmp.html suffixes from (Wget temp) fil
 #  or, in short form, ‘-r -N -l inf --no-remove-listing’, where -r: recursive; -N: timestamping; -l inf: infinite depth
 wget_mirror_options=(--recursive -N --level=inf --no-remove-listing)
 wget_core_options=("${wget_mirror_options[@]}" --convert-links --adjust-extension --page-requisites --tries=3)
-wget_wayback_core_options=()    # Specify additional recursion options in () brackets, e.g. (--recursive --level=2)
+wget_wayback_core_options=(--tries=3)    # Specify additional recursion options in () brackets, e.g. (--recursive --level=2)
 wget_default_page=index.html    # The Wget --default-page option (index.html by default)
 wget_adjust_extensions="html,css" # The Wget list of file extensions that have the extension appended to match the HTTP response header when the extension doesn't exist.
 prune_filename_extensions_querystrings=yes # Remove file name extensions thus added by Wget via --adjust-extension option (y/n)? 
@@ -169,10 +173,11 @@ warc_combine_output=yes         # Combine enumerated WARC files into one file (y
 ################################################
 # Capture and processing of asset URLS and paths
 ################################################
+windows_filename_illegal_chars='\:*?"<>|' # Quoted list of characters that cannot be used in Microsoft Windows file names because the file system does not allow it.
 # Scope of assets to be captured from parent directories and extra domains
 url_asset_capture_level=3       # (0 fewest, 5 most) for URL matching in determining assets to download and localise
 url_wildcard_capture=no         # Use a wildcard for matching URLs in asset processing (y/n)?  If set to 'yes', when capturing asset URLs on pages, a simple regex capture group will be used instead of the input file of itemised URLs generated in phases 2 and 3
-url_separator_chars="[,:(]"     # additional class of separator characters (regular expression capture class) of URLs to be captured: for example, data-src (comma) and JSON (colon).  Leave empty to omit.
+url_separator_chars="[,:(]"     # additional (regular expression capture) class of URL separator characters as used in, for example, data-src (comma) and JSON (colon).  Leave empty to omit.
 url_grep_search_pattern="[^\\\"'<) ]" # URL terminating characters in grep searches (ERE notation); if link text contain ')', then this character can be removed
 static_webpage_file_extensions="html,htm,xhtm,xhtml" # A list of common static web page file extensions. (Note that any file extension in this document assume a preceding dot '.')
 webpage_file_extensions="$static_webpage_file_extensions,dhtml,cgi,php,php2,php4,phtml,asp,aspx,jsp,cfm,cfml" # A list of common web page file extensions, including those for server-side scripts. Not exhaustive.
@@ -644,4 +649,4 @@ options_check_yesno=(ssl_checks require_login wget_extra_urls site_post_processi
 options_check_remote=(site_path) # options that need to be checked on a remote server
 options_credentials=(site_user) # credentials that may/should be encrypted
 
-options_nodeps_load=(add_search deploy deploy_remote use_snippets upload_zip ssl_checks url asset_domains page_element_domains require_login local_sitename wget_span_subdomains url_wildcard_capture input_urls_file site_post_processing prune_query_strings archive web_source_exclude_dirs htmltidy host_dir mss_cut_dirs add_extras wp_cli site_path zip_filename zip_download_folder deploy_path deploy_domain cors_enable prune_filename_extensions_querystrings warc_output warc_header_format wayback_cli use_wayback_id wayback_memento_check wayback_mementos_only wayback_anchors_original_domain wayback_merge_httphttps wayback_domain_original wayback_domain_original_sitemap wayback_code_clean wayback_folders_clean wayback_comments_clean extra_assets_allow_query_strings zip_omit_download clean_query_extensions credentials_cleanup wget_protocol_relative_urls wget_cookies_nullify_user_agent rename_wget_tmps relativise_primarydomain_assets web_print_runtime_data wayback_code_clean) # Options that are not dependent on others
+options_nodeps_load=(offline_file_system add_search deploy deploy_remote use_snippets upload_zip ssl_checks url asset_domains page_element_domains require_login local_sitename wget_span_subdomains url_wildcard_capture input_urls_file site_post_processing prune_query_strings archive web_source_exclude_dirs htmltidy host_dir mss_cut_dirs add_extras wp_cli site_path zip_filename zip_download_folder deploy_path deploy_domain cors_enable prune_filename_extensions_querystrings warc_output warc_header_format wayback_cli use_wayback_id wayback_memento_check wayback_mementos_only wayback_anchors_original_domain wayback_merge_httphttps wayback_domain_original wayback_domain_original_sitemap wayback_code_clean wayback_folders_clean wayback_comments_clean extra_assets_allow_query_strings zip_omit_download clean_query_extensions credentials_cleanup wget_protocol_relative_urls wget_cookies_nullify_user_agent rename_wget_tmps relativise_primarydomain_assets web_print_runtime_data wayback_code_clean) # Options that are not dependent on others

@@ -1177,11 +1177,6 @@ mirror_site() {
   fi
 }
 
-# (A placeholder for) post mirror site review and analysis
-post_get_site_checks() {
-  echo
-}
-
 generate_extra_domains() {
 # Generate search URL prefixes combining primary domain and extra domains
   if [ "$page_element_domains" = "auto" ]; then
@@ -1566,6 +1561,45 @@ wget_extra_urls() {
 
 }
 
+# Post Wget mirror site review: checks
+# (and placeholder for analysis)
+mirror_checks() {
+  echolog -n "Carrying out checks on mirror ... "
+
+  if [ "$offline_file_system" != "unix" ]; then
+    # Run file system checks
+    (( match_count = 0 ))
+    for (( i=0;i<${#windows_filename_illegal_chars}; i++ )); do
+      file_matches=()
+      char="${windows_filename_illegal_chars:$i:1}"
+      char2=$(glob_escape "$char")
+      # search for files with that character
+      while IFS='' read -r line; do file_matches+=("$line"); done < <(find "$working_mirror_dir" -type f -name "*$char2*" -print)
+      if [ "${#file_matches[@]}" != "0" ]; then
+        if (( match_count == 0 )); then
+          echolog $'\n'"$msg_warning: you have set the constant offline_file_system to $offline_file_system, which should support Microsoft Windows file systems, but some file names include illegal characters. To prevent such filenames, you can re-run Wget with the option --restrict-file-names=windows."
+        fi
+        match_pluralise=
+        num_matches="${#file_matches[@]}"
+        (( num_matches > 1 )) && match_pluralise='s'
+        echolog "Found ${#file_matches[@]} file$match_pluralise containing illegal character '$char'." "1"
+        for match in "${file_matches[@]}"; do
+          (( match_count++ ))
+          echolog "$match" "1"
+        done
+      fi
+    done
+    if (( match_count > 0 )); then
+      match_pluralise=
+      (( match_count > 1 )) && match_pluralise='s'
+      echolog "There were a total of $match_count file$match_pluralise with illegal characters."
+      if [ "$output_level" != "normal" ] && [ "$output_level" != "verbose" ]; then
+        echo "(See log file for details.)"
+      fi
+    fi
+  fi
+  echolog "Done."
+}
 
 augment_mirror() {
   if [ "$wget_extra_urls" = "yes" ]; then
@@ -1574,6 +1608,8 @@ augment_mirror() {
     done
   fi
 
+  mirror_checks
+  
   if [ "$warc_output" = "yes" ]; then
     # Concatenate WARC files
     warc_location="$mirror_dir/warc-$mirror_archive_dir.warc.gz"
