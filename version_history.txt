@@ -19,11 +19,44 @@
 ##########################################################################
 
 
+0.31.2 (released on 2025-02-11)
+     * Further refinements, with extended postprocessing and checks on output
+       for file names with illegal characters "
+      [lib/constants.sh]
+       Added constant offline_file_system to specify the target file system for
+       offline output (viewing, etc.)
+       Added constant windows_filename_illegal_chars, listing the characters
+       that are invalid for use in file names in a Microsoft Windows file
+       system.      
+       Added constant static_webpage_file_extensions, listing common static
+       web page file extensions, incorporating that in definition of
+       webpage_file_extensions.
+       Added option base_tags_remove to specify whether or not to remove
+       <base> tags.
+       Added tries constraint to wget_wayback_core_options constant.
+      [lib/general.sh]
+       Added function glob_escape() to apply backslash prefix to escape
+       special characters used in globbing
+       colorize(): Modified trap for case of undefined or dumb terminal. 
+       print_progress(): Added trap for case of undefined or dumb terminal. 
+      [makestaticsite.sh]
+       Replaced post_get_site_checks() with mirror_checks(), with a call
+       included in augment_mirror()
+       initialise_variables(): Added read of static_webpage_file_extensions
+       into html_file_exts array.
+       mirror_checks(): Added checks on output for whether filename characters
+       satisfy restrictions on Microsoft Windows with details sent to log and
+       terminal.
+       wget_extra_urls(): removed superfluous definition of column width.
+       site_postprocessing(): Reworked the global search and replace across
+       web pages, extending the scope of pages processed to those listed in
+       html_file_exts and adding a routine to optionally remove <base> tags.
+       
 0.31.1 (released on 2025-01-16)
      * Maintenance, with fixes for basic limitations in functionality. *
       [lib/constants.sh]
        Definition of url_re extended to include all unreserved and reserved
-       characters in URI definition, RFC 3986 
+       characters in URI definition, RFC 3986
       [makestaticsite.sh]
        initialise_variables(): added line to remove any query string when
        checking for web page file extension.
