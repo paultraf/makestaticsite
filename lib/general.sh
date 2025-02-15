@@ -715,11 +715,14 @@ regex_apply() {
 # Expects one parameter: string to be escaped
 # One optional parameter: regex type ('ERE' or 'BRE')
 # (BRE is the default)
+# The pipe '|' is added to the BRE charlist to facilitate 
+# sed replacements that use it as a delimiter, where expressions 
+# (such as URLs) might contain this character.
 regex_escape() {
   local string="$1"
   local char charlist search replace
   if [ -z ${2+x} ] || [ "$2" = "BRE" ]; then
-    charlist=('\' "^"  "." "$"  "*" "[")
+    charlist=('\' "^"  "." "$"  "*" "[" "|")
   elif [ "$2" != "BRE" ]; then
     charlist=('\' "^" "|" "." "$" "?" "*" "+" "(" ")" "[" "{")
   fi
