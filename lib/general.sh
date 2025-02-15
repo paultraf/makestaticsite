@@ -737,10 +737,13 @@ regex_escape() {
 
 # Escape special characters in right hand side of sed expressions
 # Expects one parameter: string to be escaped
+# The pipe '|' is added to the BRE charlist to facilitate 
+# sed replacements that use it as a delimiter, where expressions 
+# (such as URLs) might contain this character.
 sed_rhs_escape() {
   local string="$1"
   local char charlist search replace
-  charlist=('&')
+  charlist=('&' '|')
   for char in "${charlist[@]}"; do
     search="$char"; replace='\'"$char"
     string=${string//"$search"/"$replace"}
