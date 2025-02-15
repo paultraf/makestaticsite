@@ -631,8 +631,8 @@ consolidate_assets() {
   done < <(find "." -type d "${asset_exclude_dirs[@]}" -print)
   cd_check "$src_path_snapshot" || { echolog "Aborting"; exit; }
   if [ "$url_path_original_dir" != "" ]; then
-    folder_exclude="$url_path_original_dir/"
-    folder_exclude="${folder_exclude%\/*}"
+    folder_exclude="$url_path_original_dir"
+    [[ ${url_path_original_dir:length-1:1} = "/" ]] && folder_exclude="${folder_exclude%\/*}"  # remove trailing '/'
     folder_exclude_not_path="-not -path ./$folder_exclude"
   else
     folder_exclude_not_path=
