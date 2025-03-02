@@ -1470,6 +1470,9 @@ wget_extra_urls() {
   printf "%s\n" "${webassets_no_file_duplicates[@]}" > "$input_file_extra"
 
   if (( wget_extra_urls_count == 1 )); then
+    if [ "$wayback_url" = "yes" ] && [ ${#wget_extra_core_options[@]} -ne 0 ]; then
+      wget_extra_core_options+=("${wget_wayback_core_options[@]}")
+    fi
     cp_check "$input_file_extra" "$input_file_extra_all" "unable to make a copy of the Wget input file, $input_file_extra, to $input_file_extra_all."
   else
     # generate a diff and store result as $input_file_extra
@@ -1487,10 +1490,6 @@ wget_extra_urls() {
   (( webasset_step_count++ ))
   print_progress "$webasset_step_count" "$num_webasset_steps"
   wget_asset_options=("$wget_ssl" --directory-prefix "$mirror_archive_dir")
-
-  if [ "$wayback_url" = "yes" ] && [ ${#wget_extra_core_options[@]} -ne 0 ]; then
-    wget_extra_core_options+=("${wget_wayback_core_options[@]}")
-  fi
   
   if [ "$wvol" != "-q" ] || [ "$output_level" = "silent" ]; then
     wget_progress_indicator=()
