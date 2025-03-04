@@ -699,7 +699,7 @@ process_asset_anchors() {
         sed "${sed_options[@]}" "${sed_subs[@]}"
       done
     fi
-    
+
     pathpref=
     opt_path_stem=${opt:2}
     [ "$url_path_original_dir" != "" ] && opt_path_stem=${opt_path_stem##*"$url_path_original_dir"}  # Path (directory hierarchy) relative to the original URL
@@ -803,7 +803,8 @@ wayback_output_clean() {
         wayback_tags_list=()
         IFS=',' read -ra wayback_tags_list <<< "$wayback_code_tags"
         for tag in "${wayback_tags_list[@]}"; do
-          awk -v RS='\x7' -v var="<$tag>" '{sub(/<'"$tag>$wayback_code_re"'/,var); print}' "$opt" > "$tmp_file" && mv "$tmp_file" "$opt"
+          tag_full=$(grep -o "<$tag[^>]*>" "$opt")  # Get the tag with attributes
+          awk -v RS='\x7' -v var="$tag_full" '{sub(/<'"$tag[^>]*>$wayback_code_re"'/,var); print}' "$opt" > "$tmp_file" && mv "$tmp_file" "$opt"
         done
       else
         echolog "$msg_warning: File $opt not found, so not running awk on it." "1"
