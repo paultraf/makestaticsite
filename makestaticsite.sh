@@ -1718,8 +1718,8 @@ process_assets() {
   # Similarly, prepare adjustment for relative paths with imports directory
   if [ "$imports_directory" != "" ]; then
     imports_dir_suffix=/
-    # Also, check for duplication of assets directory label
-    if [ "$(find . -name "$imports_directory" -type d -print)" != "" ]; then
+    # Also, for non-Wayback URLs, check for duplication of assets directory label
+    if [ "$wayback_url" != "yes" ] && [ "$(find . -name "$imports_directory" -type d -print)" != "" ]; then
       echolog -n "$msg_warning: website already contains a directory, $imports_directory.  To avoid confusion (and errors), a timestamp is being appended to the MakeStaticSite-generated imports directory, but it is recommended that you modify the imports_directory constant and re-run. ... "
       imports_directory="$imports_directory$timestamp"
     fi
@@ -1746,16 +1746,10 @@ process_assets() {
         urls_array2+=("//$item/\([^\\\"\'<) ]\+\)")
       done
     else
-      # Produce a copy of input_file_extra_all ready for sed to process with extended regular expressions
-      if [ "$wayback_url" = "yes" ] && [ "$wayback_assets_mode" = "original" ]; then
-        input_string_extra=$(<"$input_file_wayback_extra") || echolog "$msg_error: Expected file $input_file_wayback_extra not found!  No further absolute links will be converted to relative links."
-        input_string_extra_all=$(regex_escape "$input_string_extra" "BRE")
-        input_file_extra_all_BRE="${input_file_wayback_extra}.BRE"
-      else
-        input_string_extra=$(<"$input_file_extra_all") || echolog "$msg_error: no file $input_file_wayback_extra found!  No further absolute links will be converted to relative links."
-        input_string_extra_all=$(regex_escape "$input_string_extra" "BRE")
-        input_file_extra_all_BRE="${input_file_extra_all}.BRE"
-      fi
+      # Produce a copy of input_file_extra_all ready for sed to process with basic regular expressions
+      input_string_extra=$(<"$input_file_extra_all") || echolog "$msg_error: no file $input_file_wayback_extra found!  No further absolute links will be converted to relative links."
+      input_string_extra_all=$(regex_escape "$input_string_extra" "BRE")
+      input_file_extra_all_BRE="${input_file_extra_all}.BRE"
       printf "%s\n" "$input_string_extra_all" > "$input_file_extra_all_BRE"
 
       # Populate URLs array from Wget's additional input file
@@ -1860,11 +1854,10 @@ process_assets() {
               fi
             else
               if [ "$wayback_url" = "yes" ]; then
-                asset_rel_path=$(printf "%s" "$asset_rel_path" | cut -d/ -f2-)
                 if [ "$wayback_assets_mode" = "original" ]; then
                   (( asset_depth=url_path_depth+2 ))
                   asset_rel_path=$(printf "%s" "$asset_rel_path" | cut -d/ -f$asset_depth-)
-                  asset_rel_path="$pathpref$asset_rel_path"
+                  asset_rel_path="$pathpref$imports_directory$imports_dir_suffix$asset_rel_path"
                 else
                   asset_rel_path="$pathpref$assets_directory$assets_dir_suffix$asset_rel_path"
                 fi
@@ -1896,7 +1889,7 @@ process_assets() {
     print_progress
 
     num_domain_dirs=$(find "$mirror_dir/$mirror_archive_dir/" -maxdepth 1 -type d -name "*.*" | wc -l )
-    if [ "$num_domain_dirs" != "1" ] && [ "$extra_assets_mode" = "contain" ]; then
+    if [ "$wayback_url" != "yes" ] && [ "$num_domain_dirs" != "1" ] && [ "$extra_assets_mode" = "contain" ]; then
       # Move folders
       if [ "$imports_directory" != "" ]; then
         mirror_imports_directory="$working_mirror_dir/$imports_directory"
@@ -1996,7 +1989,7 @@ process_assets() {
     printf "\n"
 
     # Move directories and files
-    if [ ${#extra_dirs_list[@]} -ne 0 ] && [ "$parent_dirs_mode" = "contain" ]; then
+    if [ "$wayback_url" != "yes" ] && [ ${#extra_dirs_list[@]} -ne 0 ] && [ "$parent_dirs_mode" = "contain" ]; then
       if [ "$assets_directory" != "" ]; then
         mirror_assets_directory="$working_mirror_dir/$url_path_dir/$assets_directory"
       else
@@ -2074,7 +2067,8 @@ site_postprocessing() {
     consolidate_assets
     process_asset_anchors
     wayback_output_clean 
-  elif [ -s "$input_file_extra_all" ] || [ "$url_has_path" = "yes" ]; then
+  fi
+  if [ -s "$input_file_extra_all" ] || [ "$url_has_path" = "yes" ]; then
     process_assets
   fi
 
