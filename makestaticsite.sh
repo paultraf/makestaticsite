@@ -213,6 +213,7 @@ initialise_mirror_archive_dir() {
     fi
   fi
   working_mirror_dir="$mirror_dir/$mirror_archive_dir$hostport_dir"
+  working_mirror_lock=
 
  # For Wayback Machine mirrors, optionally rename archive folder
   if [ "$wayback_url" = "yes" ] && (( phase < 3 )); then
@@ -2407,6 +2408,7 @@ clean_mirror() {
     working_mirror_dir="$mirror_dir/$mirror_archive_dir$hostport_dir"
     if [ -d "$domain_original" ]; then
       echolog "$msg_warning: The working mirror directory is already in place, using the original domain, at $working_mirror_dir. Leaving as is, but you should consider renaming the existing output and running afresh."
+      working_mirror_lock=yes
     elif [ -d "$domain" ]; then
       if mv "$domain" "$domain_original"; then
         echolog "Renamed $working_mirror_dir_old to $working_mirror_dir." "1"
@@ -2567,9 +2569,9 @@ cut_mss_dirs() {
   else
     dest_path="$working_mirror_dir"
   fi
-  if (( phase < 5 )) && [ "$dir_path" != "$dest_path" ]; then
+  if (( phase < 5 )) && [ "$dir_path" != "$dest_path" ] && [ "$working_mirror_lock" != "yes" ]; then
     if mv "$dir_path/"* "$dest_path/"; then 
-       echolog "Moved files and folders from $dir_path to $dest_path/" "1"
+      echolog "Moved files and folders from $dir_path to $dest_path/" "1"
     else
       echolog "$msg_error: unable to move the contents of $dir_path/ to $dest_path/"
       confirm_continue
