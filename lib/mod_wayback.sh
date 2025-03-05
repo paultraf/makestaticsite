@@ -725,8 +725,13 @@ process_asset_anchors() {
       fi
       item="${item##*"$domain_original"\/}"
       item=$(regex_escape "$item")
-      sed_subs1=('s|\('"$url_stem_timeless"'\)\('"$item"'\)|'"$pathpref$prefix_replace\2"'|g' "$opt")
-      sed_subs2=('s|\([\"'\'']\)\('"$url_stem_timeless_nodomain"'\)\('"$item"'\)|'"\1$pathpref$prefix_replace\3"'|g' "$opt")
+      if [ "$prune_query_strings" = "no" ]; then
+        item2=$(url_percent_encode "$item")
+      else
+        item2="$item"
+      fi
+      sed_subs1=('s|'"$url_stem_timeless$item"'|'"$pathpref$prefix_replace$item2"'|g' "$opt")
+      sed_subs2=('s|\([\"'\'']\)\('"$url_stem_timeless_nodomain$item"'\)|'"\1$pathpref$prefix_replace$item2"'|g' "$opt")
       sed "${sed_options[@]}" "${sed_subs1[@]}"
       sed "${sed_options[@]}" "${sed_subs2[@]}"
 

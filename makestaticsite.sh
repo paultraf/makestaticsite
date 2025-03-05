@@ -1219,24 +1219,6 @@ wget_extra_urls() {
 
   if (( wget_extra_urls_count == 1 )); then
 
-    if [ "$prune_query_strings" != "no" ]; then
-      echolog "Pruning links to assets that have query strings appended" "1"
-      IFS="," read -ra prune_list <<< "$query_prune_list"
-      for opt in "${prune_list[@]}"; do
-        # Prune file names on disk
-        find "$working_mirror_dir" -type f -name "*\.$opt\?*" -exec sh -c 'mv "$0" "${0%%\?*}"' {} \;   
-
-        # Prune the corresponding links
-        sed_subs0=('s|\([\"'\''][^>\"'\'']*\.'"$opt"'\)%3F[^'\''\"[:space:]]*|\1|g')
-        sed_subs=('s|\([\"'\''][^>\"'\'']*\.'"$opt"'\)?[^'\''\"[:space:]]*|\1|g')
-        for file_ext in "${asset_find_names[@]}"; do
-          find "$working_mirror_dir" -type f -name "$file_ext" "${asset_exclude_dirs[@]}" -print0 | xargs "${xargs_options[@]}" sed "${sed_options[@]}" "${sed_subs0[@]}"
-          find "$working_mirror_dir" -type f -name "$file_ext" "${asset_exclude_dirs[@]}" -print0 | xargs "${xargs_options[@]}" sed "${sed_options[@]}" "${sed_subs[@]}"
-        done
-      done
-      echolog " " "1"
-    fi
-
     if [ "$wget_protocol_relative_urls" = "yes" ]; then
       echolog "Prefixing protocol-relative URLs with $wget_protocol_prefix" "1"
       # Define BRE version of domain_bre0 
@@ -2044,6 +2026,25 @@ site_postprocessing() {
   cd_check "$working_mirror_dir" || { echolog "Aborting."; exit; }
   echolog "Carrying out site postprocessing in $working_mirror_dir ... "
 
+  if [ "$prune_query_strings" != "no" ]; then
+    echolog " " "1"
+    echolog -n "Pruning links to assets that have query strings appended ... " "1"
+    IFS="," read -ra prune_list <<< "$query_prune_list"
+    for opt in "${prune_list[@]}"; do
+      # Prune file names on disk
+      find "$working_mirror_dir" -type f -name "*\.$opt\?*" -exec sh -c 'mv "$0" "${0%%\?*}"' {} \;   
+
+      # Prune the corresponding links
+      sed_subs0=('s|\([\"'\''][^>\"'\'']*\.'"$opt"'\)%3F[^'\''\"[:space:]]*|\1|g')
+      sed_subs=('s|\([\"'\''][^>\"'\'']*\.'"$opt"'\)?[^'\''\"[:space:]]*|\1|g')
+      for file_ext in "${asset_find_names[@]}"; do
+        find "$working_mirror_dir" -type f -name "$file_ext" "${asset_exclude_dirs[@]}" -print0 | xargs "${xargs_options[@]}" sed "${sed_options[@]}" "${sed_subs0[@]}"
+        find "$working_mirror_dir" -type f -name "$file_ext" "${asset_exclude_dirs[@]}" -print0 | xargs "${xargs_options[@]}" sed "${sed_options[@]}" "${sed_subs[@]}"
+      done
+    done
+    echolog "Done." "1"
+  fi
+
   if [ "$prune_filename_extensions_querystrings" = "yes" ]; then
     # Remove file name extensions added by Wget where filenames have query strings appended
     IFS=',' read -ra prune_wget_extensions <<< "$wget_adjust_extensions"
@@ -2346,7 +2347,7 @@ clean_mirror() {
   echolog "Created a sitemap file at $sitemap_path"
 
   # Wrap lines that end in '='
-  printf "Wrap lines that end in '=' ... "
+  echolog -n "Wrap lines that end in '=' ... "
   sed_subs=(-e ':a' -e 'N' -e '$!ba' -e 's/=[\r\n][\r\n]*[[:space:]]*/=/g')
   find . -type f -name "*.html" -exec sed "${sed_options[@]}" "${sed_subs[@]}" {} +
   # and ensure that the title is on one line
