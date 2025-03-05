@@ -19,6 +19,34 @@
 ##########################################################################
 
 
+
+
+0.31.3 (released on 2025-03-05)
+     * Further refinements for Wayback sites, with extended postprocessing *
+      [lib/constants.sh]
+       Modified wayback_comments_re to be more generic as it can be included
+       in various types of files, not just HTML documents.
+      [lib/general.sh]
+       regex_escape() and sed_rhs_escape(): Added pipe '|' to the BRE escape
+       character list to facilitate sed replacements that use it as delimiter.
+      [lib/mod_wayback.sh]
+       process_asset_anchors(): for links to assets originally from external
+       domains, remove primary domain from url_stem_timeless, used in sed
+       search pattern.
+       wayback_output_clean(): extended support for tags that precede the
+       Wayback code to be removed, allowing for any attributes.
+       Extended scope of files for removal of Wayback code and comments to
+       include filenames with query strings. 
+      [makestaticsite.sh]
+       Fixed duplication of Wget core options for Wayback Machine URLs.
+       Added a locking variable, working_mirror_lock, to prevent attempted
+       move of a (now non-existent) directory in cut_mss_dirs().
+       Refactored pruning of query strings, moved from wget_extra_urls() to
+       site_postprocessing() immediately before routine to remove file name
+       extensions added by Wget.
+       process_assets(): Code tidy: removed and references to Wayback URLs
+       as this is superfluous.
+
 0.31.2 (released on 2025-02-11)
      * Further refinements, with extended postprocessing and checks on output
        for file names with illegal characters "
