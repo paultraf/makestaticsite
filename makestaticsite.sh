@@ -1700,8 +1700,8 @@ process_assets() {
   # Similarly, prepare adjustment for relative paths with imports directory
   if [ "$imports_directory" != "" ]; then
     imports_dir_suffix=/
-    # Also, for non-Wayback URLs, check for duplication of assets directory label
-    if [ "$wayback_url" != "yes" ] && [ "$(find . -name "$imports_directory" -type d -print)" != "" ]; then
+    # Also check for duplication of assets directory label
+    if [ "$(find . -name "$imports_directory" -type d -print)" != "" ]; then
       echolog -n "$msg_warning: website already contains a directory, $imports_directory.  To avoid confusion (and errors), a timestamp is being appended to the MakeStaticSite-generated imports directory, but it is recommended that you modify the imports_directory constant and re-run. ... "
       imports_directory="$imports_directory$timestamp"
     fi
@@ -1712,14 +1712,12 @@ process_assets() {
   # General case: conversion of absolute links to relative links
   if [ ${#webpages[@]} -eq 0 ]; then
     echolog "No web pages to process.  Done." "1"
-  elif [ "$waybackurl" = "yes" ] && [ ! -s "$input_file_wayback_extra" ] && [ "$url_wildcard_capture" != "yes" ]; then
-    echolog "No URLs to apply in search and replace.  Done." "1"
-  elif [ "$waybackurl" != "yes" ] && [ ! -s "$input_file_extra_all" ] && [ "$url_wildcard_capture" != "yes" ]; then
+  elif [ ! -s "$input_file_extra_all" ] && [ "$url_wildcard_capture" != "yes" ]; then
     echolog "No URLs to apply in search and replace.  Done." "1"
   elif [ "$cut_dirs" = "0" ]; then
     # Initialise URLs array
     urls_array=()
-    if [ "$url_wildcard_capture" = "yes" ] && [ "$wayback_url" != "yes" ]; then
+    if [ "$url_wildcard_capture" = "yes" ]; then
       # create URLs array via directory names (domain names) from file system
       for item in "${extra_domains_array[@]}"; do
         # Append a regex to match file paths
@@ -1729,7 +1727,7 @@ process_assets() {
       done
     else
       # Produce a copy of input_file_extra_all ready for sed to process with basic regular expressions
-      input_string_extra=$(<"$input_file_extra_all") || echolog "$msg_error: no file $input_file_wayback_extra found!  No further absolute links will be converted to relative links."
+      input_string_extra=$(<"$input_file_extra_all") || echolog "$msg_error: no file $input_file_extra_all found!  No further absolute links will be converted to relative links."
       input_string_extra_all=$(regex_escape "$input_string_extra" "BRE")
       input_file_extra_all_BRE="${input_file_extra_all}.BRE"
       printf "%s\n" "$input_string_extra_all" > "$input_file_extra_all_BRE"
@@ -1809,17 +1807,7 @@ process_assets() {
             asset_rel_path=$(printf "%s" "${url_extra#*//}")
             if [ "$url_wildcard_capture" = "yes" ]; then
               asset_rel_path=$(printf "%s" "${asset_rel_path%%/*}")
-              if [ "$wayback_url" = "yes" ]; then
-                asset_rel_path=$(printf "%s" "$asset_rel_path" | cut -d/ -f2-)
-                if [ "$wayback_assets_mode" = "original" ]; then
-                  asset_rel_path=$(printf "%s" "$asset_rel_path" | cut -d/ -f5-)
-                  asset_rel_path="$pathpref$asset_rel_path"
-                else
-                  asset_rel_path="$pathpref$assets_directory$assets_dir_suffix$asset_rel_path"
-                fi
-              else
-                asset_rel_path="$pathpref$imports_directory$imports_dir_suffix$asset_rel_path"
-              fi
+              asset_rel_path="$pathpref$imports_directory$imports_dir_suffix$asset_rel_path"
               asset_rel_path=$(url_percent_encode "$asset_rel_path")
               asset_rel_path=$(regex_escape "$asset_rel_path\/" "BRE")
               if [ "$path_doubleslash_workaround" = "yes" ]; then
@@ -1835,15 +1823,7 @@ process_assets() {
                 sed "${sed_options[@]}" "${sed_subs2[@]}"
               fi
             else
-              if [ "$wayback_url" = "yes" ]; then
-                if [ "$wayback_assets_mode" = "original" ]; then
-                  (( asset_depth=url_path_depth+2 ))
-                  asset_rel_path=$(printf "%s" "$asset_rel_path" | cut -d/ -f$asset_depth-)
-                  asset_rel_path="$pathpref$imports_directory$imports_dir_suffix$asset_rel_path"
-                else
-                  asset_rel_path="$pathpref$assets_directory$assets_dir_suffix$asset_rel_path"
-                fi
-              elif [ "$url_has_path" = "yes" ]; then
+              if [ "$url_has_path" = "yes" ]; then
                 asset_rel_path="$pathpref$assets_directory$assets_dir_suffix$imports_directory$imports_dir_suffix$asset_rel_path"
               else
                 asset_rel_path="$pathpref$imports_directory$imports_dir_suffix$asset_rel_path"
@@ -1858,7 +1838,7 @@ process_assets() {
               sed_subs1=('s|\([a-zA-Z0_9][[:space:]]*=[[:space:]]*["'"']"'\?\)'"$url_extra"'|'"\1$asset_rel_path"'|g' "$opt") # trims strictly
               sed_subs2=('s|\([[:space:]]*'"$url_separator_chars"'[[:space:]]*["'"']"'\?.*\)'"$url_extra"'|'"\1$asset_rel_path"'|g' "$opt") # trims loosely
               sed "${sed_options[@]}" "${sed_subs1[@]}"
-              if (( url_asset_capture_level > 2 )) && [ "$wayback_url" != "yes" ]; then
+              if (( url_asset_capture_level > 2 )); then
                 sed "${sed_options[@]}" "${sed_subs2[@]}"
               fi
             fi
@@ -1871,7 +1851,7 @@ process_assets() {
     print_progress
 
     num_domain_dirs=$(find "$mirror_dir/$mirror_archive_dir/" -maxdepth 1 -type d -name "*.*" | wc -l )
-    if [ "$wayback_url" != "yes" ] && [ "$num_domain_dirs" != "1" ] && [ "$extra_assets_mode" = "contain" ]; then
+    if [ "$num_domain_dirs" != "1" ] && [ "$extra_assets_mode" = "contain" ]; then
       # Move folders
       if [ "$imports_directory" != "" ]; then
         mirror_imports_directory="$working_mirror_dir/$imports_directory"
@@ -1910,7 +1890,7 @@ process_assets() {
   fi
 
   # Special case: mirroring a directory not a whole domain: readjust internal links
-  if [ "$url_has_path" = "yes" ] && [ "$cut_dirs" = "0" ] && [ "$wayback_url" != "yes" ] ; then
+  if [ "$url_has_path" = "yes" ] && [ "$cut_dirs" = "0" ]; then
     IFS='/' read -ra url_path_dir_list <<< "$url_path_dir"
     extra_dirs_list=("${url_path_dir_list[0]}")
     url_path_dir_prefix=
@@ -1971,7 +1951,7 @@ process_assets() {
     printf "\n"
 
     # Move directories and files
-    if [ "$wayback_url" != "yes" ] && [ ${#extra_dirs_list[@]} -ne 0 ] && [ "$parent_dirs_mode" = "contain" ]; then
+    if [ ${#extra_dirs_list[@]} -ne 0 ] && [ "$parent_dirs_mode" = "contain" ]; then
       if [ "$assets_directory" != "" ]; then
         mirror_assets_directory="$working_mirror_dir/$url_path_dir/$assets_directory"
       else
@@ -2068,8 +2048,7 @@ site_postprocessing() {
     consolidate_assets
     process_asset_anchors
     wayback_output_clean 
-  fi
-  if [ -s "$input_file_extra_all" ] || [ "$url_has_path" = "yes" ]; then
+  elif [ -s "$input_file_extra_all" ] || [ "$url_has_path" = "yes" ]; then
     process_assets
   fi
 
