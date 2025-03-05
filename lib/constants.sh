@@ -22,8 +22,8 @@
 ################################################
 # MakeStaticSite info
 ################################################
-version=0.31.3-alpha2
-version_date='4 March 2025'
+version=0.31.3-alpha3
+version_date='5 March 2025'
 version_header="MakeStaticSite version $version, released on $version_date."
 mss_license="GNU Affero General Public License version 3"
 mss_site="https://makestaticsite.sh"
@@ -306,7 +306,7 @@ wayback_code_re='.*<script.*<!-- End Wayback Rewrite JS Include -->' # JavaScrip
 wayback_folders_clean=yes       # Delete supporting directories created by the Wayback Machine that appear in the mirror (y/n)?
 wayback_folders=_static         # Comma-separated list of Wayback Machine directory names that may appear in the mirror
 wayback_comments_clean=yes      # Delete HTML comments inserted by Wayback Machine (y/n)?
-wayback_comments_re='<\/html>.*JAVASCRIPT APPENDED BY WAYBACK MACHINE.*load_resource.*-->' # Comments appended by the Wayback Machine (regular expression)
+wayback_comments_re='[^</]*JAVASCRIPT APPENDED BY WAYBACK MACHINE.*load_resource.*' # Comments appended by the Wayback Machine (regular expression)
 wayback_links_clean=no          # Restore original URL links in web pages, removing Wayback prefixes (y/n)?
                                 #  - 'yes' to remove all such links
                                 #  - 'no' (or any other value) to keep as is

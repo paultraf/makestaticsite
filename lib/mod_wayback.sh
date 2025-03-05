@@ -785,7 +785,7 @@ wayback_wget_postprocess() {
 # Specify as record separator an ASCII character that is not used in files (in this case: bell alert) 
 wayback_output_clean() {
   webpages_clean=()
-  while IFS= read -r line; do webpages_clean+=("$line"); done <<<"$(for file_ext in "${asset_find_names[@]}"; do find "." -type f -name "$file_ext" "${asset_exclude_dirs[@]}" -print; done)"
+  while IFS= read -r line; do webpages_clean+=("$line"); done <<<"$(for file_ext in "${asset_find_names[@]}"; do find "." -type f \( -name "$file_ext" -o -name "$file_ext"\?\* -o -name "$file_ext"@\* \) "${asset_exclude_dirs[@]}" -print; done)"
   num_webpages_clean="${#webpages_clean[@]}"
   if [ "$num_webpages_clean" = "0" ]; then
     echolog "$msg_warning: no web pages found for cleaning."
@@ -838,7 +838,8 @@ wayback_output_clean() {
     for opt in "${webpages_clean[@]}"; do
       tmp_file="$opt.tmp"
       if [ -f "$opt" ]; then
-        awk -v RS='\x7' '{sub(/'"$wayback_comments_re"'/,"</html>"); print}' "$opt" > "$tmp_file" && mv "$tmp_file" "$opt"
+        awk -v RS='\x7' '{sub(/'"\/\*$wayback_comments_re\*\/"'/,""); print}' "$opt" > "$tmp_file" && mv "$tmp_file" "$opt"
+        awk -v RS='\x7' '{sub(/'"<\/html>[^<]*<!--$wayback_comments_re-->"'/,"</html>"); print}' "$opt" > "$tmp_file" && mv "$tmp_file" "$opt"
       else
         echolog "$msg_warning: File $opt not found, so not running awk on it." "1"
       fi
