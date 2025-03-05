@@ -713,7 +713,8 @@ process_asset_anchors() {
       url_stem_timeless_nodomain="$url_timeless_nodomain"
       if [[ $item == $imports_directory* ]]; then
         prefix_replace="$imports_directory/"
-        item="${item#"$imports_directory"\/*}"    # remove initial imports directory
+        item="${item#"$imports_directory"\/*}"   # remove initial imports directory
+        url_stem_timeless="${url_stem_timeless%\/\/*}//" # remove primary domain from tail
       elif [[ $item == $assets_directory* ]]; then
         url_stem_timeless="$url_base_timeless"
         url_stem_timeless_nodomain="$url_base_timeless_nodomain"
