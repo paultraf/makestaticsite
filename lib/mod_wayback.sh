@@ -809,7 +809,7 @@ wayback_output_clean() {
         wayback_tags_list=()
         IFS=',' read -ra wayback_tags_list <<< "$wayback_code_tags"
         for tag in "${wayback_tags_list[@]}"; do
-          tag_full=$(grep -o "<$tag[^>]*>" "$opt")  # Get the tag with attributes
+          tag_full=$(grep -m 1 -o "<$tag[[:space:]]*[^>]*>" "$opt")  # Get the tag, including any attributes
           awk -v RS='\x7' -v var="$tag_full" '{sub(/<'"$tag[^>]*>$wayback_code_re"'/,var); print}' "$opt" > "$tmp_file" && mv "$tmp_file" "$opt"
         done
       else
