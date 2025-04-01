@@ -518,7 +518,7 @@ comment_uncomment() {
 # Offer to update Hosts file (typically /etc/hosts) if there's an entry for the domain
 hosts_toggle() {
   local entry
-  entry="$(grep -e "$ip4re$domain" -e "$ip6re$domain" "$etc_hosts")"
+  entry="$(grep -e "$ip4re$hostname" -e "$ip6re$hostname" "$etc_hosts")"
   if [ "$entry" != "" ]; then
     entry_count=$(printf "%s" "$entry"| wc -l | xargs)
     if [ "$entry_count" = "1" ]; then
@@ -531,7 +531,7 @@ hosts_toggle() {
     entry=$(printf "%s" "${entry}"| head -1)
 
     # Determine whether or not the entry is commented out
-    comment_prefix="^[[:space:]]*#.*$domain"
+    comment_prefix="^[[:space:]]*#.*$hostname"
     if [[ $entry =~ $comment_prefix ]]; then
       echolog "It appears this entry is commented out." "1"
       comment_status=1

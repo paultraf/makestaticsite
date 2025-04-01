@@ -22,8 +22,8 @@
 ################################################
 # MakeStaticSite info
 ################################################
-version=0.31.3+1
-version_date='9 March 2025'
+version=0.31.4-alpha1
+version_date='1 April 2025'
 version_header="MakeStaticSite version $version, released on $version_date."
 mss_license="GNU Affero General Public License version 3"
 mss_site="https://makestaticsite.sh"
@@ -72,7 +72,7 @@ mss_file_permissions=600        # Default Unix file permissions for file creatio
 mss_dir_permissions=700         # Default Unix file permissions for directory creation
 tmp_dir=tmp                     # Directory where temporary files are to be stored
 tab="  "                        # tab spacing for file outputs
-host_dir=auto                   # Host directory mode; for Wget, empty or 'no' corresponds to -nh, else host directory included 
+host_dir_mode=auto              # Host directory mode; for Wget, empty or 'no' corresponds to -nh, else host directory included 
 long_filename_threshold=200     # Number of characters in filename to trigger (Wget) length checks - should be signficantly less than 255
 
 
@@ -195,7 +195,7 @@ asset_extensions_external="$web_element_extensions,$image_extensions,$font_exten
 
 # Other processing
 base_tags_remove=yes            # Remove any <base> tags (y/n)? 
-relativise_primarydomain_assets=yes # Convert absolute links to relative links for primary domain assets (y/n)?
+relativise_host_assets=yes      # Convert absolute links to relative links for assets on host (y/n)?
 shorten_longlines=auto          # Break apart long lines to reduce processing time
                                 # - 'off' to not touch any files
                                 # - 'auto' to decide whether or not shorten on a per file basis according to criteria based on file size and number of lines in document
@@ -217,7 +217,7 @@ extra_assets_query_strings_limit=100000 # Only fetch URLs with query strings whe
 extra_assets_mode=contain       # how assets from extra domains should be incorporated
                                 # - empty or 'off' to keep in separate directories under mirror ID
                                 # - 'contain' will move the directories inside the assets directory (see below)
-assets_directory=webassets      # directory immediately under main domain directory for storing extra assets - from parent directories and extra domains
+assets_directory=webassets      # directory immediately under main host directory for storing extra assets - from parent directories and extra domains
                                 # (set empty to place assets in root, only if there is not an assets folder already)
 imports_directory=imports       # directory immediately inside assets_directory for storing assets imported for extra domains
 
@@ -258,7 +258,7 @@ sitemap_file_extensions=htm,html # List of file extensions allowed for inclusion
 mod_wayback=mod_wayback.sh      # Wayback Machine module filename
 wayback_cli=no                  # Use a third-party client to download sites from the Wayback Machine (y/n)?  If not set to 'yes', then any Wayback sites will be retrieved natively using default (Wget).
 use_wayback_id=no               # When retrieving natively, capture the original page rather than the Wayback Machine's processed version (y/n)?
-wayback_hosts=web.archive.org,www.webarchive.org.uk  # Partial list of domains where Wayback Machine is hosted
+wayback_hosts=web.archive.org,www.webarchive.org.uk  # Partial list of Wayback Machine hosts
 wayback_memento_check=yes       # Perform dynamic check for Memento site using HTTP request header (y/n)?
 wayback_header="Memento-Datetime:" # Memento header search string
 wayback_mementos_only=yes       # Only download assets with Memento URLs (y/n)? (This resets page_element_domains to be empty.)
@@ -270,7 +270,7 @@ wayback_timestamp_policy=any  # Timestamp policy
                                 #  - 'exact' to only download and refer to assets with exact timestamp
                                 #  - 'any' to download assets with any date
                                 #  - 'range' to download subject to specified date range (see below)
-wayback_anchors_original_domain=no # When partially capturing a site on the Wayback Machine, restore all anchors (links) to original domain (or make relative) rather that link to archive on Wayback Machine (y/n)?
+wayback_anchors_original_host=no # [placeholder] When partially capturing a site on the Wayback Machine, restore the href attribute in all anchors to original host (or make relative) rather that link to archive on Wayback Machine (y/n)?
 wayback_date_from_earliest=     # Earliest date timestamp for Wayback Machine snapshot files
 wayback_date_to_latest=         # Latest date timestamp for Wayback Machine snapshot files
 wayback_snapshot_path_depth=3   # The number of directories to traverse to get to the original domain directory (a magic number, default set for Internet Archive, until a suitable algorithm is determined).
@@ -293,8 +293,8 @@ wayback_sitename_timestamps=    # Which timestamps to include, specific to Wayba
                                 #  - 'both' appends the 'from'[-'to'] Wayback timestamp[s] to the Wayback host portion and the MakeStaticSite timestamp to the target domain portion.
                                 # E.g. web.archive.org202409_30160154-www.mhs.ox.ac.uk19970412232929
 wayback_merge_httphttps=yes     # Merge http and https directories in main branch of Wayback mirror output (y/n)?
-wayback_domain_original=yes     # Restore original domain folder when generating a mirror of site archived by the Wayback Machine (y/n)?
-wayback_domain_original_sitemap=yes # Restore original URLs when generating the sitemap for a site archived by the Wayback Machine (y/n)?
+wayback_host_original=yes       # Restore original host folder when generating a mirror of site archived by the Wayback Machine (y/n)?
+wayback_host_original_sitemap=yes # Restore original URLs when generating the sitemap for a site archived by the Wayback Machine (y/n)?
 wayback_newsfeed_clean=yes      # Delete references to Wayback Machine host for newsfeeds (y/n)?
                                 #  - 'no' to keep as is
                                 #  - 'yes' to restore the original link
@@ -645,8 +645,8 @@ options_allow_empty=(asset_domains page_element_domains wget_extra_options input
 options_check_cmd=(wget_cmd htmltidy_cmd) # Command line applications that need to be checked for existence
 options_check_dir=(site_path)   # Directories that need to be checked for existence
 options_check_url=(url)         # URLs that need to be validated
-options_check_yesno=(ssl_checks require_login wget_extra_urls site_post_processing archive wp_cli wp_cli_remote wp_helper_plugins add_search wp_restore_settings prune_query_strings use_snippets upload_zip deploy deploy_remote deploy_remote_rsync htmltidy host_dir mss_cut_dirs add_extras wget_span_subdomains url_wildcard_capture cors_enable prune_filename_extensions_querystrings warc_output wayback_cli use_wayback_id wayback_memento_check wayback_mementos_only wayback_anchors_original_domain wayback_merge_httphttps wayback_domain_original wayback_domain_original_sitemap wayback_code_clean wayback_folders_clean wayback_comments_clean wget_protocol_relative_urls extra_assets_allow_query_strings zip_omit_download clean_query_extensions credentials_cleanup wget_cookies_nullify_user_agent rename_wget_tmps relativise_primarydomain_assets web_print_runtime_data wayback_code_clean) # Options that take yes/no values
+options_check_yesno=(ssl_checks require_login wget_extra_urls site_post_processing archive wp_cli wp_cli_remote wp_helper_plugins add_search wp_restore_settings prune_query_strings use_snippets upload_zip deploy deploy_remote deploy_remote_rsync htmltidy host_dir_mode mss_cut_dirs add_extras wget_span_subdomains url_wildcard_capture cors_enable prune_filename_extensions_querystrings warc_output wayback_cli use_wayback_id wayback_memento_check wayback_mementos_only wayback_anchors_original_domain wayback_merge_httphttps wayback_host_original wayback_host_original_sitemap wayback_code_clean wayback_folders_clean wayback_comments_clean wget_protocol_relative_urls extra_assets_allow_query_strings zip_omit_download clean_query_extensions credentials_cleanup wget_cookies_nullify_user_agent rename_wget_tmps relativise_host_assets web_print_runtime_data wayback_code_clean) # Options that take yes/no values
 options_check_remote=(site_path) # options that need to be checked on a remote server
 options_credentials=(site_user) # credentials that may/should be encrypted
 
-options_nodeps_load=(offline_file_system add_search deploy deploy_remote use_snippets upload_zip ssl_checks url asset_domains page_element_domains require_login local_sitename wget_extra_urls_depth wget_span_subdomains url_wildcard_capture input_urls_file site_post_processing prune_query_strings archive web_source_exclude_dirs htmltidy host_dir mss_cut_dirs add_extras wp_cli site_path zip_filename zip_download_folder deploy_path deploy_domain cors_enable prune_filename_extensions_querystrings warc_output warc_header_format wayback_cli use_wayback_id wayback_memento_check wayback_mementos_only wayback_anchors_original_domain wayback_merge_httphttps wayback_domain_original wayback_domain_original_sitemap wayback_code_clean wayback_folders_clean wayback_comments_clean extra_assets_allow_query_strings zip_omit_download clean_query_extensions credentials_cleanup wget_protocol_relative_urls wget_cookies_nullify_user_agent rename_wget_tmps relativise_primarydomain_assets web_print_runtime_data wayback_code_clean) # Options that are not dependent on others
+options_nodeps_load=(offline_file_system add_search deploy deploy_remote use_snippets upload_zip ssl_checks url asset_domains page_element_domains require_login local_sitename wget_extra_urls_depth wget_span_subdomains url_wildcard_capture input_urls_file site_post_processing prune_query_strings archive web_source_exclude_dirs htmltidy host_dir_mode mss_cut_dirs add_extras wp_cli site_path zip_filename zip_download_folder deploy_path deploy_domain cors_enable prune_filename_extensions_querystrings warc_output warc_header_format wayback_cli use_wayback_id wayback_memento_check wayback_mementos_only wayback_anchors_original_domain wayback_merge_httphttps wayback_host_original wayback_host_original_sitemap wayback_code_clean wayback_folders_clean wayback_comments_clean extra_assets_allow_query_strings zip_omit_download clean_query_extensions credentials_cleanup wget_protocol_relative_urls wget_cookies_nullify_user_agent rename_wget_tmps relativise_host_assets web_print_runtime_data wayback_code_clean) # Options that are not dependent on others

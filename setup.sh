@@ -181,8 +181,8 @@ EOF
 read_credentials() {
   input_value_backup="$input_value"
   input_line="Please enter the password for $1"
-  domain=$(printf "%s\n" "$url" | awk -F/ '{print $3}' | awk -F: '{print $1}')
-  credentials_insert_path="${credentials_path_prefix}$domain/$2"
+  hostname=$(printf "%s\n" "$url" | awk -F/ '{print $3}' | awk -F: '{print $1}')
+  credentials_insert_path="${credentials_path_prefix}$hostname/$2"
   credentials_path="$credentials_home/$credentials_insert_path"
   if [ "$credentials_storage_mode" = "encrypt" ]; then
     if [ -z ${pass_check+x} ]; then
@@ -334,12 +334,12 @@ read_option() {
         host=$(printf "%s" "$input_value" | awk -F/ '{print $3}' | awk -F: '{print $1}')
         # Check for Wayback Machine
         if check_wayback_url "$input_value" "$wayback_hosts" "input_value"; then
-          archived_domain_path=$(printf "%s" "${input_value//:\/\//|}" | cut -d\| -f3)
-          if [ "$archived_domain_path" = "" ]; then
+          archived_host_path=$(printf "%s" "${input_value//:\/\//|}" | cut -d\| -f3)
+          if [ "$archived_host_path" = "" ]; then
             echo "$msg_error: Sorry, no archive URL found at the Wayback Machine!  For guidance on acceptable URLs, please consult https://help.archive.org/help/using-the-wayback-machine/ and then try again."; exit
           else
-            echo "Wayback Machine URL detected with archive having domain and path: $archived_domain_path."
-            primary_host=$(printf "%s" "$archived_domain_path" | cut -d/ -f1)
+            echo "Wayback Machine URL detected with archive host and path: $archived_host_path."
+            primary_host=$(printf "%s" "$archived_host_path" | cut -d/ -f1)
             if [ "$wayback_sitename_hosts" = "primary" ]; then
               host="$primary_host"
             elif [ "$wayback_sitename_hosts" = "both" ]; then

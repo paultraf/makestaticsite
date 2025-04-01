@@ -57,8 +57,8 @@ main() {
   (( phase < 5 )) && (( end_phase >= 4 )) && [ "$site_post_processing" = "yes" ] && site_postprocessing
 
   # Ensure that if 'no host directory' is set, the working directories are set accordingly after postprocessing
-  if [ "$host_dir" = "" ] || [ "$host_dir" = "no" ]; then
-    hostport_dir=
+  if [ "$host_dir_mode" = "" ] || [ "$host_dir_mode" = "no" ]; then
+    host_dir=
     working_mirror_dir="$mirror_dir/$mirror_archive_dir"
   fi
 
@@ -212,7 +212,7 @@ initialise_mirror_archive_dir() {
       fi
     fi
   fi
-  working_mirror_dir="$mirror_dir/$mirror_archive_dir$hostport_dir"
+  working_mirror_dir="$mirror_dir/$mirror_archive_dir$host_dir"
   working_mirror_lock=
 
  # For Wayback Machine mirrors, optionally rename archive folder
@@ -222,11 +222,11 @@ initialise_mirror_archive_dir() {
     mirror_archive_dir_old="$mirror_archive_dir"
     mirror_archive_dir=
     if [ "$wayback_sitename_hosts" = "primary" ]; then
-      mirror_archive_dir="$domain_original"
+      mirror_archive_dir="$hostname_original"
     elif [ "$wayback_sitename_hosts" = "both" ]; then
-      mirror_archive_dir="$domain-$domain_original"
+      mirror_archive_dir="$hostname-$hostname_original"
     else
-      mirror_archive_dir="$domain"
+      mirror_archive_dir="$hostname"
     fi
 
     if [ "$wayback_sitename_timestamps" = "mss" ]; then
@@ -235,20 +235,20 @@ initialise_mirror_archive_dir() {
       if [ "$wayback_sitename_hosts" != "both" ]; then
         echolog "$msg_warning: setting wayback_sitename_hosts=both to support your setting of wayback_sitename_timestamps=both"
       fi
-      mirror_archive_dir="$domain$timestamp-$domain_original$wayback_date_from_to"
+      mirror_archive_dir="$hostname$timestamp-$hostname_original$wayback_date_from_to"
     elif [ "$wayback_sitename_timestamps" = "wayback" ] || [ "$wayback_sitename_timestamps" = "" ]; then
       mirror_archive_dir+="$wayback_date_from_to"
     fi
     mirror_archive_dir="${mirror_archive_dir//\./_}"
     if (( phase > 2 )); then
       if mv "$mirror_archive_dir_old" "$mirror_archive_dir"; then
-        echolog "Renamed $working_mirror_dir to $mirror_dir/$mirror_archive_dir$hostport_dir." "1"
+        echolog "Renamed $working_mirror_dir to $mirror_dir/$mirror_archive_dir$host_dir." "1"
       else
         echolog "$msg_warning: Unable to rename mirror_archive_dir $mirror_dir/$mirror_archive_dir"
       fi
     fi
     # Update mirror variable
-    working_mirror_dir="$mirror_dir/$mirror_archive_dir$hostport_dir"
+    working_mirror_dir="$mirror_dir/$mirror_archive_dir$host_dir"
   fi
 
   if (( phase == 4 )) && [ ! -d "$working_mirror_dir/$url_path_dir" ]; then
@@ -466,7 +466,7 @@ initialise_variables() {
     session_data+=("URL|$url")
   fi
 
-  url_domain=$(printf "%s\n" "$url" | awk -F/ '{print $3}' | awk -F: '{print $1}')
+  url_hostname=$(printf "%s\n" "$url" | awk -F/ '{print $3}' | awk -F: '{print $1}')
   url_path=$(printf "%s" "$url" | cut -d/ -f4- | sed s'|/$||')
   if [ "$url_path" = "" ]; then
     url_path_depth=0
@@ -480,7 +480,7 @@ initialise_variables() {
     [ "$url_add_slash" = "avoid" ] && (( url_path_depth-- )) # need to adjust for extra '/' not being added because of valid web file extension
   fi
 
-  # Validate additional, supported extensions and domains for stored assets
+  # Validate additional, supported extensions and domains (hosts) for stored assets
   asset_domains="$(printf "%s" "$asset_domains" | tr -d '[:space:]')"
   IFS=',' read -ra list <<< "$asset_domains"
   c=0; for asset_domain in "${list[@]}"; do
@@ -528,19 +528,20 @@ initialise_variables() {
   done
 
   # For backwards-compatibility check whether URL defined instead in url_base
-  if [ "$url_domain" = "example.com" ]; then
+  if [ "$url_hostname" = "example.com" ]; then
     url="$(config_get url_base "$myconfig")"
     if [ "$url" = "" ]; then { printf "\n%s: Unable to determine a URL. Please check the arguments you have supplied at the command line and then the value of url in %s.cfg (if it's example.com, then it needs to be changed!)\nAborting.\n" "$msg_error" "$myconfig"; exit; }
     fi
   fi
 
-  # Extract the host (domain or IP) and port, protocol, and hence the URL base (no path)
-  hostport=$(printf "%s" "$url" | awk -F/ '{print $3}')
-  domain=$(printf "%s" "$hostport" | awk -F: '{print $1}') # refer to this as the 'primary domain'
+  # Extract the host (IP address or domain plus port and protocol), and hence the URL base (no path)
+  # Reference: https://developer.mozilla.org/en-US/docs/Web/API/Location
+  host=$(printf "%s" "$url" | awk -F/ '{print $3}') # the hostname and port (if any)
+  hostname=$(printf "%s" "$host" | awk -F: '{print $1}') # the hostname only
 
   # initialise list of all domains incorporated in the site
   extra_domains=
-  all_domains="$domain"
+  all_domains="$hostname"
   if [ "$asset_domains" != "" ]; then
     all_domains+=",$asset_domains"
     extra_domains="$asset_domains"
@@ -560,7 +561,7 @@ initialise_variables() {
   
   # assign URL-related variables
   protocol=$(printf "%s" "$url" | awk -F/ '{print $1}' | awk -F: '{print $1}')
-  url_base="$protocol://$hostport"
+  url_base="$protocol://$host"
   url_base_regex=$(regex_apply "$url_base")
   if [ "$url" != "$url_base/" ]; then
     url_has_path=yes
@@ -580,7 +581,7 @@ initialise_variables() {
 
   deploy_domain="$(config_get deploy_domain "$myconfig")"
   # Define URL to be used in robots.txt file
-  if [ "$wayback_url" = "yes" ] && [ "$wayback_domain_original_sitemap" = "yes" ]; then
+  if [ "$wayback_url" = "yes" ] && [ "$wayback_host_original_sitemap" = "yes" ]; then
     if [ "$mss_cut_dirs" = "no" ]; then
       url_original_root="$url_original"
       if [ "$url_add_slash" != "no" ]; then
@@ -626,17 +627,17 @@ initialise_variables() {
 
   # check for -nH option in wget_extra_options
   if [[ $wget_extra_options_tmp =~ "-nH" ]] || [[ $wget_extra_options_tmp =~ "--no-host-directories" ]]; then
-    # remove the argument, but set host_dir, so that it becomes effective later
+    # remove the argument, but set host_dir_mode, so that it becomes effective later
     wget_extra_options_tmp=${wget_extra_options_tmp//-nH /}
-    if [ "$host_dir" = "yes" ]; then
-      echolog "$msg_warning: Resetting constant, host_dir=no, as you have specified '-nH' as an argument to Wget."
+    if [ "$host_dir_mode" = "yes" ]; then
+      echolog "$msg_warning: Resetting constant, host_dir_mode=no, as you have specified '-nH' as an argument to Wget."
     fi
-    host_dir=no
+    host_dir_mode=no
     (( phase < 4 )) && echolog "$msg_info: Wget will be run with without '-nH' argument; host directory will be removed after post-processing."
   else
-    host_dir=yes
+    host_dir_mode=yes
   fi
-  hostport_dir="/$hostport"
+  host_dir="/$host"
 
   # Ensure that login pages are rejected by appending Wget --reject clause
   grep_clause="\-R[[:space:]][^[:space:]]*\|\-\-reject[[:space:]][^[:space:]]*"
@@ -747,7 +748,7 @@ initialise_variables() {
   if [ "$wayback_url" = "yes" ]; then
     wayback_url_paths
     # Check that the principal timestamp of the mirror matches the URL in the config file
-    wayback_primary_snapshot_dir="$mirror_dir/$mirror_archive_dir$hostport_dir/$url_path_snapshot_prefix/$wayback_date_from"
+    wayback_primary_snapshot_dir="$mirror_dir/$mirror_archive_dir$host_dir/$url_path_snapshot_prefix/$wayback_date_from"
     if (( phase == 3 )) && [ ! -d "$wayback_primary_snapshot_dir" ]; then
       echolog "$msg_error: The mirror does not have a timestamp that matches the 'from' date in the URL of the configuration (.cfg) file you have supplied. Suggest changing the -i or -m argument."
       confirm_continue "no" 
@@ -830,7 +831,7 @@ wget_error_codes() {
 
 # Retrieve and process credentials
 wget_process_credentials() {
-  credentials_insert_path="${credentials_path_prefix}$domain/$wget_http_login_field/$wget_http_user"
+  credentials_insert_path="${credentials_path_prefix}$hostname/$wget_http_login_field/$wget_http_user"
   credentials_path="$credentials_home/$credentials_insert_path"
   if [ "$credentials_storage_mode" = "encrypt" ]; then
     if [ -z ${pass_check+x} ]; then
@@ -863,11 +864,11 @@ wget_process_credentials() {
   rc_process=Y # initially assume we are going to write to a rc file
   rc_file="$HOME/$credentials_rc_file"
   if [ "$credentials_rc_file" = ".netrc" ]; then
-    # Search for credentials based on $site_user and $domain,
+    # Search for credentials based on $site_user and $hostname,
     # assuming they are defined on a single line with space-separated values
     if [ -f "$rc_file" ]; then
       # Check to see if an entry exists (with superfluous "''" inserted to pass Shellcheck SC1087)
-      cred_pattern="machine[[:blank:]]\{1,\}$domain"''"[[:blank:]]\{1,\}login[[:blank:]]\{1,\}$wget_http_user"
+      cred_pattern="machine[[:blank:]]\{1,\}$hostname"''"[[:blank:]]\{1,\}login[[:blank:]]\{1,\}$wget_http_user"
       search_rc="$(grep -m 1 "$cred_pattern" "$rc_file")"
       if [ "$search_rc" != "" ]; then
         confirm=y
@@ -891,7 +892,7 @@ wget_process_credentials() {
       touchmod "$rc_file"
     fi
     if [ "$rc_process" = "Y" ]; then
-      printf "%s\n" "machine $domain login $wget_http_user password $wget_http_password" >> "$rc_file"
+      printf "%s\n" "machine $hostname login $wget_http_user password $wget_http_password" >> "$rc_file"
       chmod 0600 "$rc_file"
     fi
   elif [ "$credentials_rc_file" = ".wgetrc" ]; then
@@ -997,8 +998,8 @@ wget_mirror() {
   cookies_tmppath="$tmp_dir_path/tmp$wget_cookies"; touchmod "$cookies_tmppath"
   wget_login_options=("$wget_ssl" --directory-prefix "$tmp_mirror_path" --save-cookies "$cookies_path" --keep-session-cookies)
 
-  wget_robot_options=("$wget_ssl" --directory-prefix "$mirror_archive_dir$hostport_dir" "$url_robots")
-  wget_sitemap_options=("$wget_ssl" --directory-prefix "$mirror_archive_dir$hostport_dir")
+  wget_robot_options=("$wget_ssl" --directory-prefix "$mirror_archive_dir$host_dir" "$url_robots")
+  wget_sitemap_options=("$wget_ssl" --directory-prefix "$mirror_archive_dir$host_dir")
 
   if [ "$wvol" != "-q" ] || [ "$output_level" = "silent" ]; then
     wget_progress_indicator=()
@@ -1027,7 +1028,7 @@ wget_mirror() {
   if [ "$require_login" = "yes" ]; then
     wget_login_options+=("$login_address" --delete-after)
     site_user="$(config_get site_user "$myconfig" "$script_dir")"
-    credentials_insert_path="${credentials_path_prefix}$domain/site_user/$site_user"
+    credentials_insert_path="${credentials_path_prefix}$hostname/site_user/$site_user"
     credentials_path="$credentials_home/$credentials_insert_path"
     if [ "$credentials_storage_mode" = "encrypt" ]; then
       if [ ! -f "$credentials_path.$credentials_extension" ]; then
@@ -1118,13 +1119,13 @@ wget_mirror() {
     if ! $wget_cmd "${wget_extra_options[@]}" "${wget_robot_options[@]}"; then
       printf " \n%s: Wget reported an error trying to retrieve the robots.txt file (likely not found).  Search engines expect this, so have made a note to create it.\n" "$msg_warning"
       robots_create=yes
-    elif sitemap_line=$(grep "^[[:space:]]*Sitemap:" "$mirror_archive_dir$hostport_dir/robots.txt"); then
+    elif sitemap_line=$(grep "^[[:space:]]*Sitemap:" "$mirror_archive_dir$host_dir/robots.txt"); then
       # Read contents of robots.txt, checking for sitemap
       sitemap=$(printf "%s\n" "$sitemap_line" | grep -o 'http[s]*:\/\/.*.xml')
       $wget_cmd "${wget_extra_options[@]}" "${wget_sitemap_options[@]}" "$sitemap"
       # Wget any nested sitemaps
       wget_sitemap_options+=("$sitemap" --output-document -)
-      $wget_cmd "${wget_extra_options[@]}" "${wget_sitemap_options[@]}" | grep -o "http[s]*://[^<]*.xml" | $wget_cmd "${wget_extra_options[@]}" --quiet "$wget_ssl" --directory-prefix "$mirror_archive_dir$hostport_dir" -i -
+      $wget_cmd "${wget_extra_options[@]}" "${wget_sitemap_options[@]}" | grep -o "http[s]*://[^<]*.xml" | $wget_cmd "${wget_extra_options[@]}" --quiet "$wget_ssl" --directory-prefix "$mirror_archive_dir$host_dir" -i -
     else
       printf " \n%s: No sitemap found in robots.txt. Search engines expect this, so have made a note to generate one.\n" "$msg_warning"
       sitemap_create=yes
@@ -1149,12 +1150,12 @@ mirror_site() {
   cd_check "$mirror_dir" "can't access working directory for the mirror ($mirror_dir)" || { echolog "Aborting."; exit 1; }
 
   if [ "$use_wayback_cli" = "yes" ]; then
-    echolog "Retrieving archive for $domain... "
+    echolog "Retrieving archive for $hostname... "
 
     # Check for Wayback Machine Downloader binary, else report error (in the absence of an alternative)
     if cmd_check "$wayback_machine_downloader_cmd" "1"; then
       echolog "Running Wayback Machine Downloader on $url ... "
-      if [ "$domain_wayback_machine" != "web.archive.org" ]; then
+      if [ "$host_wayback_machine" != "web.archive.org" ]; then
         echolog "$msg_error: The Wayback Machine Downloader only supports web.archive.org.  You might be able to retrieve some files by setting wayback_cli=no in constants.sh (to treat like any other site) and then re-running, though file retrieval is currently limited to the specified Wayback Machine timestamp. Aborting."
         exit
       else
@@ -1179,7 +1180,7 @@ mirror_site() {
 }
 
 generate_extra_domains() {
-# Generate search URL prefixes combining primary domain and extra domains
+# Generate search URL prefixes combining host and extra domains
   if [ "$page_element_domains" = "auto" ]; then
     echo
     echolog -n "Searching for extra asset domains (working in $working_mirror_dir) ... "
@@ -1196,7 +1197,7 @@ generate_extra_domains() {
     while IFS='' read -r line; do add_domains_unique+=("$line"); done < <(for item in "${add_domains[@]}"; do printf "%s\n" "${item%/}"; done | sort -u)
     echolog "add_domains_unique array has ${#add_domains_unique[@]} elements" "2"
     # Convert array to domain list (string), removing any slashes
-    page_element_domains=$(printf "%s" "${add_domains_unique[*]}" | sed 's/ /,/g' | sed 's/\\\?\/,/,/g' | sed "s/$domain,//g" | sed "s/,$domain//g" | sed 's/\///g' | sed 's/\\//g')
+    page_element_domains=$(printf "%s" "${add_domains_unique[*]}" | sed 's/ /,/g' | sed 's/\\\?\/,/,/g' | sed "s/$hostname,//g" | sed "s/,$hostname//g" | sed 's/\///g' | sed 's/\\//g')
     echolog "Done."
   fi
   if [ "$page_element_domains" != "" ]; then
@@ -1270,8 +1271,8 @@ wget_extra_urls() {
       trimmed_line=${trimmed_line//123456789|/&#}
       webassets_all+=("$trimmed_line")
     done < <(
-      if [ "$relativise_primarydomain_assets" = "no" ]; then
-        grep -Eroha "$item" "$working_mirror_dir" "${asset_grep_includes[@]}" | grep -v "//$domain"
+      if [ "$relativise_host_assets" = "no" ]; then
+        grep -Eroha "$item" "$working_mirror_dir" "${asset_grep_includes[@]}" | grep -v "//$hostname"
       else
         grep -Eroha "$item" "$working_mirror_dir" "${asset_grep_includes[@]}"
       fi)
@@ -1373,7 +1374,7 @@ wget_extra_urls() {
   (( webasset_step_count++ ))
   print_progress "$webasset_step_count" "$num_webasset_steps"
   if [ ${#wget_extra_options[@]} -ne 0 ]; then
-    url_bas="$protocol://$hostport"
+    url_bas="$protocol://$host"
     # Filter out URLs whose paths match an excluded directory (via subloop)
     echolog "Filter out URLs whose paths match an excluded directory (via subloop)" "1"
     # We assume that grep works as expected, but should really trap exit code 2
@@ -1607,7 +1608,7 @@ process_assets() {
   # (makes subsequent sed replacements more targeted than searching all web pages).
   extra_domains_array=()
   while IFS= read -r line; do
-    if [ "$line" != "$domain" ]; then
+    if [ "$line" != "$hostname" ]; then
       extra_domains+="$line,"
       extra_domains_array+=("$line");
     fi
@@ -1734,9 +1735,9 @@ process_assets() {
 
       # Populate URLs array from Wget's additional input file
       if [ -f "$input_file_extra_all" ]; then
-        domain_BRE=$(regex_escape "$domain" "BRE")
+        domain_BRE=$(regex_escape "$hostname" "BRE")
         domain_BRE=${domain_BRE//\\/\\\\\\} # need to escape \, so replace \ with \\\ .
-        if [ "$url_has_path" = "no" ] || [ "$relativise_primarydomain_assets" = "no" ]; then
+        if [ "$url_has_path" = "no" ] || [ "$relativise_host_assets" = "no" ]; then
           while IFS= read -r line; do line=${line//&/&amp;}; urls_array+=("$line"); done < <(grep -v "//$domain_BRE" "$input_file_extra_all_BRE")
         else
           while IFS= read -r line; do
@@ -1779,19 +1780,19 @@ process_assets() {
       # Carry out universal search and replace on primary domain;
       # Case: no URL path
       if [ "$url_has_path" = "no" ] || { [ "$external_dir_links" != "" ] && [ "$external_dir_links" != "off" ]; }; then
-        sed_subs1=('s|\([a-zA-Z0_9][[:space:]]*=[[:space:]]*["'"']"'\?\)https\?://'"$hostport/"'|'"\1$pathpref"'|g' "$opt") # trims strictly
+        sed_subs1=('s|\([a-zA-Z0_9][[:space:]]*=[[:space:]]*["'"']"'\?\)https\?://'"$host/"'|'"\1$pathpref"'|g' "$opt") # trims strictly
         sed "${sed_options[@]}" "${sed_subs1[@]}"
         if (( url_asset_capture_level > 2 )); then
-          sed_subs2=('s|\([[:space:]]*'"$url_separator_chars"'[[:space:]]*["'"']"'\?\)https\?://'"$hostport/"'|'"\1$pathpref"'|g' "$opt") # trims loosely
+          sed_subs2=('s|\([[:space:]]*'"$url_separator_chars"'[[:space:]]*["'"']"'\?\)https\?://'"$host/"'|'"\1$pathpref"'|g' "$opt") # trims loosely
           sed "${sed_options[@]}" "${sed_subs2[@]}"
         fi
       # Case: URL path
       #  with --no-parent, we need to limit matches to be within the tree
       elif [ "$url_has_path" = "yes" ]; then
-       sed_subs1=('s|\([a-zA-Z0_9][[:space:]]*=[[:space:]]*["'"']"'\?\)https\?://'"$hostport/$url_path_dir/"'|'"\1$dir_pathpref"'|g' "$opt") # trims strictly
+       sed_subs1=('s|\([a-zA-Z0_9][[:space:]]*=[[:space:]]*["'"']"'\?\)https\?://'"$host/$url_path_dir/"'|'"\1$dir_pathpref"'|g' "$opt") # trims strictly
         sed "${sed_options[@]}" "${sed_subs1[@]}"
         if (( url_asset_capture_level > 2 )); then
-          sed_subs2=('s|\([[:space:]]*'"$url_separator_chars"'[[:space:]]*["'"']"'\?\)https\?://'"$hostport/$url_path_dir/"'|'"\1$dir_pathpref"'|g' "$opt") # trims loosely
+          sed_subs2=('s|\([[:space:]]*'"$url_separator_chars"'[[:space:]]*["'"']"'\?\)https\?://'"$host/$url_path_dir/"'|'"\1$dir_pathpref"'|g' "$opt") # trims loosely
           sed "${sed_options[@]}" "${sed_subs2[@]}"
         fi
       fi
@@ -1943,7 +1944,7 @@ process_assets() {
         done
       fi
       # Rectify main domain paths
-      domain_assets_search="$assets_directory$assets_dir_suffix$imports_directory$imports_dir_suffix$domain"
+      domain_assets_search="$assets_directory$assets_dir_suffix$imports_directory$imports_dir_suffix$hostname"
       domain_assets_replace="$assets_directory"
       sed_subs=('s|'"$domain_assets_search"'|'"$domain_assets_replace"'|g' "$opt")
       sed "${sed_options[@]}" "${sed_subs[@]}"
@@ -2052,34 +2053,34 @@ site_postprocessing() {
     process_assets
   fi
 
-  # Check for occurrences of $domain as distinct from $deploy_domain.
-  # Only stick with the domain in url_base if the user requests,
+  # Check for occurrences of $hostname as distinct from $deploy_domain.
+  # Only stick with the hostname in url_base if the user requests,
   # otherwise replace all occurrences with the deployment domain
   if [ "$deploy_domain" = "mydomain.com" ]; then
-    deploy_domain="$domain"
+    deploy_domain="$hostname"
   else
-    num_domain_matches=$( find . -type f -name \* -exec grep "$domain" {} + | wc -l )
+    num_domain_matches=$( find . -type f -name \* -exec grep "$hostname" {} + | wc -l )
     if [ "$num_domain_matches" != "0" ]; then
       matches_s=$(pluralize "$num_domain_matches")
       confirm=y
-      if [ "$deploy" = "no" ] && [ "$domain" != "$deploy_domain" ]; then
-        echolog "You have chosen not to deploy, with your source having domain $domain, different from the deployment domain, $deploy_domain. "
+      if [ "$deploy" = "no" ] && [ "$hostname" != "$deploy_domain" ]; then
+        echolog "You have chosen not to deploy, with your source hosted at $hostname, different from the deployment domain, $deploy_domain. "
         if [ "$run_unattended" = "yes" ]; then
-          echolog "Assuming that you still wish to replace any occurrence of $domain with $deploy_domain."
+          echolog "Assuming that you still wish to replace any occurrence of $hostname with $deploy_domain."
         else
-          read -r -e -p "For the static mirror, would you still like to replace any occurrence of $domain with $deploy_domain (y/n)? " confirm
+          read -r -e -p "For the static mirror, would you still like to replace any occurrence of $hostname with $deploy_domain (y/n)? " confirm
           confirm=${confirm:0:1}
         fi
       elif [ "$deploy" = "yes" ] && [ "$force_domains" = "no" ] && [ "$run_unattended" != "yes" ]; then
         echolog "Found $num_domain_matches matching line$matches_s."
-        read -r -e -p "For the static mirror, would you still like to replace any occurrence of $domain with $deploy_domain (y/n)? " confirm
+        read -r -e -p "For the static mirror, would you still like to replace any occurrence of $hostname with $deploy_domain (y/n)? " confirm
         confirm=${confirm:0:1}
       fi
       if [ "$confirm" = "y" ] || [ "$confirm" = "Y" ]; then
         domain_match_prefix_esc=${domain_match_prefix//\//\\\\\/}        # \\\\\ to insert a backslash in search pattern
         domain_match_prefix_esc=${domain_match_prefix_esc//\\\\/\\\\\\?} # to make backslash match optional
-        echolog -n "Replacing remaining occurrences of $domain with $deploy_domain ... "
-        sed_subs=('s|'"\($domain_match_prefix_esc\)$domain"'|'"\1$deploy_domain"'|g')
+        echolog -n "Replacing remaining occurrences of $hostname with $deploy_domain ... "
+        sed_subs=('s|'"\($domain_match_prefix_esc\)$hostname"'|'"\1$deploy_domain"'|g')
         for file_ext in "${asset_find_names[@]}"; do
           find . -type f -name "$file_ext" "${asset_exclude_dirs[@]}" -print0 | xargs "${xargs_options[@]}" sed "${sed_options[@]}" -e "${sed_subs[@]}"
         done
@@ -2151,26 +2152,26 @@ site_postprocessing() {
     echolog "Done."
   fi
 
-# Apply host directory directive, as appropriate
-if [ "$host_dir" = "" ] || [ "$host_dir" = "no" ]; then
-  # Shift content up one level and removed host directory.
-  if ! mv "$working_mirror_dir/"* "$mirror_dir/$mirror_archive_dir/"; then
-    echolog "$msg_error: Unable to move files to the root directory."
-  else
-    if ! rmdir "$working_mirror_dir"; then
-      echolog "$msg_error: Unable to remove the working mirror directory, $working_mirror_dir."
+  # Apply host directory directive, as appropriate
+  if [ "$host_dir_mode" = "" ] || [ "$host_dir_mode" = "no" ]; then
+    # Shift content up one level and removed host directory.
+    if ! mv "$working_mirror_dir/"* "$mirror_dir/$mirror_archive_dir/"; then
+      echolog "$msg_error: Unable to move files to the root directory."
     else
-      echolog "Shifted content up one level and removed host directory." "1"
+      if ! rmdir "$working_mirror_dir"; then
+        echolog "$msg_error: Unable to remove the working mirror directory, $working_mirror_dir."
+      else
+        echolog "Shifted content up one level and removed host directory." "1"
+      fi
     fi
   fi
-fi
 
   cd_check "$mirror_dir" || { echolog "Aborting."; exit; }
 }
 
 add_extras() {
   # For archival, copy subs files into the respective mirror directory
-  extras_src="$script_dir/$extras_dir/$hostport"
+  extras_src="$script_dir/$extras_dir/$host"
   extras_dest="$working_mirror_dir"
   echolog "Copying additional files from $extras_src to $extras_dest, the static mirror (for distribution) ... "
 
@@ -2282,7 +2283,7 @@ clean_mirror() {
 
   # Create robots file, where necessary
   if [ "$robots_create" = "yes" ]; then
-    robots_path="$mirror_dir/$mirror_archive_dir$hostport_dir/robots.txt"
+    robots_path="$mirror_dir/$mirror_archive_dir$host_dir/robots.txt"
     robots_default="$script_dir/$lib_files/$robots_default_file"
     if [ -f "$robots_default" ]; then
       cp_check "$robots_default" "$robots_path"
@@ -2294,7 +2295,7 @@ clean_mirror() {
 
   # Create sitemap, where necessary
   if [ "$sitemap_create" = "yes" ]; then
-    sitemap_path="$mirror_dir/$mirror_archive_dir$hostport_dir/sitemap.xml"
+    sitemap_path="$mirror_dir/$mirror_archive_dir$host_dir/sitemap.xml"
     touch "$sitemap_path"
     sitemap_content="$(sitemap_header)"$'\n';
     sitemap_loc_files=()
@@ -2311,7 +2312,7 @@ clean_mirror() {
       fi
       sitemap_content+="$tab<url>"$'\n'
       loc=$(printf "%s" "$loc" | sed "s/index.html//" | sed "s/.\///") # remove any trailing filename from $loc
-      if [ "$wayback_url" = "yes" ] && [ "$wayback_domain_original_sitemap" = "yes" ]; then
+      if [ "$wayback_url" = "yes" ] && [ "$wayback_hostname_original_sitemap" = "yes" ]; then
         loc_full="$url_original_base/$loc" 
       else  
         loc_full="https://$deploy_domain/$loc"
@@ -2350,11 +2351,11 @@ clean_mirror() {
   if [ -n "${wget_http_user+x}" ] && [ "$credentials_cleanup" = "yes" ]; then
     rc_file="$HOME/$credentials_rc_file"
     if [ "$credentials_rc_file" = ".netrc" ]; then
-      # Search for credentials based on $site_user and $domain,
+      # Search for credentials based on $site_user and $hostname,
       # assuming they are defined on a single line with space-separated values
       if [ -f "$rc_file" ]; then
         # Check to see if an entry exists (with superfluous "''" inserted to pass Shellcheck SC1087)
-        cred_pattern="machine[[:blank:]]\{1,\}$domain"''"[[:blank:]]\{1,\}login[[:blank:]]\{1,\}$wget_http_user"
+        cred_pattern="machine[[:blank:]]\{1,\}$hostname"''"[[:blank:]]\{1,\}login[[:blank:]]\{1,\}$wget_http_user"
         replace_rc="$(grep -v "$cred_pattern" "$rc_file")"
         printf "%s\n" "$replace_rc" > "$rc_file" || echolog "$msg_warning: unable to remove existing credentials"
         chmod 0600 "$rc_file"
@@ -2374,23 +2375,23 @@ clean_mirror() {
     fi
   fi
 
-  # For Wayback Machine mirrors, optionally rename domain folder
-  if [ "$wayback_url" = "yes" ] && [ "$wayback_domain_original" = "yes" ]; then
+  # For Wayback Machine mirrors, optionally rename host folder
+  if [ "$wayback_url" = "yes" ] && [ "$wayback_hostname_original" = "yes" ]; then
     cd_check "$mirror_dir/$mirror_archive_dir" || { echolog "Aborting."; exit; }
     working_mirror_dir_old="$working_mirror_dir"
-    hostport_dir="/$domain_original"
-    working_mirror_dir="$mirror_dir/$mirror_archive_dir$hostport_dir"
-    if [ -d "$domain_original" ]; then
+    host_dir="/$hostname_original"
+    working_mirror_dir="$mirror_dir/$mirror_archive_dir$host_dir"
+    if [ -d "$hostname_original" ]; then
       echolog "$msg_warning: The working mirror directory is already in place, using the original domain, at $working_mirror_dir. Leaving as is, but you should consider renaming the existing output and running afresh."
       working_mirror_lock=yes
-    elif [ -d "$domain" ]; then
-      if mv "$domain" "$domain_original"; then
+    elif [ -d "$hostname" ]; then
+      if mv "$hostname" "$hostname_original"; then
         echolog "Renamed $working_mirror_dir_old to $working_mirror_dir." "1"
       else
         echolog "$msg_warning: Unable to rename the working mirror directory to $working_mirror_dir."
       fi
     else
-      echolog "$msg_error: Expected either a $domain/ or $domain_original/ directory inside $mirror_dir/$mirror_archive_dir, but neither found. Aborting."; exit
+      echolog "$msg_error: Expected either a $hostname/ or $hostname_original/ directory inside $mirror_dir/$mirror_archive_dir, but neither found. Aborting."; exit
     fi
   fi
 
@@ -2436,8 +2437,8 @@ process_snippets() {
   mkdir -p "$mirror_archive_dir"
 
   # Replicate the mirrored folder for the host [and port]
-  subs_hostport_dir="$mirror_archive_dir$hostport_dir"
-  mkdir -p "$subs_hostport_dir"
+  subs_host_dir="$mirror_archive_dir$host_dir"
+  mkdir -p "$subs_host_dir"
 
   # Carry out snippet substitutions:
   echolog "current directory: $(pwd)" "1"
@@ -2476,7 +2477,7 @@ process_snippets() {
         echolog -e "input file $sub_input_file" "1"
 
         # Create the necessary subdirectories containing modified files
-        src="$subs_hostport_dir/$src_file"
+        src="$subs_host_dir/$src_file"
         sub_input_dir="$(dirname "${sub_input_file}")"
         src_dir="$(dirname "${src}")"
         mkdir -p "$src_dir"
@@ -2516,7 +2517,7 @@ process_snippets() {
 
   # Copy any snippets across to mirror
   if [ "$snippets_count" != 0 ]; then
-    snippets_src="$script_dir/$sub_dir/$subs_hostport_dir"
+    snippets_src="$script_dir/$sub_dir/$subs_host_dir"
     dest="$working_mirror_dir"
     echolog "Copying from: $snippets_src" "1"
     echolog "To: $dest" "1"
@@ -2567,7 +2568,7 @@ create_zip() {
     echolog "Backed up $zip_archive to $zip_backup" "1"
   fi
   zip_options="-q -r $zip_archive $mirror_archive_dir"
-  [ "$zip_omit_download" = "yes" ] && zip_options+=" -x $mirror_archive_dir$hostport_dir/$zip_download_folder/*" 
+  [ "$zip_omit_download" = "yes" ] && zip_options+=" -x $mirror_archive_dir$host_dir/$zip_download_folder/*" 
   IFS=" " read -ra zip_options_all <<< "$zip_options"
   zip "${zip_options_all[@]}"
   cd_check "$script_dir" || echolog " "
@@ -2649,7 +2650,7 @@ deploy() {
   toggle_flag=0      # Has status been toggled?  (0 for no, 1 for yes)
 
   # if source and deployment domains are the same, then call Hosts function
-  if [ "$deploy_host" = "$domain" ]; then
+  if [ "$deploy_host" = "$hostname" ]; then
     echolog "NOTICE: Your source and deployment domains are the same."
     # Check /etc/hosts - if it exists, search for the domain and then offer choice ...
     if [ -f "$etc_hosts" ]; then

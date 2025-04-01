@@ -114,8 +114,8 @@ process_wayback_url() {
 
     # Assign other variables related to url_original
     protocol_original=$(printf "%s" "$url_original" | awk -F/ '{print $1}' | awk -F: '{print $1}')
-    hostport_original=$(printf "%s" "$url_original" | awk -F/ '{print $3}')
-    url_original_base="$protocol_original://$hostport_original"
+    host_original=$(printf "%s" "$url_original" | awk -F/ '{print $3}')
+    url_original_base="$protocol_original://$host_original"
     url_original_base_regex=$(regex_escape "$url_original_base")
     url_original_base_singleslash=${url_original_base/:\/\//:\/}  # adjust for Wget directory mapping
 
@@ -125,7 +125,7 @@ process_wayback_url() {
       echolog "Aborting."
       exit
     fi
-    domain_original=$(printf "%s\n" "$url_original" | awk -F/ '{print $3}' | awk -F: '{print $1}')
+    hostname_original=$(printf "%s\n" "$url_original" | awk -F/ '{print $3}' | awk -F: '{print $1}')
   fi
 }
 
@@ -133,9 +133,9 @@ process_wayback_url() {
 initialise_wayback() {
   wayback_url=yes  # Wayback Machine URL established
   url_wildcard_capture=no # reset as the Wayback Machine doesn't yet have a means to handle this; also note that it will refer to all external assets under its own host name.
-  domain_wayback_machine=$(printf "%s" "$url" | awk -F/ '{print $3}' | awk -F: '{print $1}')
+  host_wayback_machine=$(printf "%s" "$url" | awk -F/ '{print $3}' | awk -F: '{print $1}')
   process_wayback_url "$url" # will set the value of $url_original to be that of the archived site
-  printf "Wayback Machine detected at %s, hosted on %s.\n" "$url" "$domain_wayback_machine"
+  printf "Wayback Machine detected at %s, hosted on %s.\n" "$url" "$host_wayback_machine"
   if [ "$wayback_timestamp_policy" = "exact" ] && [ "$wayback_date_to" != "" ]; then
     echolog "$msg_warning: you have specified a date range for the Wayback Machine, but the constant wayback_timestamp_policy is set to 'exact'."
     echolog "To resolve this conflict, MakeStaticSite will only download assets for the earliest timestamp, $wayback_date_from. But you may like to set wayback_timestamp_policy=range."
@@ -303,7 +303,7 @@ wayback_filter_domains() {
   fi
 
   # Constrain candidate Wayback URLs for Wget to those that have 
-  # a valid asset extension and/or involve the primary domain.
+  # a valid asset extension and/or involve the host.
   webassets_wayback0=()
   for opt in "${webassets_http[@]}"; do
     opt_regex=$(printf "%s" "$opt"|sed 's|\(/\)'"$wayback_datetime_regex"'|\1'"$wayback_datetime_regex"'|') # turn original URL into wildcard expression
@@ -447,7 +447,7 @@ consolidate_assets() {
     url_path_snapshot_root2=${url_path_snapshot_root/\/http:/\/https:}
   fi
   if [ -d "$url_path_snapshot_root2" ] && ls "$url_path_snapshot_root2" >/dev/null 2>&1; then
-    msg_mixed_content="The snapshots that have been have downloaded by the Wayback Machine include both encrypted and unencrypted content, i.e. they have been retrieved from https://$domain_original and http://$domain_original."
+    msg_mixed_content="The snapshots that have been have downloaded by the Wayback Machine include both encrypted and unencrypted content, i.e. they have been retrieved from https://$hostname_original and http://$hostname_original."
     if [ "$wayback_merge_httphttps" = "yes" ]; then
       echolog "$msg_info: $msg_mixed_content Will proceed to merge the snapshots under the main branch."
     else        
@@ -506,7 +506,7 @@ consolidate_assets() {
     opt_item="${opt##*"$url_original_base_singleslash"\/}" # extract only the relevant path and then add this on to snapshot_src_path
     opt_item="${opt_item%\/*}" # remove everything after trailing slash
     for item in "${snapshot_path_list[@]}"; do
-      this_domain="${item##*/}" # remove everything before trailing slash
+      this_host="${item##*/}" # remove everything before trailing slash
       snapshot_src_path="$pathpref$url_path_prefix$item"
       snapshot_src_path=$(regex_escape "$snapshot_src_path")
       snapshot_src_path=$(printf "%s" "$snapshot_src_path" | sed 's|'"$wayback_datetime_regex"'|'"$wayback_datetime_regex"'|g') 
@@ -516,8 +516,8 @@ consolidate_assets() {
         opt_item_slashes=${opt_item//[!\/]};
         opt_item_slashes_num=${#opt_item_slashes};
         this_path="$opt_item"
-        if [ "$this_domain" != "$domain_original" ]; then
-          this_path_prefix="$imports_directory/$this_domain"
+        if [ "$this_host" != "$hostname_original" ]; then
+          this_path_prefix="$imports_directory/$this_host"
         elif [[ ! $url_path_original_dir == $opt_item* ]]; then
           this_path_prefix="$assets_directory"
         else
@@ -533,8 +533,8 @@ consolidate_assets() {
         done
       fi
       this_folder_path=
-      if [ "$this_domain" != "$domain_original" ]; then
-        this_folder_path="$imports_directory/$this_domain/"
+      if [ "$this_host" != "$hostname_original" ]; then
+        this_folder_path="$imports_directory/$this_host/"
       elif [ "$url_path_original_dir" != "" ]; then
         # First substitute on any match under url_path_original
         sed_subs1=('s|'"$snapshot_src_path/$url_path_original/"'|'""'|g' "$opt") # first convert assets that are underneath the trunk
@@ -551,10 +551,10 @@ consolidate_assets() {
 
   ## Copy over directories and files to URL Path.
   for snapshot_dir in "${snapshot_path_list[@]}"; do
-    this_domain="${snapshot_dir##*/}" # remove everything before trailing slash
-    # Create a directory for $this_domain inside the 'imports' directory under the 'destination' path.
-    if [ "$this_domain" != "$domain_original" ]; then
-      mkdir -p "$dest_path/$imports_directory/$this_domain" || echolog "$msg_error: Unable to create the external domain directory $this_domain inside $dest_path/$imports_directory."
+    this_host="${snapshot_dir##*/}" # remove everything before trailing slash
+    # Create a directory for $this_host inside the 'imports' directory under the 'destination' path.
+    if [ "$this_host" != "$hostname_original" ]; then
+      mkdir -p "$dest_path/$imports_directory/$this_host" || echolog "$msg_error: Unable to create the external domain directory $this_host inside $dest_path/$imports_directory."
     fi
     echolog "Entering $snapshot_dir" "1"
     if [ -d "$snapshot_dir" ]; then
@@ -566,8 +566,8 @@ consolidate_assets() {
     while IFS= read -r copy_dir; do
       copy_dir="${copy_dir#./}"
       if [ "$copy_dir" != "" ] && { [[ ! $url_path_original_dir == $copy_dir/* ]] || [ "$url_path_original_dir" != "" ]; }; then
-        if [ "$this_domain" != "$domain_original" ]; then
-          this_dest_path="$dest_path/$imports_directory/$this_domain/$copy_dir"
+        if [ "$this_host" != "$hostname_original" ]; then
+          this_dest_path="$dest_path/$imports_directory/$this_host/$copy_dir"
         elif [[ $copy_dir == $url_path_original_dir* ]]; then
           this_dest_path="$dest_path_root/$copy_dir"
         else
@@ -580,8 +580,8 @@ consolidate_assets() {
         while IFS= read -r item; do
           [ "$item" = "" ] && continue
           # check for internal URL path copying and adjust accordingly
-          if [ "$this_domain" != "$domain_original" ]; then
-            file_dest="$dest_path/$imports_directory/$this_domain/$item"
+          if [ "$this_host" != "$hostname_original" ]; then
+            file_dest="$dest_path/$imports_directory/$this_host/$item"
           elif [[ $item == $url_path_original_dir* ]]; then
             file_dest="$dest_path_root/$item"
           elif [[ ! $copy_dir == $url_path_original_dir* ]]; then
@@ -603,8 +603,8 @@ consolidate_assets() {
         if [ "$item" != "" ]; then
           # check if file already exists in destination
           item="${item#./}"
-          if [ "$this_domain" != "$domain_original" ]; then
-            file_dest="$dest_path/$imports_directory/$this_domain/$item"
+          if [ "$this_host" != "$hostname_original" ]; then
+            file_dest="$dest_path/$imports_directory/$this_host/$item"
           elif [[ ! $copy_dir == $url_path_original_dir* ]] || { [ "$copy_dir" = "" ] && [ "$url_path_original_dir" != "" ]; }; then
             file_dest="$dest_path/$assets_directory/$item"
           else
@@ -723,7 +723,7 @@ process_asset_anchors() {
       else
         prefix_replace=
       fi
-      item="${item##*"$domain_original"\/}"
+      item="${item##*"$hostname_original"\/}"
       item=$(regex_escape "$item")
       if [ "$prune_query_strings" = "no" ]; then
         item2=$(url_percent_encode "$item")
