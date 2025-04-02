@@ -2312,7 +2312,7 @@ clean_mirror() {
       fi
       sitemap_content+="$tab<url>"$'\n'
       loc=$(printf "%s" "$loc" | sed "s/index.html//" | sed "s/.\///") # remove any trailing filename from $loc
-      if [ "$wayback_url" = "yes" ] && [ "$wayback_hostname_original_sitemap" = "yes" ]; then
+      if [ "$wayback_url" = "yes" ] && [ "$wayback_host_original_sitemap" = "yes" ]; then
         loc_full="$url_original_base/$loc" 
       else  
         loc_full="https://$deploy_domain/$loc"
@@ -2375,8 +2375,8 @@ clean_mirror() {
     fi
   fi
 
-  # For Wayback Machine mirrors, optionally rename host folder
-  if [ "$wayback_url" = "yes" ] && [ "$wayback_hostname_original" = "yes" ]; then
+  # For Wayback Machine mirrors, optionally rename host directory
+  if [ "$wayback_url" = "yes" ] && [ "$wayback_host_original_dir" = "yes" ]; then
     cd_check "$mirror_dir/$mirror_archive_dir" || { echolog "Aborting."; exit; }
     working_mirror_dir_old="$working_mirror_dir"
     host_dir="/$hostname_original"
