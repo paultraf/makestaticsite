@@ -700,6 +700,16 @@ process_asset_anchors() {
     webpaths_output+=("$line")
   done < <(find "." -type f "${asset_exclude_dirs[@]}" -print)
 
+  # URL stems to be used in replacements
+  url_stem_timeless_nodomain1="$url_timeless_nodomain"
+  url_stem_timeless_nodomain2="$url_base_timeless_nodomain"
+  if [ "$wayback_links_relative_rewrite" = "yes" ]; then
+    wayback_url_re='https\?://'"$domain_re0"
+    wayback_url_re0='https\\?:\/\/'"$domain_re0"
+    url_stem_timeless_nodomain1=${url_stem_timeless_nodomain1/\/${wayback_url_re0}/\/$wayback_url_re}
+    url_stem_timeless_nodomain2=${url_stem_timeless_nodomain2/\/${wayback_url_re0}/\/$wayback_url_re} 
+  fi
+
   # Carry out substitutions in web pages
   count=0
   for opt in "${webpages_output[@]}"; do
@@ -724,14 +734,14 @@ process_asset_anchors() {
     done
     for item in "${webpaths_output[@]}"; do
       url_stem_timeless="$url_timeless_slash"
-      url_stem_timeless_nodomain="$url_timeless_nodomain"
+      url_stem_timeless_nodomain="$url_stem_timeless_nodomain1"
       if [[ $item == $imports_directory* ]]; then
         prefix_replace="$imports_directory/"
         item="${item#"$imports_directory"\/*}"   # remove initial imports directory
         url_stem_timeless="${url_stem_timeless%\/\/*}//" # remove primary domain from tail
       elif [[ $item == $assets_directory* ]]; then
         url_stem_timeless="$url_base_timeless"
-        url_stem_timeless_nodomain="$url_base_timeless_nodomain"
+        url_stem_timeless_nodomain="$url_stem_timeless_nodomain2"
         prefix_replace="$assets_directory/"
         item="${item#"$assets_directory"\/*}"    # remove initial assets directory
       else

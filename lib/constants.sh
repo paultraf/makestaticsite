@@ -22,7 +22,7 @@
 ################################################
 # MakeStaticSite info
 ################################################
-version=0.31.4-beta2
+version=0.31.4-beta3
 version_date='2 April 2025'
 version_header="MakeStaticSite version $version, released on $version_date."
 mss_license="GNU Affero General Public License version 3"
@@ -295,7 +295,10 @@ wayback_merge_httphttps=yes     # Merge http and https directories in main branc
 wayback_host_original_dir=yes   # Restore original host directory when generating a mirror of site archived by the Wayback Machine (y/n)?
 
 # Processing of Wayback Machine output
-wayback_relative_links_clean=original # How to treat residual Wayback stems in hyperlinks (typically starting '/web')
+wayback_links_relative_rewrite=yes # Should residual relative links (e.g., involving host subdomains) also be written (y/n)?
+                                # - 'yes': ensure that any such links are rewritten
+                                # - any other setting: leave, as is, rewriting only with respect to original host.
+wayback_relative_links_clean=wayback # How to treat residual Wayback stems in hyperlinks (typically starting '/web')
                                 # - ‘original’: restore links to original host  
                                 # - 'wayback': make absolute residual Wayback-specific relative links (prefix with Wayback host) 
 wayback_host_original_sitemap=yes # Restore original URLs when generating the sitemap for a site archived by the Wayback Machine (y/n)?
@@ -649,8 +652,8 @@ options_allow_empty=(asset_domains page_element_domains wget_extra_options input
 options_check_cmd=(wget_cmd htmltidy_cmd) # Command line applications that need to be checked for existence
 options_check_dir=(site_path)   # Directories that need to be checked for existence
 options_check_url=(url)         # URLs that need to be validated
-options_check_yesno=(ssl_checks require_login wget_extra_urls site_post_processing archive wp_cli wp_cli_remote wp_helper_plugins add_search wp_restore_settings prune_query_strings use_snippets upload_zip deploy deploy_remote deploy_remote_rsync htmltidy host_dir_mode mss_cut_dirs add_extras wget_span_subdomains url_wildcard_capture cors_enable prune_filename_extensions_querystrings warc_output wayback_cli use_wayback_id wayback_memento_check wayback_mementos_only wayback_anchors_original_host wayback_merge_httphttps wayback_host_original_dir wayback_host_original_sitemap wayback_code_clean wayback_folders_clean wayback_comments_clean wget_protocol_relative_urls extra_assets_allow_query_strings zip_omit_download clean_query_extensions credentials_cleanup wget_cookies_nullify_user_agent rename_wget_tmps relativise_host_assets web_print_runtime_data wayback_code_clean) # Options that take yes/no values
+options_check_yesno=(ssl_checks require_login wget_extra_urls site_post_processing archive wp_cli wp_cli_remote wp_helper_plugins add_search wp_restore_settings prune_query_strings use_snippets upload_zip deploy deploy_remote deploy_remote_rsync htmltidy host_dir_mode mss_cut_dirs add_extras wget_span_subdomains url_wildcard_capture cors_enable prune_filename_extensions_querystrings warc_output wayback_cli use_wayback_id wayback_memento_check wayback_mementos_only wayback_anchors_original_host wayback_links_relative_rewrite wayback_merge_httphttps wayback_host_original_dir wayback_host_original_sitemap wayback_code_clean wayback_folders_clean wayback_comments_clean wget_protocol_relative_urls extra_assets_allow_query_strings zip_omit_download clean_query_extensions credentials_cleanup wget_cookies_nullify_user_agent rename_wget_tmps relativise_host_assets web_print_runtime_data wayback_code_clean) # Options that take yes/no values
 options_check_remote=(site_path) # options that need to be checked on a remote server
 options_credentials=(site_user) # credentials that may/should be encrypted
 
-options_nodeps_load=(offline_file_system add_search deploy deploy_remote use_snippets upload_zip ssl_checks url asset_domains page_element_domains require_login local_sitename wget_extra_urls_depth wget_span_subdomains url_wildcard_capture input_urls_file site_post_processing prune_query_strings archive web_source_exclude_dirs htmltidy host_dir_mode mss_cut_dirs add_extras wp_cli site_path zip_filename zip_download_folder deploy_path deploy_domain cors_enable prune_filename_extensions_querystrings warc_output warc_header_format wayback_cli use_wayback_id wayback_memento_check wayback_mementos_only wayback_anchors_original_host wayback_relative_links_clean wayback_merge_httphttps wayback_host_original_dir wayback_host_original_sitemap wayback_code_clean wayback_folders_clean wayback_comments_clean extra_assets_allow_query_strings zip_omit_download clean_query_extensions credentials_cleanup wget_protocol_relative_urls wget_cookies_nullify_user_agent rename_wget_tmps relativise_host_assets web_print_runtime_data wayback_code_clean) # Options that are not dependent on others
+options_nodeps_load=(offline_file_system add_search deploy deploy_remote use_snippets upload_zip ssl_checks url asset_domains page_element_domains require_login local_sitename wget_extra_urls_depth wget_span_subdomains url_wildcard_capture input_urls_file site_post_processing prune_query_strings archive web_source_exclude_dirs htmltidy host_dir_mode mss_cut_dirs add_extras wp_cli site_path zip_filename zip_download_folder deploy_path deploy_domain cors_enable prune_filename_extensions_querystrings warc_output warc_header_format wayback_cli use_wayback_id wayback_memento_check wayback_mementos_only wayback_anchors_original_host wayback_links_relative_rewrite wayback_relative_links_clean wayback_merge_httphttps wayback_host_original_dir wayback_host_original_sitemap wayback_code_clean wayback_folders_clean wayback_comments_clean extra_assets_allow_query_strings zip_omit_download clean_query_extensions credentials_cleanup wget_protocol_relative_urls wget_cookies_nullify_user_agent rename_wget_tmps relativise_host_assets web_print_runtime_data wayback_code_clean) # Options that are not dependent on others
