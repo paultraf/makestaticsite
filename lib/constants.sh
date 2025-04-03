@@ -22,8 +22,8 @@
 ################################################
 # MakeStaticSite info
 ################################################
-version=0.31.4-beta3
-version_date='2 April 2025'
+version=0.31.4
+version_date='3 April 2025'
 version_header="MakeStaticSite version $version, released on $version_date."
 mss_license="GNU Affero General Public License version 3"
 mss_site="https://makestaticsite.sh"
@@ -189,7 +189,8 @@ web_element_extensions="js,css,svg,map,ico" # list of file extensions for standa
 font_extensions="cff,ttf,eot,woff,woff2" # list of file extensions for Web fonts 
 image_extensions="jpeg,jpg,gif,png" # list of file extensions for Web images
 audiovideo_extensions="heic,webp,mp3,m4a,ogg,wav,avi,mpg,mp4,mov,ogv,wmv,3gp,3gp2" # list of file extensions for audio and video assets
-doc_extensions="pdf,doc,docx,odt,ppt,xls,xlsx" # list of file extensions for office documents
+#doc_extensions="pdf,doc,docx,odt,ppt,xls,xlsx" # list of file extensions for office documents
+doc_extensions="doc,docx,odt,ppt,xls,xlsx" # list of file extensions for office documents
 asset_extensions="$web_element_extensions,$image_extensions,$audiovideo_extensions,$doc_extensions,$font_extensions"  # list of file extensions for assets that may be retrieved by Wget in phase 3. If no extensions are defined, then cURL will be used to remove non-HTML assets, but all other assets will be accepted
 asset_extensions_external="$web_element_extensions,$image_extensions,$font_extensions" # a more limited set for assets gleaned from external domains
 
@@ -272,7 +273,7 @@ wayback_timestamp_policy=any  # Timestamp policy
                                 #  - 'range' to download subject to specified date range (see below)
 wayback_date_from_earliest=     # Earliest date timestamp for Wayback Machine snapshot files
 wayback_date_to_latest=         # Latest date timestamp for Wayback Machine snapshot files
-wayback_snapshot_path_depth=3   # The number of directories to traverse to get to the original domain directory (a magic number, default set for Internet Archive, until a suitable algorithm is determined).
+wayback_snapshot_path_depth=3   # The number of directories to traverse to get to the original host directory (a magic number, default set for Internet Archive, until a suitable algorithm is determined).
 wayback_search_regex="href[[:space:]]*=[[:space:]]*[\'\"]\?[^#:>\'\"/][^:>]\+[[:space:]]*[\'\"]\?[[:space:]]*>" # Basic regular expression for matching the href attribute in an anchor
 
 # Wayback Machine output's directory layout

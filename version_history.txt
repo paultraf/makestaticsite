@@ -19,7 +19,45 @@
 ##########################################################################
 
 
-
+0.31.4 (released on 2025-04-03)
+     * Extended processing and maintenance for Wayback Machine sites. *
+       Renamed variable names with 'domain' in them to 'hostname' where they
+       can take both domain names and IP addresses as values.
+       To be more consistent the Mozilla's MDN documentation: 
+       https://developer.mozilla.org/en-US/docs/Web/API/Location
+       wayback_restore_original_host renamed wayback_relative_links_clean
+       and reworked its description to indicate options for original host and
+       Wayback Machine host; wayback_host_original renamed
+       wayback_host_original_dir. Added wayback_links_relative_rewrite to
+       indicate how (non-Wayback) relative links are to be handled.
+      [setup.sh].
+       read_credentials(): Replaced reference to $domain with $hostname.
+       read_option(): Replaced reference to $archived_domain_path with
+       archived_host_path.
+      [makestaticsite.sh]
+       Replaced references to variable domain with hostname, domain_original
+       with hostname_original, url_domain with url_hostname, and 
+       wayback_domain_original_sitemap with wayback_host_original_sitemap.
+      [lib/constants.sh]
+       Added option wget_extra_urls_depth to options_nodeps_load.
+       Renamed wayback_domain_original to wayback_host_original, 
+       wayback_domain_original_sitemap to wayback_host_original_sitemap, 
+       wayback_anchors_original_domain to wayback_anchors_original_host,
+       and host_dir to host_dir_mode.
+      [lib/general.sh]
+       hosts_toggle(): Replaced reference to $domain with $host.
+      [lib/mod_wayback.sh]
+       wayback_output_clean(): Restricted the search pattern for tags to
+       prevent false superstring matches.
+       Moved wayback_wget_postprocess() before consolidate_assets() to be
+       consistent with temporal sequence.
+       process_asset_anchors(): Rewriting relative links to identified assets
+       increased in scope to allow for arbitrary domains.
+       wayback_output_clean(): Removed any duplication in generation of
+       webpages_clean array. Inserted routine to carry out restoration of 
+       original host URLs, removing Wayback Machine prefixes, or, when
+       retaining Wayback Machine URLs, to prefix absolute paths with
+       Wayback Machine host, turning them into absolute URLs.
 
 0.31.3 (released on 2025-03-05)
      * Further refinements for Wayback sites, with extended postprocessing *
@@ -30,13 +68,13 @@
        regex_escape() and sed_rhs_escape(): Added pipe '|' to the BRE escape
        character list to facilitate sed replacements that use it as delimiter.
       [lib/mod_wayback.sh]
-       process_asset_anchors(): for links to assets originally from external
+       process_asset_anchors(): For links to assets originally from external
        domains, remove primary domain from url_stem_timeless, used in sed
        search pattern.
-       wayback_output_clean(): extended support for tags that precede the
+       wayback_output_clean(): Extended support for tags that precede the
        Wayback code to be removed, allowing for any attributes.
        Extended scope of files for removal of Wayback code and comments to
-       include filenames with query strings. 
+       include filenames with query strings.
       [makestaticsite.sh]
        Fixed duplication of Wget core options for Wayback Machine URLs.
        Added a locking variable, working_mirror_lock, to prevent attempted
