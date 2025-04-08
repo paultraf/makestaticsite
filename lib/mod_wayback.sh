@@ -194,7 +194,9 @@ wayback_url_paths() {
   url_path_original_regex=$(regex_escape "$url_path_original")
   url_timeless=${url/\/${wayback_date_from}/\/[0-9]+[a-z]\{0,2\}_\?} # This could be tightened - use $wayback_datetime_regex
   if [ "$wayback_merge_httphttps" = "yes" ]; then
-    url_timeless=${url_timeless/\/https:/\/https\?:} # allow support for http and https links
+    # Allow support for http and https links
+    url_timeless=${url_timeless/\/http:/\/https\?:} 
+    url_timeless=${url_timeless/\/https:/\/https\?:} 
   fi
   url_timeless=$(regex_escape "$url_timeless")
   url_timeless=$(regex_apply "$url_timeless")
@@ -292,8 +294,24 @@ wayback_filter_domains() {
     url_regex+="/"
   fi
   url_regex=${url_regex/"$url_base"/} # trim the URL base to support relative links
+
+  # Further modification when spanning domains
+  if [ "$wget_span_subdomains" = "yes" ]; then
+    wget_span_subdomains_only=${wget_span_subdomains_expr/|)/)}
+    if [[ $hostname_original =~ ^$wget_span_subdomains_only ]]; then
+      # Already has a prefix, so trim and reapply
+      primaryhostname=$(echo "${hostname_original#*.}")
+    else
+      # No recognised prefix, so will append
+      primaryhostname="$hostname_original"
+    fi
+    hostname_new=$(echo "$wget_span_subdomains_expr$primaryhostname")    
+    url_regex=${url_regex/"$hostname_original"/"$hostname_new"}  
+  fi
   if [ "$wayback_merge_httphttps" = "yes" ]; then
-    url_regex=${url_regex/\/https:/\/https?:} # allow support for http and https links
+    # Allow support for http and https links
+    url_regex=${url_regex/\/https:/\/https?:} 
+    url_regex=${url_regex/\/http:/\/https?:}
   fi
 
   # Add a constraint on Wget searches
@@ -422,7 +440,7 @@ wayback_wget_postprocess() {
     sed "${sed_options[@]}" "${sed_subs[@]}"
   done < <(for file_ext in "${asset_find_names[@]}"; do
     find "." -type f -name "$file_ext" -print
-  done) 
+  done)
 }
 
 # Consolidate snapshot assets in a single location,
