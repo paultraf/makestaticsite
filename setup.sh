@@ -55,11 +55,16 @@ read_config() {
   cfg_string=
   log_filename=
   local OPTIND
-  while getopts ":o:l:L:q:u" option; do
+  while getopts ":f:o:l:L:q:u" option; do
     case "$option" in
+      f)
+        batch_file="$OPTARG"
+        [ -f "$batch_file" ] || { printf "%s\n" "$msg_error: Sorry, unable to read from the batch file, $batch_file; it doesn't appear to exist.  Please try again."; exit; }
+        setup_batch; exit
+        ;;
       l)
         level="$OPTARG"
-        validate_range 0 "$max_setup_level" "$level" ||{ printf "$msg_error: Sorry, the setup level of $level is out of range (it should be an integer between 0 and %s).  Please try again.\n" "$max_setup_level"; exit; }
+        validate_range 0 "$max_setup_level" "$level" ||{ printf "%s: Sorry, the setup level of $level is out of range (it should be an integer between 0 and %s).  Please try again.\n" "$msg_error" "$max_setup_level"; exit; }
         ;;
       L)
         log_filename="$OPTARG"
@@ -99,17 +104,28 @@ read_config() {
 
   # If an end phase (number) has been specified, but is too small, then not much will be done
   if [ "$end_phase" != "" ] && ((end_phase < 2)); then
-    printf "$msg_warning: No site will be output because the supplied end phase (q) is too low.\n"
+    printf "%s\n" "$msg_warning: No site will be output because the supplied end phase (q) is too low."
   fi
 
   if [ "$run_unattended" = "yes" ] && [ -z ${url+x} ]; then
-    printf "$msg_error: You have run setup in unattended mode (-u flag), but not supplied a URL. Aborting - please try again. \n"; exit;
+    printf "%s\n" "$msg_error: You have run setup in unattended mode (-u flag), but not supplied a URL. Aborting - please try again."; exit;
   fi
 
   if [ "$run_unattended" = "yes" ] && (( level > 0 )); then
-    printf "$msg_error: You can only run setup in unattended mode (-u flag) at level 0. Aborting - please try again.\n"; exit;
+    printf "%s\n" "$msg_error: You can only run setup in unattended mode (-u flag) at level 0. Aborting - please try again."; exit;
   fi
   
+}
+
+setup_batch() {
+  # Read and process batch_file, line by line
+  while IFS= read -r url_line; do
+    validate_url "$url_line" || { echolog -n "$msg_error: URL $url_line is invalid, so skipping it."$'\n'; continue; }
+    echolog -n "Running setup.sh on $url_line ..." 
+    ./setup.sh -u "$url_line";
+    echo -n "---------------------------------------"$'\n'
+  done < "$batch_file"
+  echolog -n "Batch setup complete."$'\n'
 }
 
 print_welcome() {
