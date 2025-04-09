@@ -22,8 +22,8 @@
 ################################################
 # MakeStaticSite info
 ################################################
-version=0.31.5-alpha1
-version_date='8 April 2025'
+version=0.31.5-alpha2
+version_date='9 April 2025'
 version_header="MakeStaticSite version $version, released on $version_date."
 mss_license="GNU Affero General Public License version 3"
 mss_site="https://makestaticsite.sh"
@@ -135,7 +135,7 @@ wget_core_options=("${wget_mirror_options[@]}" --convert-links --adjust-extensio
 wget_wayback_core_options=(--tries=3)    # Specify additional recursion options in () brackets, e.g. (--recursive --level=2)
 wget_span_subdomains=yes        # Should Wget span additional subdomains (yes/no)?
                                 # - 'yes': match on domain prefixes specified by get_span_domains_expr
-wget_span_subdomains_expr='(www\.|web\.|)' # A basic regular expression of subdomain prefixes to the primary domain that can be spanned in addition to the primary domain itself.
+wget_span_subdomains_expr='(www\.|web\.|)' # An extended regular expression of subdomain prefixes to the primary domain that can be spanned in addition to the primary domain itself.
 wget_default_page=index.html    # The Wget --default-page option (index.html by default)
 wget_adjust_extensions="html,css" # The Wget list of file extensions that have the extension appended to match the HTTP response header when the extension doesn't exist.
 prune_filename_extensions_querystrings=yes # Remove file name extensions thus added by Wget via --adjust-extension option (y/n)? 

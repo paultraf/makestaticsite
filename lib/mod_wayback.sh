@@ -722,10 +722,15 @@ process_asset_anchors() {
   url_stem_timeless_nodomain1="$url_timeless_nodomain"
   url_stem_timeless_nodomain2="$url_base_timeless_nodomain"
   if [ "$wayback_links_relative_rewrite" = "yes" ]; then
+    # Replace the original URL within a Wayback (Memento) URL with a regular expression for any domain
     wayback_url_re='https\?://'"$domain_re0"
     wayback_url_re0='https\\?:\/\/'"$domain_re0"
+    # Absolute URLs
+    url_timeless=${url_timeless/\/${wayback_url_re0}/\/$wayback_url_re}
+    url_stem_timeless=${url_stem_timeless/\/${wayback_url_re0}/\/$wayback_url_re}
+    # Relative URLs 
     url_stem_timeless_nodomain1=${url_stem_timeless_nodomain1/\/${wayback_url_re0}/\/$wayback_url_re}
-    url_stem_timeless_nodomain2=${url_stem_timeless_nodomain2/\/${wayback_url_re0}/\/$wayback_url_re} 
+    url_stem_timeless_nodomain2=${url_stem_timeless_nodomain2/\/${wayback_url_re0}/\/$wayback_url_re}
   fi
 
   # Carry out substitutions in web pages
