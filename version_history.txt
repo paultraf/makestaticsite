@@ -19,6 +19,36 @@
 ##########################################################################
 
 
+0.31.5 (released on 2025-04-10)
+     * Extended processing for Wayback Machine sites and batch file support. *
+      [lib/constants.sh]
+       Added option wget_span_subdomains to indicate whether or not Wget
+       should span additional subdomains; and wget_span_subdomains_expr, a
+       basic regular expression of allowed subdomain prefixes in addition to
+       the primary domain itself.
+      [lib/mod_wayback.sh]
+       wayback_url_paths() and wayback_filter_domains() respectively: Ensure
+       merge of http and https in url_timeless and url_regex applies when the
+       origianal URL starts with http: or https:
+       wayback_filter_domains(): Apply subdomain support in url_regex search
+       pattern.
+       process_asset_anchors(): Rewriting of links to absolute Wayback URLs
+       extended to fully match corresponding downloaded assets via search
+       pattern on arbitrary domains for url_timeless and url_stem_timeless
+       replacements.
+      [setup.sh]
+       Fixed minor issues with printf and variables.
+       read_config(): added -f <batch file> as an argument option.
+       Added function setup_batch() to loop through supplied batch file and
+       repeatedly call setup.sh, with URL validation for each line.
+      [makestaticsite.sh]
+       read_config(): added support for '-f' option with filename parameter;
+       when supplied, call mss_batch().
+       Added function mss_batch() to read and process batch_file, line by
+       line; call makestaticsite.sh with this as -i parameter when it matches
+       a valid configuration filename, and -u (unattended)
+       A few cosmetic changes to echo statements.
+
 0.31.4 (released on 2025-04-03)
      * Extended processing and maintenance for Wayback Machine sites. *
        Renamed variable names with 'domain' in them to 'hostname' where they
@@ -30,14 +60,6 @@
        Wayback Machine host; wayback_host_original renamed
        wayback_host_original_dir. Added wayback_links_relative_rewrite to
        indicate how (non-Wayback) relative links are to be handled.
-      [setup.sh].
-       read_credentials(): Replaced reference to $domain with $hostname.
-       read_option(): Replaced reference to $archived_domain_path with
-       archived_host_path.
-      [makestaticsite.sh]
-       Replaced references to variable domain with hostname, domain_original
-       with hostname_original, url_domain with url_hostname, and 
-       wayback_domain_original_sitemap with wayback_host_original_sitemap.
       [lib/constants.sh]
        Added option wget_extra_urls_depth to options_nodeps_load.
        Renamed wayback_domain_original to wayback_host_original, 
@@ -58,6 +80,14 @@
        original host URLs, removing Wayback Machine prefixes, or, when
        retaining Wayback Machine URLs, to prefix absolute paths with
        Wayback Machine host, turning them into absolute URLs.
+      [setup.sh].
+       read_credentials(): Replaced reference to $domain with $hostname.
+       read_option(): Replaced reference to $archived_domain_path with
+       archived_host_path.
+      [makestaticsite.sh]
+       Replaced references to variable domain with hostname, domain_original
+       with hostname_original, url_domain with url_hostname, and 
+       wayback_domain_original_sitemap with wayback_host_original_sitemap.
 
 0.31.3 (released on 2025-03-05)
      * Further refinements for Wayback sites, with extended postprocessing *
