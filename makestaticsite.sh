@@ -52,7 +52,7 @@ main() {
 
   # Phase 3: Augment the static site
   (( phase < 4 )) && (( end_phase >= 3 )) && augment_mirror
-   
+
   # Phase 4: Refine the static site
   (( phase < 5 )) && (( end_phase >= 4 )) && [ "$site_post_processing" = "yes" ] && site_postprocessing
 
@@ -100,8 +100,13 @@ read_config() {
   mirror_id_flag=off # flag to denote whether or not -m option set
 
   local OPTIND
-  while getopts "ui:p:q:m:L:vh" option; do
+  while getopts "ui:f:p:q:m:L:vh" option; do
     case "$option" in
+      f)
+        batch_file="$OPTARG"
+        [ -f "$batch_file" ] || { printf "%s\n" "$msg_error: Sorry, unable to read from the batch file, $batch_file; it doesn't appear to exist.  Please try again."; exit; }
+        mss_batch; exit
+        ;;
       u)
         run_unattended=yes
         ;;
@@ -132,6 +137,7 @@ read_config() {
         echo
         echo "Allowable options are:"
         echo " -u                 Run unattended."
+        echo " -f FILENAME        Batch file listing configuration file names."
         echo " -i FILENAME        Input configuration file name."
         echo " -p NUMBER          Run from phase NUMBER, where"
         echo "    0 (default)     Initialisation"
@@ -163,6 +169,7 @@ read_config() {
         echo "Invalid option: $OPTARG" 1>&2
         echo "Allowable options are:"
         echo " -u                 Run unattended."
+        echo " -f FILENAME        Batch file listing configuration file names."
         echo " -i FILENAME        Input configuration file."
         echo " -p NUMBER          Run from phase NUMBER (default is 0, start)."
         echo " -q NUMBER          End at phase NUMBER (default is 9, end)."
@@ -176,6 +183,17 @@ read_config() {
     esac
   done
   shift $((OPTIND-1))
+}
+
+mss_batch() {
+  # Read and process batch_file, line by line
+  while IFS= read -r cfg_line; do
+    echolog -n "Running makestaticsite.sh with configuration file $cfg_line ..."$'\n'
+    [ ! -f "config/$cfg_line" ] && { echolog -n "$msg_error: URL $cfg_line not found, so skipping it."$'\n'; continue; }
+    ./makestaticsite.sh -i "$cfg_line" -u
+    echo -n "---------------------------------------"$'\n'
+  done < "$batch_file"
+  echolog -n "Batch run complete."$'\n'
 }
 
 initialise_include_excludes() {
@@ -778,7 +796,7 @@ prepare_static_generation() {
 }
 
 wget_error_codes() {
-  echolog "Done."
+  echolog "Done." "1"
   case "$1" in
     "8")
       echolog -n "$msg_warning: Wget ERROR code 8, i.e. the Web server gave an error on retrieving at least one file, probably HTTP 404 (file not found - possibly specified in the input file).  Less likely is a 500 (internal server error), which in the case of a CMS might be due to a plugin or module. ";
@@ -1320,7 +1338,7 @@ wget_extra_urls() {
   assets_or='\.('${asset_extensions//,/|}')'
   assets_or_external='\.('${asset_extensions_external//,/|}')'
   (( num_webasset_steps_nohtml=num_webasset_steps-5 )) # Progress bar: this is most of the processing
-  
+
   # But for Wayback URLs, consider web pages as allowable assets
   # and carry out special filtering
   if [ "$wayback_url" = "yes" ]; then
@@ -1505,7 +1523,7 @@ wget_extra_urls() {
   done < "$input_file_extra"
   (( webasset_step_count++ ))
   print_progress
-  echolog "Done."
+  echolog "Done." "1"
 
   # Insert WARC options, where applicable
   if [ "$warc_output" = "yes" ]; then
@@ -1524,7 +1542,7 @@ wget_extra_urls() {
     wget_extra_core_options=("${array_reduced[@]}")
   fi
   
-  echolog "Running Wget on these additional URLs with options: " "${wget_extra_core_options[@]}" "${wget_extra_options[@]}" "${wget_asset_options[@]}"
+  echolog "Running Wget on these additional URLs with options:" "${wget_extra_core_options[@]}" "${wget_extra_options[@]}" "${wget_asset_options[@]}"
   if [ "$warc_output" = "yes" ] && (( phase >2 )); then
     echolog "$msg_warning: The progress bars may display oddly. This is a known technical issue with Wget when WARC and other options are supplied together."
   fi 
