@@ -317,7 +317,7 @@ wayback_filter_domains() {
   # Add a constraint on Wget searches
   if (( wget_extra_urls_count == 1 )); then
     wget_extra_core_options+=( "--accept-regex" "\"$url_regex\"" ) # Every link in the Wayback Machine is to an absolute URL
-    wget_extra_options+=("--max-redirect=1") # Reduce the risk of Wget fetching external resources whilst allowing the possibility for a standard internal redirect to fetch nearest timestamp 
+    wget_extra_options+=("--max-redirect=$wget_wayback_max_redirects") # Reduce the risk of Wget fetching external resources whilst allowing the possibility for standard internal redirects to fetch nearest timestamp 
   fi
 
   # Constrain candidate Wayback URLs for Wget to those that have 
