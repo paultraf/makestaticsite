@@ -339,6 +339,15 @@ wayback_filter_domains() {
     fi
   done
 
+  # Filter out any candidate URL that ends with a pair of braces or parenthesis
+  webassets_wayback1=()
+  for opt in "${webassets_wayback0[@]}"; do
+    opt_filter=$(echo "$opt" | sed 's|/[{(][^/]*[})][^/]*$|/|')
+    if [ "$opt" = "$opt_filter" ]; then
+      webassets_wayback1+=("$opt")
+    fi
+  done
+
   # Add further filters based on a list of existing downloaded URLs.
   # Wget's first run only generates one timestamped folder with web pages,
   # but subsequent runs will potentially generate many more, depending on
@@ -388,7 +397,7 @@ wayback_filter_domains() {
   while IFS= read -r line; do
     webassets_wayback+=("$line");
   done < <(
-  for opt in "${webassets_wayback0[@]}"; do
+  for opt in "${webassets_wayback1[@]}"; do
     for exception in "${wayback_exceptions[@]}"; do
       if [[ $opt =~ $exception$ ]]; then
         continue 2              # URL is not allowed, so drop
