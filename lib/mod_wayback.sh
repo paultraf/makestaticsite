@@ -191,7 +191,8 @@ wayback_url_paths() {
   else
     url_path_original_dir="$url_path_original"
   fi
-  url_path_original_regex=$(regex_escape "$url_path_original")
+  [[ ${url_path_original_dir:length-1:1} = "/" ]] && url_path_original_dir=$(echo ${url_path_original_dir::-1}) # Ensure no trailing slash for the directory
+  url_path_original_regex=$(regex_escape "$url_path_original_dir")
   url_timeless=${url/\/${wayback_date_from}/\/[0-9]+[a-z]\{0,2\}_\?} # This could be tightened - use $wayback_datetime_regex
   if [ "$wayback_merge_httphttps" = "yes" ]; then
     # Allow support for http and https links
@@ -203,7 +204,7 @@ wayback_url_paths() {
   url_timeless=${url_timeless//\\[/[} # final adjustment to remove '\' in front of '['
   url_timeless_slash="$url_timeless"
   [ "$url_add_slash" = "avoid" ] && url_timeless_slash="${url_timeless_slash%\/*}/" # Remove anything after last '/' for URLs not ending in '/'
-  url_timeless_nodomain=${url_timeless_slash/"$url_base_regex"/}   # Truncated version
+  url_timeless_nodomain=${url_timeless_slash/"$url_base_regex"/}   # Truncated version (note that the pattern is not treated as regex)
   url_base_timeless=${url_timeless_slash/"$url_path_original_regex/"/}
   url_base_timeless_nodomain=${url_timeless_nodomain/"$url_path_original_regex/"/}
   url_base_timeless_generic=${url_base_timeless/"$url_original_base_regex/"/}
