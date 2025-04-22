@@ -1320,10 +1320,10 @@ wget_extra_urls() {
   (( webasset_step_count++ ))
   print_progress "$webasset_step_count" "$num_webasset_steps"
 
-  # Filter out all items not starting http
-  echolog "Filter out all items not starting http" "1"
+  # Filter out all invalid URLs 
+  echolog "Filter out invalid URLs" "1"
   webassets_http=()
-  while IFS='' read -r line; do webassets_http+=("$line"); done < <(for item in "${webassets_unique[@]}"; do if [ "${item:0:4}" = "http" ]; then printf "%s\n" "${item}"; else continue; fi; done)
+  while IFS='' read -r line; do webassets_http+=("$line"); done < <(for item in "${webassets_unique[@]}"; do if [[ $item =~ $url_re ]]; then printf "%s\n" "${item}"; else continue; fi; done)
   [ ${#webassets_http[@]} -eq 0 ] && { echolog "None found. " "1"; (( wget_extra_urls_count=wget_extra_urls_depth+1 )); print_progress; echolog "Done."; return 0; }
   num_webassets_http="${#webassets_http[@]}"
   echolog "webassets_http array has $num_webassets_http elements" "2"
@@ -1364,11 +1364,10 @@ wget_extra_urls() {
       opt_domain=$(printf "%s\n" "$opt" | awk -F/ '{print $3}' | awk -F: '{print $1}')
       if [[ ' '${page_element_domains_array[*]}' ' =~ ' '$opt_domain' ' ]]; then # satisfied vacuously for all Wayback URLs
         if [ "$prune_query_strings" = "yes" ]; then
-          echo "$opt" | grep -Ei "$assets_or_external$" > /dev/null && printf "%s|%s\n" "$i" "$opt";
+          echo "$opt" | grep -Ei "$assets_or_external$" > /dev/null && printf "%s|%s\n" "$i" "$opt"
         else
 # probably should tack on ? or %3F to restrict the search ...
-          echo "$opt" | grep -Ei "$assets_or_external" > /dev/null && printf "%s|%s\n" "$i" "$opt";        
-
+          echo "$opt" | grep -Ei "$assets_or_external" > /dev/null && printf "%s|%s\n" "$i" "$opt"
         fi
       else
         if [ "$prune_query_strings" = "yes" ]; then
