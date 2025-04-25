@@ -137,7 +137,7 @@ validate_domain() {
 }
 
 validate_url() {
-  if [[ ! $1 =~ $url_re ]]; then
+  if [[ ! $1 =~ ^$url_re$ ]]; then
     return 1
   fi
 }

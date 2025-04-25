@@ -1323,7 +1323,7 @@ wget_extra_urls() {
   # Filter out all invalid URLs 
   echolog "Filter out invalid URLs" "1"
   webassets_http=()
-  while IFS='' read -r line; do webassets_http+=("$line"); done < <(for item in "${webassets_unique[@]}"; do if [[ $item =~ $url_re ]]; then printf "%s\n" "${item}"; else continue; fi; done)
+  while IFS='' read -r line; do webassets_http+=("$line"); done < <(for item in "${webassets_unique[@]}"; do if [[ $item =~ ^$url_re$ ]]; then printf "%s\n" "${item}"; else continue; fi; done)
   [ ${#webassets_http[@]} -eq 0 ] && { echolog "None found. " "1"; (( wget_extra_urls_count=wget_extra_urls_depth+1 )); print_progress; echolog "Done."; return 0; }
   num_webassets_http="${#webassets_http[@]}"
   echolog "webassets_http array has $num_webassets_http elements" "2"

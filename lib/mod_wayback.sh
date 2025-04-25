@@ -239,6 +239,7 @@ wayback_augment_urls(){
 
   find_web_pages
   href_matches=()
+  wayback_search_regex2="url($url_base_timeless[^)]\+)"
   for opt in "${webpages[@]}"; do
     opt_item=${opt:2}
     opt_filename="${opt##*\/}"
@@ -280,7 +281,13 @@ wayback_augment_urls(){
       line=${line//[[:space:]]/%20}
       href_matches+=("$line")
     done < <(grep -o "$wayback_search_regex" "$opt")
-    webassets_all=("${webassets_all[@]}" "${href_matches[@]}") 
+
+    while IFS= read -r line; do
+      line=$(echo "$line" | grep -o -E "$url_re[^\)]")
+      href_matches+=("$line")
+    done < <(grep -o "$wayback_search_regex2" "$opt")
+    
+    webassets_all=("${webassets_all[@]}" "${href_matches[@]}")
   done
 }
 
