@@ -752,7 +752,7 @@ process_asset_anchors() {
     wayback_url_re='https\?://'"$domain_re0"
     wayback_url_re0='https\\?:\/\/'"$domain_re0"
     # Absolute URLs
-    url_timeless=${url_timeless/\/${wayback_url_re0}/\/$wayback_url_re}
+    url_timeless=$(echo "$url_timeless" | sed 's|'"$wayback_url_re0"'|'"$wayback_url_re"'|')
     url_stem_timeless=${url_stem_timeless/\/${wayback_url_re0}/\/$wayback_url_re}
     # Relative URLs 
     url_stem_timeless_nodomain1=${url_stem_timeless_nodomain1/\/${wayback_url_re0}/\/$wayback_url_re}
@@ -823,8 +823,18 @@ process_asset_anchors() {
       sed "${sed_options[@]}" "${sed_subs1[@]}"
       sed "${sed_options[@]}" "${sed_subs2[@]}"
       sed "${sed_options[@]}" "${sed_subs3[@]}"
+      # If $item ends in /index.html, then add a variant that removes everything after the final /
+      if [[ ${item:length-12:12} = "/index\.html" ]]; then
+        item3="${item:0:length-11}"
+        sed_subs4=('s|\('"$url_stem_timeless"'\)\('"$item3\)\([\'\"[:space:]]\)"'|'"$pathpref$prefix_replace$item2a\3"'|g' "$opt")
+        sed_subs5=('s|\([\"'\'']\)\('"$url_stem_timeless_nodomain"'\)\('"$item3"'\)\('"[\'\"[:space:]]"'\)|'"\1$pathpref$prefix_replace$item2a\4"'|g' "$opt")
+        sed_subs6=('s|\([\"'\'']\)\('"$item3"'\)\('"[\'\"[:space:]]"'\)|'"\1$pathpref$prefix_replace$item2a\3"'|g' "$opt")
+        sed "${sed_options[@]}" "${sed_subs4[@]}"
+        sed "${sed_options[@]}" "${sed_subs5[@]}"
+        sed "${sed_options[@]}" "${sed_subs6[@]}"
+      fi
     done
-    # Conversion of anchors make implicit index pages explicit, to assist in internal navigation
+    # Conversion of Wayback anchors make implicit index pages explicit, to assist in internal navigation
     # (1) Empty case
     sed_subs1=('s|\('"$url_timeless"'\)\([\"'\'']\)|'"${pathpref}index.html\2"'|g' "$opt")
     sed_subs2=('s|\([\"'\'']\)\('"$url_timeless_nodomain"'\)\([\"'\'']\)|'"\1${pathpref}index.html\3"'|g' "$opt")
