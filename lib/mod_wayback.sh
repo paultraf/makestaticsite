@@ -823,15 +823,17 @@ process_asset_anchors() {
       sed "${sed_options[@]}" "${sed_subs1[@]}"
       sed "${sed_options[@]}" "${sed_subs2[@]}"
       sed "${sed_options[@]}" "${sed_subs3[@]}"
-      # If $item ends in /index.html, then add a variant that removes everything after the final /
-      if [[ ${item:length-12:12} = "/index\.html" ]]; then
+      # If $item is index.html or ends in /index.html, then use a search pattern that removes everything after the final /
+      if [[ ${item:length-12:12} = "/index\.html" ]] || [ "$item" = "index\.html" ]; then
         item3="${item:0:length-11}"
         sed_subs4=('s|\('"$url_stem_timeless"'\)\('"$item3\)\([\'\"[:space:]]\)"'|'"$pathpref$prefix_replace$item2a\3"'|g' "$opt")
         sed_subs5=('s|\([\"'\'']\)\('"$url_stem_timeless_nodomain"'\)\('"$item3"'\)\('"[\'\"[:space:]]"'\)|'"\1$pathpref$prefix_replace$item2a\4"'|g' "$opt")
-        sed_subs6=('s|\([\"'\'']\)\('"$item3"'\)\('"[\'\"[:space:]]"'\)|'"\1$pathpref$prefix_replace$item2a\3"'|g' "$opt")
         sed "${sed_options[@]}" "${sed_subs4[@]}"
         sed "${sed_options[@]}" "${sed_subs5[@]}"
-        sed "${sed_options[@]}" "${sed_subs6[@]}"
+        if [ "$item3" != "" ]; then
+          sed_subs6=('s|\([\"'\'']\)\('"$item3"'\)\('"[\'\"[:space:]]"'\)|'"\1$pathpref$prefix_replace$item2a\3"'|g' "$opt")
+          sed "${sed_options[@]}" "${sed_subs6[@]}"
+        fi
       fi
     done
     # Conversion of Wayback anchors make implicit index pages explicit, to assist in internal navigation
