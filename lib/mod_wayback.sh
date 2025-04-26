@@ -824,7 +824,7 @@ process_asset_anchors() {
       sed "${sed_options[@]}" "${sed_subs2[@]}"
       sed "${sed_options[@]}" "${sed_subs3[@]}"
       # If $item is index.html or ends in /index.html, then use a search pattern that removes everything after the final /
-      if [[ ${item:length-12:12} = "/index\.html" ]] || [ "$item" = "index\.html" ]; then
+      if [[ ! $prefix_replace =~ "imports/" ]] && { [[ ${item:length-12:12} = "/index\.html" ]] || [ "$item" = "index\.html" ]; }; then
         item3="${item:0:length-11}"
         sed_subs4=('s|\('"$url_stem_timeless"'\)\('"$item3\)\([\'\"[:space:]]\)"'|'"$pathpref$prefix_replace$item2a\3"'|g' "$opt")
         sed_subs5=('s|\([\"'\'']\)\('"$url_stem_timeless_nodomain"'\)\('"$item3"'\)\('"[\'\"[:space:]]"'\)|'"\1$pathpref$prefix_replace$item2a\4"'|g' "$opt")
