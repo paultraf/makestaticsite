@@ -752,7 +752,7 @@ process_asset_anchors() {
     wayback_url_re='https\?://'"$domain_re0"
     wayback_url_re0='https\\?:\/\/'"$domain_re0"
     # Absolute URLs
-    url_timeless=$(echo "$url_timeless" | sed 's|'"$wayback_url_re0"'|'"$wayback_url_re"'|')
+    url_timeless=${url_timeless/\/${wayback_url_re0}/\/$wayback_url_re}
     url_stem_timeless=${url_stem_timeless/\/${wayback_url_re0}/\/$wayback_url_re}
     # Relative URLs 
     url_stem_timeless_nodomain1=${url_stem_timeless_nodomain1/\/${wayback_url_re0}/\/$wayback_url_re}
