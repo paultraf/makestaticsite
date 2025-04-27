@@ -127,6 +127,21 @@ process_wayback_url() {
     fi
     hostname_original=$(printf "%s\n" "$url_original" | awk -F/ '{print $3}' | awk -F: '{print $1}')
   fi
+
+  # Define a hostname variant that supports subdomain spanning
+  if [ "$wget_span_subdomains" = "yes" ]; then
+    wget_span_subdomains_only=${wget_span_subdomains_expr/|)/)}
+    if [[ $hostname_original =~ ^$wget_span_subdomains_only ]]; then
+      # Already has a prefix, so trim and reapply
+      primaryhostname=$(echo "${hostname_original#*.}")
+    else
+      # No recognised prefix, so will append
+      primaryhostname="$hostname_original"
+    fi
+    hostname_original_span=$(echo "$wget_span_subdomains_expr$primaryhostname")
+  else
+    hostname_original_span="$hostname_original"
+  fi
 }
 
 # Determine runtime configuration for Wayback URL.
@@ -305,16 +320,7 @@ wayback_filter_domains() {
 
   # Further modification when spanning domains
   if [ "$wget_span_subdomains" = "yes" ]; then
-    wget_span_subdomains_only=${wget_span_subdomains_expr/|)/)}
-    if [[ $hostname_original =~ ^$wget_span_subdomains_only ]]; then
-      # Already has a prefix, so trim and reapply
-      primaryhostname=$(echo "${hostname_original#*.}")
-    else
-      # No recognised prefix, so will append
-      primaryhostname="$hostname_original"
-    fi
-    hostname_new=$(echo "$wget_span_subdomains_expr$primaryhostname")    
-    url_regex=${url_regex/"$hostname_original"/"$hostname_new"}  
+    url_regex=${url_regex/"$hostname_original"/"$hostname_original_span"}
   fi
   if [ "$wayback_merge_httphttps" = "yes" ]; then
     # Allow support for http and https links
@@ -574,7 +580,7 @@ consolidate_assets() {
         opt_item_slashes=${opt_item//[!\/]};
         opt_item_slashes_num=${#opt_item_slashes};
         this_path="$opt_item"
-        if [ "$this_host" != "$hostname_original" ]; then
+        if [[ ! $this_host =~ ^$hostname_original_span$ ]]; then
           this_path_prefix="$imports_directory/$this_host"
         elif [[ ! $url_path_original_dir == $opt_item* ]]; then
           this_path_prefix="$assets_directory"
@@ -591,7 +597,7 @@ consolidate_assets() {
         done
       fi
       this_folder_path=
-      if [ "$this_host" != "$hostname_original" ]; then
+      if [[ ! $this_host =~ ^$hostname_original_span$ ]]; then
         this_folder_path="$imports_directory/$this_host/"
       elif [ "$url_path_original_dir" != "" ]; then
         # First substitute on any match under url_path_original
@@ -611,7 +617,7 @@ consolidate_assets() {
   for snapshot_dir in "${snapshot_path_list[@]}"; do
     this_host="${snapshot_dir##*/}" # remove everything before trailing slash
     # Create a directory for $this_host inside the 'imports' directory under the 'destination' path.
-    if [ "$this_host" != "$hostname_original" ]; then
+    if [[ ! $this_host =~ ^$hostname_original_span$ ]]; then
       mkdir -p "$dest_path/$imports_directory/$this_host" || echolog "$msg_error: Unable to create the external domain directory $this_host inside $dest_path/$imports_directory."
     fi
     echolog "Entering $snapshot_dir" "1"
@@ -624,7 +630,7 @@ consolidate_assets() {
     while IFS= read -r copy_dir; do
       copy_dir="${copy_dir#./}"
       if [ "$copy_dir" != "" ] && { [[ ! $url_path_original_dir == $copy_dir/* ]] || [ "$url_path_original_dir" != "" ]; }; then
-        if [ "$this_host" != "$hostname_original" ]; then
+        if [[ ! $this_host =~ ^$hostname_original_span$ ]]; then
           this_dest_path="$dest_path/$imports_directory/$this_host/$copy_dir"
         elif [[ $copy_dir == $url_path_original_dir* ]]; then
           this_dest_path="$dest_path_root/$copy_dir"
@@ -638,7 +644,7 @@ consolidate_assets() {
         while IFS= read -r item; do
           [ "$item" = "" ] && continue
           # check for internal URL path copying and adjust accordingly
-          if [ "$this_host" != "$hostname_original" ]; then
+          if [[ ! $this_host =~ ^$hostname_original_span$ ]]; then
             file_dest="$dest_path/$imports_directory/$this_host/$item"
           elif [[ $item == $url_path_original_dir* ]]; then
             file_dest="$dest_path_root/$item"
@@ -661,7 +667,7 @@ consolidate_assets() {
         if [ "$item" != "" ]; then
           # check if file already exists in destination
           item="${item#./}"
-          if [ "$this_host" != "$hostname_original" ]; then
+          if [[ ! $this_host =~ ^$hostname_original_span$ ]]; then
             file_dest="$dest_path/$imports_directory/$this_host/$item"
           elif [[ ! $copy_dir == $url_path_original_dir* ]] || { [ "$copy_dir" = "" ] && [ "$url_path_original_dir" != "" ]; }; then
             file_dest="$dest_path/$assets_directory/$item"
@@ -802,6 +808,10 @@ process_asset_anchors() {
         item2=$(url_percent_encode "$item")
       else
         item2="$item"
+      fi
+      if [ "$wget_span_subdomains" = "yes" ]; then
+        # When spanning subdomains, simply follow the loose replacement pattern already defined for url_stem_timeless_nodomain
+        url_stem_timeless="$url_base_regex$url_stem_timeless_nodomain"
       fi
       sed_subs1=('s|'"$url_stem_timeless$item"'|'"$pathpref$prefix_replace$item2"'|g' "$opt")
       sed_subs2=('s|\([\"'\'']\)\('"$url_stem_timeless_nodomain$item"'\)|'"\1$pathpref$prefix_replace$item2"'|g' "$opt")
