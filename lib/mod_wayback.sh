@@ -138,7 +138,15 @@ process_wayback_url() {
       # No recognised prefix, so will append
       primaryhostname="$hostname_original"
     fi
+    primaryhostname_regex=$(regex_escape "$primaryhostname")
     hostname_original_span=$(echo "$wget_span_subdomains_expr$primaryhostname")
+    subdomain_wildcard="://[-[:alnum:]+\.]*$primaryhostname_regex"
+    if [ "$wayback_merge_httphttps" = "yes" ]; then
+    # Allow support for http and https links
+      primaryhost_regex_span="https\?$subdomain_wildcard"
+    else
+      primaryhost_regex_span="$protocol_original://$subdomain_wildcard"
+    fi
   else
     hostname_original_span="$hostname_original"
   fi
@@ -754,15 +762,13 @@ process_asset_anchors() {
   url_stem_timeless_nodomain1="$url_timeless_nodomain"
   url_stem_timeless_nodomain2="$url_base_timeless_nodomain"
   if [ "$wayback_links_relative_rewrite" = "yes" ]; then
-    # Replace the original URL within a Wayback (Memento) URL with a regular expression for any domain
-    wayback_url_re='https\?://'"$domain_re0"
     wayback_url_re0='https\\?:\/\/'"$domain_re0"
-    # Absolute URLs
-    url_timeless=${url_timeless/\/${wayback_url_re0}/\/$wayback_url_re}
-    url_stem_timeless=${url_stem_timeless/\/${wayback_url_re0}/\/$wayback_url_re}
-    # Relative URLs 
-    url_stem_timeless_nodomain1=${url_stem_timeless_nodomain1/\/${wayback_url_re0}/\/$wayback_url_re}
-    url_stem_timeless_nodomain2=${url_stem_timeless_nodomain2/\/${wayback_url_re0}/\/$wayback_url_re}
+    # With Wayback (Memento) URLs, replace the original URL with primaryhost_regex_span (regular expression based on original host)
+    # - absolute URLs
+    url_timeless=${url_timeless/\/${wayback_url_re0}/\/$primaryhost_regex_span}
+    # - relative URLs
+    url_stem_timeless_nodomain1=${url_stem_timeless_nodomain1/\/${wayback_url_re0}/\/$primaryhost_regex_span}
+    url_stem_timeless_nodomain2=${url_stem_timeless_nodomain2/\/${wayback_url_re0}/\/$primaryhost_regex_span}
   fi
 
   # Carry out substitutions in web pages
@@ -788,14 +794,11 @@ process_asset_anchors() {
       pathpref+="../";
     done
     for item in "${webpaths_output[@]}"; do
-      url_stem_timeless="$url_timeless_slash"
       url_stem_timeless_nodomain="$url_stem_timeless_nodomain1"
       if [[ $item == $imports_directory* ]]; then
         prefix_replace="$imports_directory/"
         item="${item#"$imports_directory"\/*}"   # remove initial imports directory
-        url_stem_timeless="${url_stem_timeless%\/\/*}//" # remove primary domain from tail
       elif [[ $item == $assets_directory* ]]; then
-        url_stem_timeless="$url_base_timeless"
         url_stem_timeless_nodomain="$url_stem_timeless_nodomain2"
         prefix_replace="$assets_directory/"
         item="${item#"$assets_directory"\/*}"    # remove initial assets directory
@@ -809,10 +812,9 @@ process_asset_anchors() {
       else
         item2="$item"
       fi
-      if [ "$wget_span_subdomains" = "yes" ]; then
-        # When spanning subdomains, simply follow the loose replacement pattern already defined for url_stem_timeless_nodomain
-        url_stem_timeless="$url_base_regex$url_stem_timeless_nodomain"
-      fi
+      # For converting links with Wayback host, simply prepend host to url_stem_timeless_nodomain (and its search pattern)
+      url_stem_timeless="$url_base_regex$url_stem_timeless_nodomain"
+
       sed_subs1=('s|'"$url_stem_timeless$item"'|'"$pathpref$prefix_replace$item2"'|g' "$opt")
       sed_subs2=('s|\([\"'\'']\)\('"$url_stem_timeless_nodomain$item"'\)|'"\1$pathpref$prefix_replace$item2"'|g' "$opt")
       sed "${sed_options[@]}" "${sed_subs1[@]}"
