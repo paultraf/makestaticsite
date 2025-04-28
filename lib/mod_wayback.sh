@@ -251,6 +251,7 @@ wayback_url_paths() {
 }
 
 # Augment list of candidate URLs
+# by determining absolute URLs from relative links
 wayback_augment_urls(){
   src_path_snapshot="$working_mirror_dir/$url_path_snapshot_prefix"
   cd_check "$src_path_snapshot" || { echolog "Aborting."; exit; }
@@ -283,6 +284,7 @@ wayback_augment_urls(){
     while IFS= read -r line; do
       line=${line//[ >\'\"]/}
       line=${line//href=/}
+      line=${line//src=/}
       line="${line%#*}" # remove internal anchors
       [ "$line" = "$opt_filename" ] && continue;
       # count number of ../ prefix cuts
@@ -303,7 +305,7 @@ wayback_augment_urls(){
       # percent encode whitespace
       line=${line//[[:space:]]/%20}
       href_matches+=("$line")
-    done < <(grep -o "$wayback_search_regex" "$opt")
+    done < <(grep -o -E "$wayback_search_regex" "$opt")
 
     while IFS= read -r line; do
       line=$(echo "$line" | grep -o -E "$url_re[^\)]")

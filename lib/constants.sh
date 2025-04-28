@@ -22,8 +22,8 @@
 ################################################
 # MakeStaticSite info
 ################################################
-version=0.31.6-beta4
-version_date='27 April 2025'
+version=0.31.6-beta5
+version_date='28 April 2025'
 version_header="MakeStaticSite version $version, released on $version_date."
 mss_license="GNU Affero General Public License version 3"
 mss_site="https://makestaticsite.sh"
@@ -278,7 +278,7 @@ wayback_timestamp_policy=any  # Timestamp policy
 wayback_date_from_earliest=     # Earliest date timestamp for Wayback Machine snapshot files
 wayback_date_to_latest=         # Latest date timestamp for Wayback Machine snapshot files
 wayback_snapshot_path_depth=3   # The number of directories to traverse to get to the original host directory (a magic number, default set for Internet Archive, until a suitable algorithm is determined).
-wayback_search_regex="href[[:space:]]*=[[:space:]]*[\'\"]\?[^#:>\'\"/][^:>]\+[[:space:]]*[\'\"]\?[[:space:]]*>" # Basic regular expression for matching the href attribute in an anchor
+wayback_search_regex="(href|src)[[:space:]]*=[[:space:]]*[\'\\\"][^#:>\'\\\"/[:space:]][^[:space:]:>]+[\'\\\"]" # Extended regular expression for matching the href or src attribute in a link
 
 # Wayback Machine output's directory layout
 wayback_sitename_hosts=         # Host domain[s] to base the top-level directory and zipfile names on (overrides setup settings)
