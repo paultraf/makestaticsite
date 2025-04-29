@@ -1276,6 +1276,9 @@ wget_extra_urls() {
   url_grep_array=()
   IFS='|' read -ra url_grep_array <<< "$url_grep"
   url_grep_array_count=${#url_grep_array[@]}; (( url_grep_array_count=num_webasset_steps*url_grep_array_count ))
+  if [ "$wayback_url" = "yes" ]; then
+    url_grep_array+=( "$url_timeless_nodomain_ere[^\"'<) ]+" )
+  fi
 
   # In generating list of asset URLs, strip out initial characters 
   # such as a quote or '=' arising from url_grep match condition.
@@ -1319,11 +1322,23 @@ wget_extra_urls() {
   echolog "webassets_unique array has ${#webassets_unique[@]} elements" "2"
   (( webasset_step_count++ ))
   print_progress "$webasset_step_count" "$num_webasset_steps"
+  if [ "$wayback_url" = "yes" ]; then
+    webassets_unique2=();
+    # prepend /web Memento absolute paths with Wayback host
+    while IFS='' read -r line; do
+      if [[ $line =~ ^$url_timeless_nodomain_ere ]]; then
+        line="$url_base$line"
+      fi    
+    webassets_unique2+=("$line");
+    done < <(for item in "${webassets_unique[@]}"; do printf "%s\n" "${item}"; done)
+  else
+    webassets_unique2=("${webassets_unique[@]}")
+  fi
 
   # Filter out all invalid URLs 
   echolog "Filter out invalid URLs" "1"
   webassets_http=()
-  while IFS='' read -r line; do webassets_http+=("$line"); done < <(for item in "${webassets_unique[@]}"; do if [[ $item =~ ^$url_re$ ]]; then printf "%s\n" "${item}"; else continue; fi; done)
+  while IFS='' read -r line; do webassets_http+=("$line"); done < <(for item in "${webassets_unique2[@]}"; do if [[ $item =~ ^$url_re$ ]]; then printf "%s\n" "${item}"; else continue; fi; done)
   [ ${#webassets_http[@]} -eq 0 ] && { echolog "None found. " "1"; (( wget_extra_urls_count=wget_extra_urls_depth+1 )); print_progress; echolog "Done."; return 0; }
   num_webassets_http="${#webassets_http[@]}"
   echolog "webassets_http array has $num_webassets_http elements" "2"

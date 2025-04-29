@@ -248,6 +248,9 @@ wayback_url_paths() {
   for ((i=1;i<url_path_depth;i++)); do
     url_path_prefix+="../"
   done
+  wayback_url_re0='https\\?:\/\/'"$domain_re0"
+  url_timeless_nodomain_ere=${url_timeless_nodomain/\/${wayback_url_re0}/\/$primaryhost_regex_span}
+  url_timeless_nodomain_ere=$(sed_bre_unescape "$url_timeless_nodomain_ere")
 }
 
 # Augment list of candidate URLs
@@ -764,7 +767,6 @@ process_asset_anchors() {
   url_stem_timeless_nodomain1="$url_timeless_nodomain"
   url_stem_timeless_nodomain2="$url_base_timeless_nodomain"
   if [ "$wayback_links_relative_rewrite" = "yes" ]; then
-    wayback_url_re0='https\\?:\/\/'"$domain_re0"
     # With Wayback (Memento) URLs, replace the original URL with primaryhost_regex_span (regular expression based on original host)
     # - absolute URLs
     url_timeless=${url_timeless/\/${wayback_url_re0}/\/$primaryhost_regex_span}

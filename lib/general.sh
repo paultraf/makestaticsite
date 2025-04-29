@@ -423,11 +423,10 @@ assets_search_string() {
   if [ "$1" != "" ]; then
     IFS="," read -r -a other_domains <<< "$1" 
     for opt in "${other_domains[@]}"; do
-      # Constrain by prefixing with [\"'=]
-      url_path+="|[\"'=]https?://$opt/$path" # the '?' is intended for ERE 0 or 1
-
+      # Constrain by prefixing with [\"'=], using ERE
+      url_path+="|[\\\"'=]https?://$opt/$path"
       # Or by prefixing with specified separator characters and optionally [\"'=]
-      url_path+="|[[:space:]]*${url_separator_chars}[[:space:]]*[\"=']?https?://$opt/$path" # the '?' is intended for ERE 0 or 1
+      url_path+="|[[:space:]]*${url_separator_chars}[[:space:]]*[\\\"=']?https?://$opt/$path"
     done
   fi
   [ "$url_path" != "" ] && url_path="${url_path:1}" # Remove the first separator character using parameter expansion
@@ -784,3 +783,16 @@ longest_line() {
   printf "%s" "$output"
 }
 
+# Unescape metacharacters escaped in basic regular expressions,
+# allowing use as extended regular expressions.
+# Expects one parameter: string to be escaped
+sed_bre_unescape() {
+  local string="$1"
+  local char charlist search replace
+  charlist=("|" "?" "+" "(" ")" "[" "]" "{" "}")
+  for char in "${charlist[@]}"; do
+    search="\\$char"; replace="$char"
+    string=${string//"$search"/"$replace"}
+  done
+  printf "%s" "$string"
+}
