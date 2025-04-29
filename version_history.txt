@@ -19,6 +19,56 @@
 ##########################################################################
 
 
+0.31.6 (released on 2025-04-29)
+     * Extended support for Wayback Machine sites that span subdomains. *
+      [lib/constants.sh]
+       Added constant wget_wayback_max_redirects for the maximum number of
+       redirects allowed for the Wayback Machine and set to 3 instead of 1
+       that was previously hard-coded.
+       Redefined wayback_search_regex as extended regular expression to
+       support use of alternation between href and src.
+       Removed the anchors from definition of url_re to support greps.
+      [lib/general.sh]
+       Added function sed_bre_unescape to unescape metacharacters escaped in
+       basic regular expressions, allowing use as extended regular expressions.
+       assets_search_string(): inserted \\ to properly escape double quotes.
+      [lib/validate.sh]
+       validate_url(): added anchors to url_re (following change to constant)
+      [lib/mod_wayback.sh]
+       process_wayback_url(): Define hostname_original_span, hostname variant
+       that supports subdomain spanning, along with primaryhost_regex_span
+       search pattern for Wayback link conversions.
+       wayback_url_paths(): Ensure that url_path_original_regex, used in link
+       replacements, doesn't have a trailing slash. Add definition of
+       url_timeless_nodomain_ere as extended regular expression for use in
+       grep.
+       wayback_url_paths()
+       wayback_augment_urls(): Added support for links via src attribute,
+       using extended regular expressions.
+       Added another candidate URL search pattern
+       based on CSS background-image url property. 
+       wayback_filter_domains(): Filter out candidate URLs that end with a
+       pair of braces or parenthesis. Redefine url_regex in terms of
+       hostname_original_span.
+       wayback_wget_postprocess(): Added removal of URLs erroneously inserted
+       in template code - before code render blocks - by Wget via href or src
+       link conversion. Also replace space character entity number with an
+       actual space.
+       consolidate_assets(): replaced condition on hostname_original by one on 
+       hostname_original_span to support subdomain matches in link conversion.
+       process_asset_anchors(): Added a search pattern to match on trailing
+       slashes when converting Wayback links to relative links for pages
+       downloaded locally.
+       process_asset_anchors(): In definition of url_stem_timeless_nodomain1
+       and url_stem_timeless_nodomain2 change search pattern from generic    
+       wayback_url_re to primaryhost_regex_span. url_stem_timeless now defined
+       in terms of these, not calculated separately. 
+      [makestaticsite.sh]
+       wget_extra_urls(): For Wayback URLs, add Memento absolute paths to
+       url_grep_array and then prepend with Wayback host.
+       Replace the http filter with one that filters out
+       invalid URLs according to value of url_re.
+
 0.31.5 (released on 2025-04-10)
      * Extended processing for Wayback Machine sites and batch file support. *
       [lib/constants.sh]
