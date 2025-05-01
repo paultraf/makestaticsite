@@ -353,7 +353,8 @@ wayback_filter_domains() {
   for opt in "${webassets_http[@]}"; do
     opt_regex=$(printf "%s" "$opt"|sed 's|\(/\)'"$wayback_datetime_regex"'|\1'"$wayback_datetime_regex"'|') # turn original URL into wildcard expression
     # First check if we are fetching a page requisite
-    wayback_ext="$(printf "%s" ".${opt##*.}" | grep -Ei "$assets_or$")"
+    opt_noquery="${opt%\?*}"    # remove any query string
+    wayback_ext="$(printf "%s" ".${opt_noquery##*.}" | grep -Ei "$assets_or$")"
     if [ "$wayback_ext" != "" ]; then
       webassets_wayback0+=("$opt")
     # Or if the asset satisfies a no-parent condition
