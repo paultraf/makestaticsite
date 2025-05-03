@@ -22,8 +22,8 @@
 ################################################
 # MakeStaticSite info
 ################################################
-version=0.31.6+1
-version_date='1 May 2025'
+version=0.31.7-alpha1
+version_date='3 May 2025'
 version_header="MakeStaticSite version $version, released on $version_date."
 mss_license="GNU Affero General Public License version 3"
 mss_site="https://makestaticsite.sh"
@@ -263,7 +263,7 @@ sitemap_file_extensions=htm,html # List of file extensions allowed for inclusion
 mod_wayback=mod_wayback.sh      # Wayback Machine module filename
 wayback_cli=no                  # Use a third-party client to download sites from the Wayback Machine (y/n)?  If not set to 'yes', then any Wayback sites will be retrieved natively using default (Wget).
 use_wayback_id=no               # When retrieving natively, capture the original page rather than the Wayback Machine's processed version (y/n)?
-wayback_hosts=web.archive.org,www.webarchive.org.uk  # Partial list of Wayback Machine hosts
+wayback_hosts=web.archive.org,wayback.archive-it.org,www.webarchive.org.uk  # Partial list of Wayback Machine hosts
 wayback_memento_check=yes       # Perform dynamic check for Memento site using HTTP request header (y/n)?
 wayback_header="Memento-Datetime:" # Memento header search string
 wayback_mementos_only=yes       # Only download assets with Memento URLs (y/n)? (This resets page_element_domains to be empty.)

@@ -771,6 +771,7 @@ process_asset_anchors() {
     # With Wayback (Memento) URLs, replace the original URL with primaryhost_regex_span (regular expression based on original host)
     # - absolute URLs
     url_timeless=${url_timeless/\/${wayback_url_re0}/\/$primaryhost_regex_span}
+    url_timeless+="$url_path_original" # This is a (hopefully temporary) hack whilst figuring out how to deal with '*' in shell parameter expansion pattern above.
     # - relative URLs
     url_stem_timeless_nodomain1=${url_stem_timeless_nodomain1/\/${wayback_url_re0}/\/$primaryhost_regex_span}
     url_stem_timeless_nodomain2=${url_stem_timeless_nodomain2/\/${wayback_url_re0}/\/$primaryhost_regex_span}
@@ -799,6 +800,17 @@ process_asset_anchors() {
       pathpref+="../";
     done
     for item in "${webpaths_output[@]}"; do
+      # Start with a replacement based on a search pattern that strips .html extension from asset path.
+      if [ "${item: -6}" = "\.html" ]; then
+        item_no_dot_html="${item:0:-6}" 
+      else
+        item_no_dot_html="$item"
+      fi
+      sed_subs1=('s|\('"$url_timeless"'\)\('"$item_no_dot_html"'\)\([\"'\'']\)|'"$pathpref\2.html\3"'|g' "$opt")
+      sed_subs2=('s|\([\"'\'']\)\('"$url_timeless_nodomain"'\)\('"$item_no_dot_html"'\)\([\"'\'']\)|'"\1$pathpref\3.html\4"'|g' "$opt")
+      sed "${sed_options[@]}" "${sed_subs1[@]}"
+      sed "${sed_options[@]}" "${sed_subs2[@]}"
+
       url_stem_timeless_nodomain="$url_stem_timeless_nodomain1"
       if [[ $item == $imports_directory* ]]; then
         prefix_replace="$imports_directory/"
