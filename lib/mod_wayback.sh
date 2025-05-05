@@ -232,6 +232,7 @@ wayback_url_paths() {
   url_base_timeless_nodomain=${url_timeless_nodomain/"$url_path_original_regex/"/}
   url_base_timeless_generic=${url_base_timeless/"$url_original_base_regex/"/}
   url_base_timeless_generic=$(echo "$url_base_timeless_generic" | sed 's|\(https\?:/\)\([^/]\)|\1/\2|') # Ensure http[s] is followed by a colon and two slashes
+  url_base_timeless_nodomain_original="${url_base_timeless%\/*\/*}/" # strip everything after the second protocol, removing reference to any original domain
 
   # Locate source directories to copy
   url_path_root=$(printf "%s" "$url_path" | cut -d'/' -f1,2 )
@@ -836,6 +837,10 @@ process_asset_anchors() {
       sed_subs2=('s|\([\"'\'']\)\('"$url_stem_timeless_nodomain$item"'\)|'"\1$pathpref$prefix_replace$item2"'|g' "$opt")
       sed "${sed_options[@]}" "${sed_subs1[@]}"
       sed "${sed_options[@]}" "${sed_subs2[@]}"
+
+      # For imported assets with Wayback host, strip everything after the second protocol, removing reference to any original domain    
+      sed_subs3=('s|\([\"'\'']\)\('"$url_base_timeless_nodomain_original"'\)\('"$item2"'\)\([\"'\'']\)|'"\1$pathpref$prefix_replace\3\4"'|g' "$opt")
+      sed "${sed_options[@]}" "${sed_subs3[@]}"
 
       # Refine search pattern further to handle items that are missing .html extension whilst preserving items that have the extension 
       item2=${item/%\\.html/}
