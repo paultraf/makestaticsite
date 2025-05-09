@@ -737,7 +737,6 @@ initialise_variables() {
   if [ "$archive" = "no" ]; then
      wget_core_options+=(--timestamping)
   fi
-
   
   # For deployment on a remote server
   if [ "$deploy_remote" != "yes" ]; then
@@ -1277,6 +1276,7 @@ wget_extra_urls() {
   IFS='|' read -ra url_grep_array <<< "$url_grep"
   url_grep_array_count=${#url_grep_array[@]}; (( url_grep_array_count=num_webasset_steps*url_grep_array_count ))
   if [ "$wayback_url" = "yes" ]; then
+# shellcheck disable=SC1087
     url_grep_array+=( "$url_timeless_nodomain_ere[^\"'<) ]+" )
   fi
 
@@ -2039,24 +2039,27 @@ site_postprocessing() {
   cd_check "$working_mirror_dir" || { echolog "Aborting."; exit; }
   echolog "Carrying out site postprocessing in $working_mirror_dir ... "
 
+  echolog " " "1"
   if [ "$prune_query_strings" != "no" ]; then
-    echolog " " "1"
-    echolog -n "Pruning links to assets that have query strings appended ... " "1"
     IFS="," read -ra prune_list <<< "$query_prune_list"
-    for opt in "${prune_list[@]}"; do
-      # Prune file names on disk
-      find "$working_mirror_dir" -type f -name "*\.$opt\?*" -exec sh -c 'mv "$0" "${0%%\?*}"' {} \;   
-
-      # Prune the corresponding links
-      sed_subs0=('s|\([\"'\''][^>\"'\'']*\.'"$opt"'\)%3F[^'\''\"[:space:]]*|\1|g')
-      sed_subs=('s|\([\"'\''][^>\"'\'']*\.'"$opt"'\)?[^'\''\"[:space:]]*|\1|g')
-      for file_ext in "${asset_find_names[@]}"; do
-        find "$working_mirror_dir" -type f -name "$file_ext" "${asset_exclude_dirs[@]}" -print0 | xargs "${xargs_options[@]}" sed "${sed_options[@]}" "${sed_subs0[@]}"
-        find "$working_mirror_dir" -type f -name "$file_ext" "${asset_exclude_dirs[@]}" -print0 | xargs "${xargs_options[@]}" sed "${sed_options[@]}" "${sed_subs[@]}"
-      done
-    done
-    echolog "Done." "1"
+    echolog -n "Pruning links to assets that have query strings appended ... " "1"
+  else
+    prune_list=("css")
+    echolog -n "Pruning links to CSS files that have query strings appended ... " "1"
   fi
+  for opt in "${prune_list[@]}"; do
+    # Prune file names on disk
+    find "$working_mirror_dir" -type f -name "*\.$opt\?*" -exec sh -c 'mv "$0" "${0%%\?*}"' {} \;   
+
+    # Prune the corresponding links
+    sed_subs0=('s|\([\"'\''][^>\"'\'']*\.'"$opt"'\)%3F[^'\''\"[:space:]]*|\1|g')
+    sed_subs=('s|\([\"'\''][^>\"'\'']*\.'"$opt"'\)?[^'\''\"[:space:]]*|\1|g')
+    for file_ext in "${asset_find_names[@]}"; do
+      find "$working_mirror_dir" -type f -name "$file_ext" "${asset_exclude_dirs[@]}" -print0 | xargs "${xargs_options[@]}" sed "${sed_options[@]}" "${sed_subs0[@]}"
+      find "$working_mirror_dir" -type f -name "$file_ext" "${asset_exclude_dirs[@]}" -print0 | xargs "${xargs_options[@]}" sed "${sed_options[@]}" "${sed_subs[@]}"
+    done
+  done
+  echolog "Done." "1"
 
   if [ "$prune_filename_extensions_querystrings" = "yes" ]; then
     # Remove file name extensions added by Wget where filenames have query strings appended
