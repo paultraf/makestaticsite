@@ -1214,7 +1214,7 @@ generate_extra_domains() {
     while IFS='' read -r line; do add_domains_unique+=("$line"); done < <(for item in "${add_domains[@]}"; do printf "%s\n" "${item%/}"; done | sort -u)
     echolog "add_domains_unique array has ${#add_domains_unique[@]} elements" "2"
     # Convert array to domain list (string), removing any slashes
-    page_element_domains=$(printf "%s" "${add_domains_unique[*]}" | sed 's/ /,/g' | sed 's/\\\?\/,/,/g' | sed "s/$hostname,//g" | sed "s/,$hostname//g" | sed 's/\///g' | sed 's/\\//g')
+    page_element_domains=$(printf "%s" "${add_domains_unique[*]}" | sed 's/ /,/g' | sed 's/\\\?\/,/,/g' | sed "s/^$hostname,//g" | sed "s/,$hostname//g" | sed 's/\///g' | sed 's/\\//g')
     echolog "Done."
   fi
   if [ "$page_element_domains" != "" ]; then
