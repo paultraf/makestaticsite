@@ -1375,21 +1375,13 @@ wget_extra_urls() {
       # Wayback URLs have already been filtered for asset extensions, etc., we assume all such URLs are valid candidates for mirroring.
       printf "%s|%s\n" "$i" "$opt";    
     elif [ "$asset_extensions" != "" ]; then
-      # Loop over an inclusion list of allowable extensions
+      # Loop over an inclusion list of allowable extensions, accommodating query strings
       opt_domain=$(printf "%s\n" "$opt" | awk -F/ '{print $3}' | awk -F: '{print $1}')
       if [[ ' '${page_element_domains_array[*]}' ' =~ ' '$opt_domain' ' ]]; then # satisfied vacuously for all Wayback URLs
-        if [ "$prune_query_strings" = "yes" ]; then
-          echo "$opt" | grep -Ei "$assets_or_external$" > /dev/null && printf "%s|%s\n" "$i" "$opt"
-        else
-# probably should tack on ? or %3F to restrict the search ...
-          echo "$opt" | grep -Ei "$assets_or_external" > /dev/null && printf "%s|%s\n" "$i" "$opt"
-        fi
+# Dev note: probably should also support percent-encoded '?', i.e., %3F  ...
+        echo "$opt" | grep -Ei "$assets_or_external\??[^\"'[:space:]]*$" > /dev/null && printf "%s|%s\n" "$i" "$opt"
       else
-        if [ "$prune_query_strings" = "yes" ]; then
-          echo "$opt" | grep -Ei "$assets_or$" > /dev/null && printf "%s|%s\n" "$i" "$opt";
-        else
-          echo "$opt" | grep -Ei "$assets_or" > /dev/null && printf "%s|%s\n" "$i" "$opt";        
-        fi
+        echo "$opt" | grep -Ei "$assets_or\??[^\"'[:space:]]*$" > /dev/null && printf "%s|%s\n" "$i" "$opt";
       fi
     else
       # When no allowable extensions specified, remove HTML assets according to content type.
@@ -1555,7 +1547,7 @@ wget_extra_urls() {
     array_elements_delete wget_extra_core_options wget_extra_core_removals
     wget_extra_core_options=("${array_reduced[@]}")
   fi
-  
+
   echolog "Running Wget on these additional URLs with options:" "${wget_extra_core_options[@]}" "${wget_extra_options[@]}" "${wget_asset_options[@]}"
   if [ "$warc_output" = "yes" ] && (( phase >2 )); then
     echolog "$msg_warning: The progress bars may display oddly. This is a known technical issue with Wget when WARC and other options are supplied together."
@@ -2048,15 +2040,21 @@ site_postprocessing() {
     echolog -n "Pruning links to CSS files that have query strings appended ... " "1"
   fi
   for opt in "${prune_list[@]}"; do
+    # Prune URLs in input_file_extra_all
+    sed_subs0=('s|\(\.'"$opt"'\)%3F[^'\''\"[:space:]]*$|\1|g' "$input_file_extra_all")
+    sed_subs=('s|\(\.'"$opt"'\)?[^'\''\"[:space:]]*$|\1|g' "$input_file_extra_all")
+    sed "${sed_options[@]}" "${sed_subs0[@]}"
+    sed "${sed_options[@]}" "${sed_subs[@]}"
+
     # Prune file names on disk
-    find "$working_mirror_dir" -type f -name "*\.$opt\?*" -exec sh -c 'mv "$0" "${0%%\?*}"' {} \;   
+    find "$mirror_dir/$mirror_archive_dir" -type f -name "*\.$opt\?*" -exec sh -c 'mv "$0" "${0%%\?*}"' {} \;   
 
     # Prune the corresponding links
     sed_subs0=('s|\([\"'\''][^>\"'\'']*\.'"$opt"'\)%3F[^'\''\"[:space:]]*|\1|g')
     sed_subs=('s|\([\"'\''][^>\"'\'']*\.'"$opt"'\)?[^'\''\"[:space:]]*|\1|g')
     for file_ext in "${asset_find_names[@]}"; do
-      find "$working_mirror_dir" -type f -name "$file_ext" "${asset_exclude_dirs[@]}" -print0 | xargs "${xargs_options[@]}" sed "${sed_options[@]}" "${sed_subs0[@]}"
-      find "$working_mirror_dir" -type f -name "$file_ext" "${asset_exclude_dirs[@]}" -print0 | xargs "${xargs_options[@]}" sed "${sed_options[@]}" "${sed_subs[@]}"
+      find "$mirror_dir/$mirror_archive_dir" -type f -name "$file_ext" "${asset_exclude_dirs[@]}" -print0 | xargs "${xargs_options[@]}" sed "${sed_options[@]}" "${sed_subs0[@]}"
+      find "$mirror_dir/$mirror_archive_dir" -type f -name "$file_ext" "${asset_exclude_dirs[@]}" -print0 | xargs "${xargs_options[@]}" sed "${sed_options[@]}" "${sed_subs[@]}"
     done
   done
   echolog "Done." "1"

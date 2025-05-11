@@ -22,8 +22,8 @@
 ################################################
 # MakeStaticSite info
 ################################################
-version=0.31.7-alpha3
-version_date='9 May 2025'
+version=0.31.7-beta1
+version_date='11 May 2025'
 version_header="MakeStaticSite version $version, released on $version_date."
 mss_license="GNU Affero General Public License version 3"
 mss_site="https://makestaticsite.sh"
@@ -210,7 +210,7 @@ longest_linelength_max=10000    # For 'auto', shorten lines when the longest lin
 newline_inserts=('<\/script></<\/script>$'"'\n'"'<' '<\/style></<\/style>$'"'\n'"'<' '<\div></<\div>$'"'\n'"'<' '\\\"\,\\\"/\\\"\,$'"'\n'"'\\\"' '\}@media/\}$'"'\n'"'@media' '\}@font-face/\}$'"'\n'"'@font-face') # Replacements to be made for shortening line length (array)
 
 # Query strings
-prune_query_strings=no         # Remove query strings appended to paths and URLs in anchors limited to files of type given in query_prune_list (y/n)?
+prune_query_strings=yes         # Remove query strings appended to paths and URLs in anchors limited to files of type given in query_prune_list (y/n)?
 query_prune_list="$web_element_extensions,$image_extensions,$audiovideo_extensions,$doc_extensions,$font_extensions" # List of file extensions in requests that may have query string appended for versioning or other non-essential purposes. For static sites these can be pruned without loss of functionality.
 extra_assets_allow_query_strings=yes # Allow Wget to fetch additional URLs with query strings in phase 3 (y/n)? 
 extra_assets_query_strings_limit=100000 # Only fetch URLs with query strings when the total number of assets is less than this number 
