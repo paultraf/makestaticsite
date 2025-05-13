@@ -1287,7 +1287,7 @@ wget_extra_urls() {
   for item in "${url_grep_array[@]}"; do
     while IFS='' read -r line; do
       line=${line//&#/123456789|} # retain entity references that begin '&#'
-      trimmed_line="${line#"${line%%[![:space:],:\'\"=]*}"}"
+      trimmed_line="${line#"${line%%[![:space:],:\'\"=(]*}"}" # trim preceding quotes and other characters (any combination)
       trimmed_line="${trimmed_line%#*}"
       trimmed_line=${trimmed_line//123456789|/&#}
       webassets_all+=("$trimmed_line")
