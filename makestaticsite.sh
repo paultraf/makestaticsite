@@ -2036,8 +2036,8 @@ site_postprocessing() {
     IFS="," read -ra prune_list <<< "$query_prune_list"
     echolog -n "Pruning links to assets that have query strings appended ... " "1"
   else
-    prune_list=("css")
-    echolog -n "Pruning links to CSS files that have query strings appended ... " "1"
+    IFS="," read -ra prune_list <<< "$query_prune_always_list"
+    echolog -n "Pruning links to asset files of certain types where query strings must be removed ... " "1"
   fi
   for opt in "${prune_list[@]}"; do
     # Prune URLs in input_file_extra_all
