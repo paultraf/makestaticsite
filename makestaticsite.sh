@@ -2047,7 +2047,7 @@ site_postprocessing() {
     sed "${sed_options[@]}" "${sed_subs[@]}"
 
     # Prune file names on disk
-    find "$mirror_dir/$mirror_archive_dir" -type f -name "*\.$opt\?*" -exec sh -c 'mv "$0" "${0%%\?*}"' {} \;   
+    find "$mirror_dir/$mirror_archive_dir" -type f -name "*\.$opt\?*" -exec sh -c 'opt_noquery="${0%%\?*}"; [ ! -f "$opt_noquery" ] && mv "$0" "${0%%\?*}" || rm "$0"' {} \;
 
     # Prune the corresponding links
     sed_subs0=('s|\([\"'\''][^>\"'\'']*\.'"$opt"'\)%3F[^'\''\"[:space:]]*|\1|g')
