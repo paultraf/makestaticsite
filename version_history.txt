@@ -19,6 +19,37 @@
 ##########################################################################
 
 
+0.31.7 (released on 2025-05-14)
+     * Extended support for assets with query strings, Wayback refinements. *
+      [lib/constants.sh]: Changed default value of prune_query_strings to yes.
+       Added constant, query_prune_always_list, for the removal of query
+       strings for certain asset types irrespective of the value of
+       prune_query_strings.
+      [lib/mod_wayback.sh]
+       wayback_filter_domains(): Allow assets to have query strings appended.
+       process_asset_anchors(): Added a replacement based on a search pattern
+       that strips .html extension from asset path for the links to web pages
+       served without a trailing slash (and not appended with one by Wget's
+       --convert-links option). Added another replacement for imported assets
+       based on a search pattern on absolute URLs as far as second (original
+       host) protocol, replacing it with path prefix.
+      [makestaticsite.sh]
+       generate_extra_domains(): Ensure that page_element_domains filters out
+       precisely the host domain (and not subdomains).
+       wget_extra_urls(): Added left parenthesis to list of characters
+       to be trimmed if they precede a URL.
+       Removed condition on prune_query_strings to enable
+       download of assets with query strings (which can be pruned later).
+       site_postprocessing(): Modified pruning of asset files with query
+       strings to prevent any existing files without a query string from being
+       overwritten.
+       Added a routine to prune URLs in input_file_extra_all, file names and
+       links - depending on the value of prune_query_strings; furthermore,
+       prune all links to asset URLs/files if the extension is listed in
+       query_prune_always_list, mainly because Chrome and other browsers will
+       not process file:// links to, e.g., CSS unless they end in .css.
+       Extended scope of pruning to all downloaded assets.
+       
 0.31.6 (released on 2025-04-29)
      * Extended support for Wayback Machine sites that span subdomains. *
       [lib/constants.sh]
@@ -62,7 +93,7 @@
        process_asset_anchors(): In definition of url_stem_timeless_nodomain1
        and url_stem_timeless_nodomain2 change search pattern from generic    
        wayback_url_re to primaryhost_regex_span. url_stem_timeless now defined
-       in terms of these, not calculated separately. 
+       in terms of these, not calculated separately.
       [makestaticsite.sh]
        wget_extra_urls(): For Wayback URLs, add Memento absolute paths to
        url_grep_array and then prepend with Wayback host.
