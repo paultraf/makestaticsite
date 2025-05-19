@@ -733,9 +733,15 @@ initialise_variables() {
     wget_core_options+=("${wget_warc_options[@]}")
   fi
 
+  # Apply MS Windows file name restrictions, if needed
+  if [ "$offline_file_system" = "windows" ]; then
+    wget_core_options+=(--restrict-file-names=windows)
+    wget_extra_core_options+=(--restrict-file-names=windows)
+  fi
+
   # For site captures with fixed directories, enable timestamping for efficient Wget mirroring
   if [ "$archive" = "no" ]; then
-     wget_core_options+=(--timestamping)
+    wget_core_options+=(--timestamping)
   fi
   
   # For deployment on a remote server
@@ -1584,7 +1590,7 @@ mirror_checks() {
       while IFS='' read -r line; do file_matches+=("$line"); done < <(find "$working_mirror_dir" -type f -name "*$char2*" -print)
       if [ "${#file_matches[@]}" != "0" ]; then
         if (( match_count == 0 )); then
-          echolog $'\n'"$msg_warning: you have set the constant offline_file_system to $offline_file_system, which should support Microsoft Windows file systems, but some file names include illegal characters. To prevent such filenames, you can re-run Wget with the option --restrict-file-names=windows."
+          echolog $'\n'"$msg_warning: You have set the constant offline_file_system to $offline_file_system. Whereas all the files should be fine here, for distribution, note that the file names include one or more characters that are illegal in Microsoft Windows file systems. You can prevent this by setting offline_file_system=windows or else manually set Wget with the option --restrict-file-names=windows. Then rerun."
         fi
         match_pluralise=
         num_matches="${#file_matches[@]}"
