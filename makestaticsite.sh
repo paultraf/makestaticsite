@@ -71,8 +71,8 @@ main() {
   # Phase 7: Use snippets
   (( phase < 8 )) && (( end_phase >= 7 )) && [ "$use_snippets" = "yes" ] && process_snippets
 
-  # Phase 7-8 Interval: MSS cut directories
-  (( phase < 8 )) && (( end_phase >= 4 )) && { [ "$mss_cut_dirs" = "yes" ] || [ "$wayback_url" = "yes" ]; } && cut_mss_dirs
+  # Phase 7-8 Interval: Organise site layout and mapping
+  (( phase < 8 )) && (( end_phase >= 4 )) && site_layout
 
   # Phase 8: Create an offline zip archive
   (( phase < 9 )) && (( end_phase >= 8 )) && [ "$upload_zip" = "yes" ] && create_zip || { echolog "Creation of ZIP archive skipped, as per preferences." "1"; }
@@ -2246,6 +2246,40 @@ add_extras() {
   echolog "Done."
 }
 
+sitemap_creation() {
+  sitemap_dir="$mirror_dir/$mirror_archive_dir$host_dir"
+  cd_check "$sitemap_dir" "can't access $sitemap_dir to create a sitemap" || { echolog "Aborting."; exit 1; }
+
+  sitemap_path="$sitemap_dir/sitemap.xml"
+  touch "$sitemap_path"
+  sitemap_content="$(sitemap_header)"$'\n';
+  sitemap_loc_files=()
+
+  # Generate find params string based on $sitemap_file_extensions
+  IFS="," read -ra sitemap_file_exts <<< "$sitemap_file_extensions"
+  for ext in "${sitemap_file_exts[@]}"; do
+    while IFS='' read -r line; do sitemap_loc_files+=("$line"); done < <(find . -type f  -name "*.$ext")
+  done
+  for loc in "${sitemap_loc_files[@]}"; do
+    # and exclude case where loc contains '?', i.e. query strings
+    if [[ "$loc" == *"?"* ]]; then
+      continue;
+    fi
+    sitemap_content+="$tab<url>"$'\n'
+    loc=$(printf "%s" "$loc" | sed "s/index.html//" | sed "s/.\///") # remove any trailing filename from $loc
+    if [ "$wayback_url" = "yes" ] && [ "$wayback_host_original_sitemap" = "yes" ]; then
+      loc_full="$url_original_base/$loc" 
+    else  
+      loc_full="https://$deploy_domain/$loc"
+    fi
+    sitemap_content+="$tab$tab<loc>$loc_full</loc>"$'\n'
+    sitemap_content+="$tab</url>"$'\n'
+  done
+  sitemap_content+="</urlset>"$'\n'
+  echo "$sitemap_content" > "$sitemap_path"
+  echolog "Created a sitemap file at $sitemap_path"
+}
+
 clean_mirror() {
   cd_check "$working_mirror_dir" || { echolog "Aborting."; exit; }
 
@@ -2331,39 +2365,6 @@ clean_mirror() {
     fi
     printf "\nSitemap: %s\n" "$url_sitemap" >> "$robots_path"
   fi
-
-  # Create sitemap, where necessary
-  if [ "$sitemap_create" = "yes" ]; then
-    sitemap_path="$mirror_dir/$mirror_archive_dir$host_dir/sitemap.xml"
-    touch "$sitemap_path"
-    sitemap_content="$(sitemap_header)"$'\n';
-    sitemap_loc_files=()
-
-    # Generate find params string based on $sitemap_file_extensions
-    IFS="," read -ra sitemap_file_exts <<< "$sitemap_file_extensions"
-    for ext in "${sitemap_file_exts[@]}"; do
-      while IFS='' read -r line; do sitemap_loc_files+=("$line"); done < <(find . -type f  -name "*.$ext")
-    done
-    for loc in "${sitemap_loc_files[@]}"; do
-      # and exclude case where loc contains '?', i.e. query strings
-      if [[ "$loc" == *"?"* ]]; then
-        continue;
-      fi
-      sitemap_content+="$tab<url>"$'\n'
-      loc=$(printf "%s" "$loc" | sed "s/index.html//" | sed "s/.\///") # remove any trailing filename from $loc
-      if [ "$wayback_url" = "yes" ] && [ "$wayback_host_original_sitemap" = "yes" ]; then
-        loc_full="$url_original_base/$loc" 
-      else  
-        loc_full="https://$deploy_domain/$loc"
-      fi
-      sitemap_content+="$tab$tab<loc>$loc_full</loc>"$'\n'
-      sitemap_content+="$tab</url>"$'\n'
-    done
-    sitemap_content+="</urlset>"$'\n'
-  fi
-
-  echo "$sitemap_content" > "$sitemap_path"
-  echolog "Created a sitemap file at $sitemap_path"
 
   # Wrap lines that end in '='
   echolog -n "Wrap lines that end in '=' ... "
@@ -2595,6 +2596,17 @@ cut_mss_dirs() {
   url_root_dir=$(printf "%s" "$url_path_dir" | cut -d/ -f1)
   if [ -d "$url_root_dir" ]; then
     rm -rf "$url_root_dir"
+  fi
+}
+
+site_layout(){
+  # MSS cut directories
+  if [ "$mss_cut_dirs" = "yes" ] || [ "$wayback_url" = "yes" ]; then
+    cut_mss_dirs
+  fi
+  # Create sitemap, where necessary
+  if [ "$sitemap_create" = "yes" ]; then
+    sitemap_creation
   fi
 }
 
