@@ -1286,6 +1286,24 @@ wget_extra_urls() {
     url_grep_array+=( "$url_timeless_nodomain_ere[^\"'<) ]+" )
   fi
 
+  echolog "Generating list of file candidates... " "1"
+  file_candidates=()
+  while IFS= read -r -d '' opt
+  do
+    file_candidates+=( "$opt" )
+  done <   <(for file_ext in "${asset_find_names[@]}"; do find "$working_mirror_dir" -type f -name "$file_ext" -print0; done)
+  if (( wget_extra_urls_count != 1 )); then
+#    file_candidate_diffs=( $(echo "${file_candidates0[@]}" "${file_candidates[@]}" | tr ' ' '\n' | sort | uniq -u) )
+    file_candidate_diffs=( "$(printf '%s\n' "${file_candidates0[@]}" "${file_candidates[@]}" | tr ' ' '\n' | sort | uniq -u)" )
+    file_candidates=( "${file_candidate_diffs[@]}" )
+    file_candidates0=( "${file_candidates0[@]}" "${file_candidate_diffs[@]}" )
+  else
+    file_candidates0=( "${file_candidates[@]}" )
+  fi
+
+  # Return if empty (no further web sources to search)
+  [ "${file_candidates[*]}" == "" ] && { echolog "No further candidate URLs found. " "1"; (( wget_extra_urls_count=wget_extra_urls_depth+1 )); print_progress; echolog "Done."; return 0; }
+
   # In generating list of asset URLs, strip out initial characters 
   # such as a quote or '=' arising from url_grep match condition.
   # Also remove internal anchors at end of URL (with '#' appended)
@@ -1299,9 +1317,21 @@ wget_extra_urls() {
       webassets_all+=("$trimmed_line")
     done < <(
       if [ "$relativise_host_assets" = "no" ]; then
-        grep -Eroha "$item" "$working_mirror_dir" "${asset_grep_includes[@]}" | grep -v "//$hostname"
+        if (( wget_extra_urls_count == 1 )); then 
+          grep -Eroha "'$item'" "$working_mirror_dir" "${asset_grep_includes[@]}" | grep -v "//$hostname"
+        else
+          for opt in "${file_candidates[@]}"; do
+            grep -Eroha "'$item'" "$opt" "${asset_grep_includes[@]}" | grep -v "//$hostname"
+          done
+        fi
       else
-        grep -Eroha "$item" "$working_mirror_dir" "${asset_grep_includes[@]}"
+        if (( wget_extra_urls_count == 1 )); then
+          grep -Eroha "'$item'" "$working_mirror_dir" "${asset_grep_includes[@]}"
+        else
+          for opt in "${file_candidates[@]}"; do
+            grep -Eroha "'$item'" "$opt" "${asset_grep_includes[@]}"
+          done
+        fi
       fi)
     print_progress "$count" "$url_grep_array_count"
     (( count++ ))
