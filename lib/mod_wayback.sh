@@ -760,8 +760,10 @@ process_asset_anchors() {
     line=${line:2}
     # Percent encode spaces
     line=${line// /%20}
-    # escape dots
+    # Escape dots
     line=${line//./\\.}
+    # Escape sed delimiter, pipe (dev note: should use a constant)
+    line=${line//|/\\|}
     webpaths_output+=("$line")
   done < <(find "." -type f "${asset_exclude_dirs[@]}" -print)
 
