@@ -269,6 +269,9 @@ initialise_mirror_archive_dir() {
     working_mirror_dir="$mirror_dir/$mirror_archive_dir$host_dir"
   fi
 
+  # Define a temporary area inside working mirror directory
+  tmp_working_dir="$working_mirror_dir/_tmpfiles"
+
   if (( phase == 4 )) && [ ! -d "$working_mirror_dir/$url_path_dir" ]; then
     if [ -d "$working_mirror_dir" ]; then
       msg_compare=" and compare with the actual contents of $working_mirror_dir"
@@ -1293,8 +1296,7 @@ wget_extra_urls() {
     file_candidates+=( "$opt" )
   done <   <(for file_ext in "${asset_find_names[@]}"; do find "$working_mirror_dir" -type f -name "$file_ext" -print0; done)
   if (( wget_extra_urls_count != 1 )); then
-#    file_candidate_diffs=( $(echo "${file_candidates0[@]}" "${file_candidates[@]}" | tr ' ' '\n' | sort | uniq -u) )
-    file_candidate_diffs=( "$(printf '%s\n' "${file_candidates0[@]}" "${file_candidates[@]}" | tr ' ' '\n' | sort | uniq -u)" )
+    file_candidate_diffs=( "$(printf '%s\n' "${file_candidates0[@]}" "${file_candidates[@]}" | sort | uniq -u)" )
     file_candidates=( "${file_candidate_diffs[@]}" )
     file_candidates0=( "${file_candidates0[@]}" "${file_candidate_diffs[@]}" )
   else
@@ -1304,6 +1306,19 @@ wget_extra_urls() {
   # Return if empty (no further web sources to search)
   [ "${file_candidates[*]}" == "" ] && { echolog "No further candidate URLs found. " "1"; (( wget_extra_urls_count=wget_extra_urls_depth+1 )); print_progress; echolog "Done."; return 0; }
 
+  # (re-)Generate a fresh, temporary empty directory with symbolic links to candidate files
+  if [ ! -d "$tmp_working_dir" ]; then
+    mkdir "$tmp_working_dir"
+  else
+    rm -rf "$tmp_working_dir"
+  fi
+  for file in "${file_candidates[@]}"; do
+    dest_dir="${file%\/*}"
+    dest_dir=${dest_dir/"$working_mirror_dir"/"$working_mirror_dir"\/_tmpfiles}
+    mkdir -p "$dest_dir"
+    ln -s "$file" "$dest_dir/" || echolog "$msg_warning: Unable to create symbolic link from $file to $dest_dir/."
+  done
+  
   # In generating list of asset URLs, strip out initial characters 
   # such as a quote or '=' arising from url_grep match condition.
   # Also remove internal anchors at end of URL (with '#' appended)
@@ -1317,21 +1332,9 @@ wget_extra_urls() {
       webassets_all+=("$trimmed_line")
     done < <(
       if [ "$relativise_host_assets" = "no" ]; then
-        if (( wget_extra_urls_count == 1 )); then 
-          grep -Eroha "'$item'" "$working_mirror_dir" "${asset_grep_includes[@]}" | grep -v "//$hostname"
-        else
-          for opt in "${file_candidates[@]}"; do
-            grep -Eroha "'$item'" "$opt" "${asset_grep_includes[@]}" | grep -v "//$hostname"
-          done
-        fi
+        grep -ERoha "$item" "$tmp_working_dir" "${asset_grep_includes[@]}" | grep -v "//$hostname"
       else
-        if (( wget_extra_urls_count == 1 )); then
-          grep -Eroha "'$item'" "$working_mirror_dir" "${asset_grep_includes[@]}"
-        else
-          for opt in "${file_candidates[@]}"; do
-            grep -Eroha "'$item'" "$opt" "${asset_grep_includes[@]}"
-          done
-        fi
+        grep -ERoha "$item" "$tmp_working_dir" "${asset_grep_includes[@]}"
       fi)
     print_progress "$count" "$url_grep_array_count"
     (( count++ ))
@@ -1649,6 +1652,7 @@ augment_mirror() {
     while (( wget_extra_urls_count <= wget_extra_urls_depth )); do
       wget_extra_urls;
     done
+    [ -d "$tmp_working_dir" ] && rm -rf "$tmp_working_dir"
   fi
 
   mirror_checks
