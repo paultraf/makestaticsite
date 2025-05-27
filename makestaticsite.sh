@@ -1340,6 +1340,13 @@ wget_extra_urls() {
     (( count++ ))
   done
 
+  webassets_max_length=$(printf "%s\n" "${webassets_all[@]}" | wc -L)
+  if (( webassets_max_length > url_max_chars )); then
+    echolog "$msg_warning: generation of candidate URLs produced at least one line with $webassets_max_length characters exceeding url_max_chars ($url_max_chars)." "1"
+# shellcheck disable=SC2207
+    webassets_all=($(printf "%s\n" "${webassets_all[@]}" | sed '/.\{'"$url_max_chars"'\}/d'))
+  fi
+
   # Call routines specific to Wayback Machine to augment list of candidate URLs
   if [ "$wayback_url" = "yes" ]; then
     wayback_augment_urls
@@ -1369,7 +1376,7 @@ wget_extra_urls() {
         line="$url_base$line"
       fi    
     webassets_unique2+=("$line");
-    done < <(for item in "${webassets_unique[@]}"; do printf "%s\n" "${item}"; done)
+    done < <(for item in "${webassets_unique[@]}"; do printf "%s\n" "$item"; done)
   else
     webassets_unique2=("${webassets_unique[@]}")
   fi
@@ -1384,22 +1391,23 @@ wget_extra_urls() {
   (( webasset_step_count++ ))
   print_progress "$webasset_step_count" "$num_webasset_steps"
 
-  # Filter out web pages and newsfeeds; limit to non-HTML assets, such as images and JS files
-  # (this filter is the most process-intensive)
-  (( count=0 ))
-  echolog "Filter out web pages and newsfeeds (limit to non-HTML assets, such as images and JS files)" "1"
-  webassets_filter_html=()
+  # Define assets clauses for greps
   assets_or='\.('${asset_extensions//,/|}')'
   assets_or_external='\.('${asset_extensions_external//,/|}')'
-  (( num_webasset_steps_nohtml=num_webasset_steps-5 )) # Progress bar: this is most of the processing
 
-  # But for Wayback URLs, consider web pages as allowable assets
-  # and carry out special filtering
+  # For Wayback URLs, carry out special filtering
   if [ "$wayback_url" = "yes" ]; then
+    echolog "Carry out Wayback-specific filtering." "1"
     src_path_snapshot="$working_mirror_dir/$url_path_snapshot_prefix"
     wayback_filter_domains
   fi
 
+  # Filter out web pages and newsfeeds; limit to non-HTML assets, such as images and JS files
+  # (this filter is the most process-intensive, so progress bar has more steps than others)
+  echolog "Filter out web pages and newsfeeds (limit to non-HTML assets, such as images and JS files)" "1"
+  webassets_filter_html=()
+  (( num_webasset_steps_nohtml=num_webasset_steps-5 ))
+  (( count=0 ))
   while IFS='' read -r line; do
     count=$(printf "%s" "$line" | awk -F'|' '{print $1}')
     assetline=$(printf "%s" "$line" | awk -F'|' '{print $2}')

@@ -22,8 +22,8 @@
 ################################################
 # MakeStaticSite info
 ################################################
-version=0.31.8-beta2
-version_date='25 May 2025'
+version=0.31.8-beta3
+version_date='27 May 2025'
 version_header="MakeStaticSite version $version, released on $version_date."
 mss_license="GNU Affero General Public License version 3"
 mss_site="https://makestaticsite.sh"
@@ -183,6 +183,7 @@ url_asset_capture_level=3       # (0 fewest, 5 most) for URL matching in determi
 url_wildcard_capture=no         # Use a wildcard for matching URLs in asset processing (y/n)?  If set to 'yes', when capturing asset URLs on pages, a simple regex capture group will be used instead of the input file of itemised URLs generated in phases 2 and 3
 url_separator_chars="[,:(]"     # additional (regular expression capture) class of URL separator characters as used in, for example, data-src (comma) and JSON (colon).  Leave empty to omit.
 url_grep_search_pattern="[^\\\"'<) ]" # URL terminating characters in grep searches (ERE notation); if link text contain ')', then this character can be removed
+url_max_chars=2048              # Maximum number of characters permitted in a URL (for use in processing)
 static_webpage_file_extensions="html,htm,xhtm,xhtml" # A list of common static web page file extensions. (Note that any file extension in this document assume a preceding dot '.')
 webpage_file_extensions="$static_webpage_file_extensions,dhtml,cgi,php,php2,php4,phtml,asp,aspx,jsp,cfm,cfml" # A list of common web page file extensions, including those for server-side scripts. Not exhaustive.
 
