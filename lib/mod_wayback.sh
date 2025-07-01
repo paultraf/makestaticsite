@@ -227,9 +227,11 @@ wayback_url_paths() {
   url_timeless=${url_timeless//\\[/[} # final adjustment to remove '\' in front of '['
   url_timeless_slash="$url_timeless"
   [ "$url_add_slash" = "avoid" ] && url_timeless_slash="${url_timeless_slash%\/*}/" # Remove anything after last '/' for URLs not ending in '/'
-  url_timeless_nodomain=${url_timeless_slash/"$url_base_regex"/}   # Truncated version (note that the pattern is not treated as regex)
+  url_timeless_nodomain=${url_timeless/"$url_base_regex"/}   # Truncated version (note that the pattern is not treated as regex)
+  url_timeless_nodomain_slash="$url_timeless_nodomain"
+  [ "$url_add_slash" = "avoid" ] && url_timeless_nodomain_slash="${url_timeless_nodomain_slash%\/*}/" # Remove anything after last '/' for URLs not ending in '/'
   url_base_timeless=${url_timeless_slash/"$url_path_original_regex/"/}
-  url_base_timeless_nodomain=${url_timeless_nodomain/"$url_path_original_regex/"/}
+  url_base_timeless_nodomain=${url_timeless_nodomain_slash/"$url_path_original_regex/"/}
   url_base_timeless_generic=${url_base_timeless/"$url_original_base_regex/"/}
   url_base_timeless_generic=$(echo "$url_base_timeless_generic" | sed 's|\(https\?:/\)\([^/]\)|\1/\2|') # Ensure http[s] is followed by a colon and two slashes
   url_base_timeless_nodomain_original="${url_base_timeless%\/*\/*}/" # strip everything after the second protocol, removing reference to any original domain
@@ -250,6 +252,7 @@ wayback_url_paths() {
     url_path_prefix+="../"
   done
   wayback_url_re0='https\\?:\/\/'"$domain_re0"
+  wayback_url_re0_sed='https?://[[:alnum:]][-[:alnum:]+\.]*'
   url_timeless_nodomain_ere=${url_timeless_nodomain/\/${wayback_url_re0}/\/$primaryhost_regex_span}
   url_timeless_nodomain_ere=$(sed_bre_unescape "$url_timeless_nodomain_ere")
 }
@@ -420,7 +423,7 @@ wayback_filter_domains() {
 
 # shellcheck disable=SC2207
   IFS=$'\n' wayback_exceptions=($(sort -u <<<"${wayback_download_exceptions[*]}"))
-  
+
   ## Apply filter
   webassets_wayback=()
   while IFS= read -r line; do
@@ -768,16 +771,16 @@ process_asset_anchors() {
   done < <(find "." -type f "${asset_exclude_dirs[@]}" -print)
 
   # URL stems to be used in replacements
-  url_stem_timeless_nodomain1="$url_timeless_nodomain"
+  url_stem_timeless_nodomain1="$url_timeless_nodomain_slash"
   url_stem_timeless_nodomain2="$url_base_timeless_nodomain"
   if [ "$wayback_links_relative_rewrite" = "yes" ]; then
     # With Wayback (Memento) URLs, replace the original URL with primaryhost_regex_span (regular expression based on original host)
     # - absolute URLs
-    url_timeless=${url_timeless/\/${wayback_url_re0}/\/$primaryhost_regex_span}
+    url_timeless=$(echo "$url_timeless" | sed 's|'"/$wayback_url_re0_sed"'|'"/$primaryhost_regex_span"'|g');
     url_timeless+="$url_path_original" # This is a (hopefully temporary) hack whilst figuring out how to deal with '*' in shell parameter expansion pattern above.
     # - relative URLs
-    url_stem_timeless_nodomain1=${url_stem_timeless_nodomain1/\/${wayback_url_re0}/\/$primaryhost_regex_span}
-    url_stem_timeless_nodomain2=${url_stem_timeless_nodomain2/\/${wayback_url_re0}/\/$primaryhost_regex_span}
+    url_stem_timeless_nodomain1=$(echo "$url_stem_timeless_nodomain1" | sed 's|'"/$wayback_url_re0_sed"'|'"/$primaryhost_regex_span"'|g');
+    url_stem_timeless_nodomain2=$(echo "$url_stem_timeless_nodomain2" | sed 's|'"/$wayback_url_re0_sed"'|'"/$primaryhost_regex_span"'|g');    
   fi
 
   # Carry out substitutions in web pages
