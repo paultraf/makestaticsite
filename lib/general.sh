@@ -796,3 +796,12 @@ sed_bre_unescape() {
   done
   printf "%s" "$string"
 }
+
+# Generates difference of two arrays (assuming elements don't contain whitespace)
+# From SiegeX on stackoverflow.com
+# https://stackoverflow.com/questions/2312762/compare-difference-of-two-arrays-in-bash
+function arraydiff() {
+  awk 'BEGIN{RS=ORS=" "}
+       {NR==FNR?a[$0]++:a[$0]--}
+       END{for(k in a)if(a[k])print k}' <(echo -n "${!1}") <(echo -n "${!2}")
+}

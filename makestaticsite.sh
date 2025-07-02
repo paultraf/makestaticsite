@@ -1296,9 +1296,14 @@ wget_extra_urls() {
     file_candidates+=( "$opt" )
   done <   <(for file_ext in "${asset_find_names[@]}"; do find "$working_mirror_dir" -type f -name "$file_ext" -print0; done)
   if (( wget_extra_urls_count != 1 )); then
-    file_candidate_diffs=( "$(printf '%s\n' "${file_candidates0[@]}" "${file_candidates[@]}" | sort | uniq -u)" )
-    file_candidates=( "${file_candidate_diffs[@]}" )
-    file_candidates0=( "${file_candidates0[@]}" "${file_candidate_diffs[@]}" )
+# shellcheck disable=SC2207
+    file_candidate_diffs=($(arraydiff file_candidates0[@] file_candidates[@]))
+    if [[ ${#file_candidate_diffs[@]} -ne 0 ]]; then
+      file_candidates0=( "${file_candidates0[@]}" "${file_candidate_diffs[@]}" )
+      file_candidates=( "${file_candidate_diffs[@]}" )
+    else
+      file_candidates=()
+    fi
   else
     file_candidates0=( "${file_candidates[@]}" )
   fi
@@ -1309,8 +1314,6 @@ wget_extra_urls() {
   # (re-)Generate a fresh, temporary empty directory with symbolic links to candidate files
   if [ ! -d "$tmp_working_dir" ]; then
     mkdir "$tmp_working_dir"
-  else
-    rm -rf "$tmp_working_dir"
   fi
   for file in "${file_candidates[@]}"; do
     dest_dir="${file%\/*}"
@@ -1339,6 +1342,7 @@ wget_extra_urls() {
     print_progress "$count" "$url_grep_array_count"
     (( count++ ))
   done
+  [ -d "$tmp_working_dir" ] && rm -rf "$tmp_working_dir"
 
   webassets_max_length=$(printf "%s\n" "${webassets_all[@]}" | wc -L)
   if (( webassets_max_length > url_max_chars )); then
@@ -1450,7 +1454,7 @@ wget_extra_urls() {
     echolog "Filter out URLs whose paths match an excluded directory (via subloop)" "1"
     # We assume that grep works as expected, but should really trap exit code 2
     exclude_dirs=$(printf "%s\n" "$wget_plus_ops"| grep -o "\-X[[:space:]]*[[:alnum:]/,\-]*" | grep -o "/.*"; exit 0)
-    temp_IFS=$IFS; IFS=","; read -ra exclude_arr <<< "$exclude_dirs"; IFS=$temp_IFS
+    temp_IFS="$IFS"; IFS=","; read -ra exclude_arr <<< "$exclude_dirs"; IFS="$temp_IFS"
     if [ ${#exclude_arr[@]} -eq 0 ]; then
       webassets_omissions=("${webassets_filter_html[@]}")
     else
@@ -1657,10 +1661,10 @@ mirror_checks() {
 
 augment_mirror() {
   if [ "$wget_extra_urls" = "yes" ]; then
+    file_candidates0=()
     while (( wget_extra_urls_count <= wget_extra_urls_depth )); do
       wget_extra_urls;
     done
-    [ -d "$tmp_working_dir" ] && rm -rf "$tmp_working_dir"
   fi
 
   mirror_checks
