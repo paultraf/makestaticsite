@@ -422,7 +422,7 @@ wayback_filter_domains() {
   done
 
 # shellcheck disable=SC2207
-  IFS=$'\n' wayback_exceptions=($(sort -u <<<"${wayback_download_exceptions[*]}"))
+  temp_IFS="$IFS"; IFS=$'\n'; wayback_exceptions=($(sort -u <<<"${wayback_download_exceptions[*]}")); IFS="$temp_IFS"
 
   ## Apply filter
   webassets_wayback=()
@@ -439,8 +439,7 @@ wayback_filter_domains() {
   done)
 
 # shellcheck disable=SC2207
-  IFS=$'\n' webassets_http=($(sort -u <<<"${webassets_wayback[*]}"))
-  
+  temp_IFS="$IFS"; IFS=$'\n' webassets_http=($(sort -u <<<"${webassets_wayback[*]}")); IFS="$temp_IFS" 
   cd_check "$mirror_dir" || echolog " "
 }
 
