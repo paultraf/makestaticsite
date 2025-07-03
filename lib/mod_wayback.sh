@@ -143,9 +143,10 @@ process_wayback_url() {
     subdomain_wildcard="://[-[:alnum:]+\.]*$primaryhostname_regex"
     if [ "$wayback_merge_httphttps" = "yes" ]; then
     # Allow support for http and https links
-      primaryhost_regex_span="https\?$subdomain_wildcard"
+      primaryhost_regex_span="https\\\?$subdomain_wildcard"
+      primaryhost_ere_span="https\?$subdomain_wildcard"
     else
-      primaryhost_regex_span="$protocol_original://$subdomain_wildcard"
+      primaryhost_regex_span="$protocol_original$subdomain_wildcard"
     fi
   else
     hostname_original_span="$hostname_original"
@@ -252,8 +253,8 @@ wayback_url_paths() {
     url_path_prefix+="../"
   done
   wayback_url_re0='https\\?:\/\/'"$domain_re0"
-  wayback_url_re0_sed='https?://[[:alnum:]][-[:alnum:]+\.]*'
-  url_timeless_nodomain_ere=${url_timeless_nodomain/\/${wayback_url_re0}/\/$primaryhost_regex_span}
+  wayback_url_re0_sed='https\\?://[[:alnum:]][-[:alnum:]+\.]*'
+  url_timeless_nodomain_ere=${url_timeless_nodomain/\/${wayback_url_re0}/\/$primaryhost_ere_span}
   url_timeless_nodomain_ere=$(sed_bre_unescape "$url_timeless_nodomain_ere")
 }
 
@@ -776,7 +777,6 @@ process_asset_anchors() {
     # With Wayback (Memento) URLs, replace the original URL with primaryhost_regex_span (regular expression based on original host)
     # - absolute URLs
     url_timeless=$(echo "$url_timeless" | sed 's|'"/$wayback_url_re0_sed"'|'"/$primaryhost_regex_span"'|g');
-    url_timeless+="$url_path_original" # This is a (hopefully temporary) hack whilst figuring out how to deal with '*' in shell parameter expansion pattern above.
     # - relative URLs
     url_stem_timeless_nodomain1=$(echo "$url_stem_timeless_nodomain1" | sed 's|'"/$wayback_url_re0_sed"'|'"/$primaryhost_regex_span"'|g');
     url_stem_timeless_nodomain2=$(echo "$url_stem_timeless_nodomain2" | sed 's|'"/$wayback_url_re0_sed"'|'"/$primaryhost_regex_span"'|g');    
