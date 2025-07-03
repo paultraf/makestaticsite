@@ -1259,8 +1259,8 @@ generate_file_candidates(){
     file_candidates0=( "${file_candidates[@]}" )
   fi
 
-  # Return if empty (no further web sources to search)
-  [ "${file_candidates[*]}" == "" ] && { echolog "No further candidate URLs found. " "1"; (( wget_extra_urls_count=wget_extra_urls_depth+1 )); print_progress; echolog "Done."; return 0; }
+  # Return if file candidates array is empty
+  [ "${file_candidates[*]}" == "" ] && return 0
 
   # (re-)Generate a fresh, temporary empty directory with symbolic links to candidate files
   if [ ! -d "$tmp_working_dir" ]; then
@@ -1328,6 +1328,10 @@ wget_extra_urls() {
 
   if [ "$wget_url_candidates_optimisation" = "yes" ]; then
     generate_file_candidates
+
+    # Return if empty (no further web sources to search)
+    [ "${file_candidates[*]}" == "" ] && { echolog "No further candidate URLs found. " "1"; (( wget_extra_urls_count=wget_extra_urls_depth+1 )); print_progress; echolog "Done."; return 0; }
+    
     grep_working_dir="$tmp_working_dir"
   else
     grep_working_dir="$working_mirror_dir"
