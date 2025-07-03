@@ -1237,6 +1237,43 @@ generate_extra_domains() {
   IFS="," read -ra page_element_domains_array <<< "$page_element_domains"
 }
 
+# Optimise list of URL candidates by generating a temporary directory with
+# minimal set of web pages yet to be processed for candidate URLs.
+generate_file_candidates(){
+  echolog "Generating list of file candidates... " "1"
+  file_candidates=()
+  while IFS= read -r -d '' opt
+  do
+    file_candidates+=( "$opt" )
+  done <   <(for file_ext in "${asset_find_names[@]}"; do find "$working_mirror_dir" -type f -name "$file_ext" -print0; done)
+  if (( wget_extra_urls_count != 1 )); then
+# shellcheck disable=SC2207
+    file_candidate_diffs=($(arraydiff file_candidates0[@] file_candidates[@]))
+    if [[ ${#file_candidate_diffs[@]} -ne 0 ]]; then
+      file_candidates0=( "${file_candidates0[@]}" "${file_candidate_diffs[@]}" )
+      file_candidates=( "${file_candidate_diffs[@]}" )
+    else
+      file_candidates=()
+    fi
+  else
+    file_candidates0=( "${file_candidates[@]}" )
+  fi
+
+  # Return if empty (no further web sources to search)
+  [ "${file_candidates[*]}" == "" ] && { echolog "No further candidate URLs found. " "1"; (( wget_extra_urls_count=wget_extra_urls_depth+1 )); print_progress; echolog "Done."; return 0; }
+
+  # (re-)Generate a fresh, temporary empty directory with symbolic links to candidate files
+  if [ ! -d "$tmp_working_dir" ]; then
+    mkdir "$tmp_working_dir"
+  fi
+  for file in "${file_candidates[@]}"; do
+    dest_dir="${file%\/*}"
+    dest_dir=${dest_dir/"$working_mirror_dir"/"$working_mirror_dir"\/_tmpfiles}
+    mkdir -p "$dest_dir"
+    ln -s "$file" "$dest_dir/" || echolog "$msg_warning: Unable to create symbolic link from $file to $dest_dir/."
+  done
+}
+
 # Augment Wget's snapshot by retrieving missed URLs
 # (this needs to be done before site_postprocessing)
 # We use Wget instead of cURL to avoid repeated overwrites -
@@ -1289,39 +1326,13 @@ wget_extra_urls() {
     url_grep_array+=( "$url_timeless_nodomain_ere[^\"'<) ]+" )
   fi
 
-  echolog "Generating list of file candidates... " "1"
-  file_candidates=()
-  while IFS= read -r -d '' opt
-  do
-    file_candidates+=( "$opt" )
-  done <   <(for file_ext in "${asset_find_names[@]}"; do find "$working_mirror_dir" -type f -name "$file_ext" -print0; done)
-  if (( wget_extra_urls_count != 1 )); then
-# shellcheck disable=SC2207
-    file_candidate_diffs=($(arraydiff file_candidates0[@] file_candidates[@]))
-    if [[ ${#file_candidate_diffs[@]} -ne 0 ]]; then
-      file_candidates0=( "${file_candidates0[@]}" "${file_candidate_diffs[@]}" )
-      file_candidates=( "${file_candidate_diffs[@]}" )
-    else
-      file_candidates=()
-    fi
+  if [ "$wget_url_candidates_optimisation" = "yes" ]; then
+    generate_file_candidates
+    grep_working_dir="$tmp_working_dir"
   else
-    file_candidates0=( "${file_candidates[@]}" )
+    grep_working_dir="$working_mirror_dir"
   fi
 
-  # Return if empty (no further web sources to search)
-  [ "${file_candidates[*]}" == "" ] && { echolog "No further candidate URLs found. " "1"; (( wget_extra_urls_count=wget_extra_urls_depth+1 )); print_progress; echolog "Done."; return 0; }
-
-  # (re-)Generate a fresh, temporary empty directory with symbolic links to candidate files
-  if [ ! -d "$tmp_working_dir" ]; then
-    mkdir "$tmp_working_dir"
-  fi
-  for file in "${file_candidates[@]}"; do
-    dest_dir="${file%\/*}"
-    dest_dir=${dest_dir/"$working_mirror_dir"/"$working_mirror_dir"\/_tmpfiles}
-    mkdir -p "$dest_dir"
-    ln -s "$file" "$dest_dir/" || echolog "$msg_warning: Unable to create symbolic link from $file to $dest_dir/."
-  done
-  
   # In generating list of asset URLs, strip out initial characters 
   # such as a quote or '=' arising from url_grep match condition.
   # Also remove internal anchors at end of URL (with '#' appended)
@@ -1335,14 +1346,14 @@ wget_extra_urls() {
       webassets_all+=("$trimmed_line")
     done < <(
       if [ "$relativise_host_assets" = "no" ]; then
-        grep -ERoha "$item" "$tmp_working_dir" "${asset_grep_includes[@]}" | grep -v "//$hostname"
+        grep -ERoha "$item" "$grep_working_dir" "${asset_grep_includes[@]}" | grep -v "//$hostname"
       else
-        grep -ERoha "$item" "$tmp_working_dir" "${asset_grep_includes[@]}"
+        grep -ERoha "$item" "$grep_working_dir" "${asset_grep_includes[@]}"
       fi)
     print_progress "$count" "$url_grep_array_count"
     (( count++ ))
   done
-  [ -d "$tmp_working_dir" ] && rm -rf "$tmp_working_dir"
+  [ "$wget_url_candidates_optimisation" = "yes" ] && [ -d "$tmp_working_dir" ] && rm -rf "$tmp_working_dir"
 
   webassets_max_length=$(printf "%s\n" "${webassets_all[@]}" | wc -L)
   if (( webassets_max_length > url_max_chars )); then
@@ -1661,7 +1672,7 @@ mirror_checks() {
 
 augment_mirror() {
   if [ "$wget_extra_urls" = "yes" ]; then
-    file_candidates0=()
+    [ "$wget_url_candidates_optimisation" = "yes" ] && file_candidates0=()
     while (( wget_extra_urls_count <= wget_extra_urls_depth )); do
       wget_extra_urls;
     done
