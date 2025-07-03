@@ -19,8 +19,14 @@
 ##########################################################################
 
 
+0.31.8.1 (released on 2025-07-03)
+     * Bug fix *
+      [makestaticsite.sh]
+       generate_file_candidates() and wget_extra_urls(): Ensure that when
+       file_candidates array is empty, wget_extra_urls() is duly exited also.
+
 0.31.8 (released on 2025-07-03)
-     * Performance enhancements and refinements. *
+     * Performance enhancdements and refinements. *
       [lib/constants.sh]
        Added switch constant, wget_url_candidates_optimisation.
        Some cosmetic re-ordering; created new subsection for Wget-related
