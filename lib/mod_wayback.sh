@@ -140,7 +140,7 @@ process_wayback_url() {
     fi
     primaryhostname_regex=$(regex_escape "$primaryhostname")
     hostname_original_span=$(echo "$wget_span_subdomains_expr$primaryhostname")
-    subdomain_wildcard="://[-[:alnum:]+\.]*$primaryhostname_regex"
+    subdomain_wildcard="://[-[:alnum:]+\\\.]*$primaryhostname_regex"
     if [ "$wayback_merge_httphttps" = "yes" ]; then
     # Allow support for http and https links
       primaryhost_regex_span="https\\\?$subdomain_wildcard"
@@ -253,7 +253,7 @@ wayback_url_paths() {
     url_path_prefix+="../"
   done
   wayback_url_re0='https\\?:\/\/'"$domain_re0"
-  wayback_url_re0_sed='https\\?://[[:alnum:]][-[:alnum:]+\.]*'
+  wayback_url_re0_sed='https\\?://[[:alnum:]][-[:alnum:]+\\.]*'
   url_timeless_nodomain_ere=${url_timeless_nodomain/\/${wayback_url_re0}/\/$primaryhost_ere_span}
   url_timeless_nodomain_ere=$(sed_bre_unescape "$url_timeless_nodomain_ere")
 }
