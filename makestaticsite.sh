@@ -2362,9 +2362,10 @@ clean_mirror() {
   done <   <(for file_ext in "${asset_find_names[@]}"; do find . -type f -name "$file_ext" -print0; done)
   echolog "Done."
 
+  # Run HTML Tidy (option)
   error_set +e
-  html_errors_file="$script_dir/$tmp_dir/${htmltidy_errors_file}-$myconfig.txt"
   if [ "$htmltidy" = "yes" ]; then
+    html_errors_file="$script_dir/$tmp_dir/${htmltidy_errors_file}-$myconfig.txt"
     if ! cmd_check "$htmltidy_cmd" "1"; then
       printf "Unable to run HTML Tidy (htmltidy_cmd is set to %s) - please check that it is installed according to instructions at %s. Skipping.\n" "$htmltidy_cmd" "$htmltidy_url";
     else
@@ -2378,7 +2379,60 @@ clean_mirror() {
   fi
   error_set -e
 
-  # Rename Wget temporary files
+  # Run link checker (option)
+  if [ "$linkchecker" = "yes" ]; then
+    linkchecker_options=()
+    if ! cmd_check "$linkchecker_cmd" "1"; then
+      printf "Unable to run link checker (linkchecker_cmd is set to %s) - please check that it is installed according to instructions at %s. Skipping.\n" "$linkchecker_cmd" "$linkchecker_url";
+    else
+      echolog "Checking links ... "
+      msg_linkcheck=
+      links_errors_file="$script_dir/$tmp_dir/${linkchecker_errors_file}-$myconfig.txt"
+      url_noquery=${url%\?*}
+      home_page="$url_path_dir"
+      [ "$url_path_dir" != "" ] && home_page+="/"
+      if [[ ${url_noquery:length-1:1} = "/" ]]; then
+        home_page+="index.html"
+      elif [[ ${url_noquery:length-4:4} != ".htm" ]] && [[ ${url_noquery:length-5:5} != ".html" ]]; then
+        home_page+=$(basename "$url_noquery")".html"
+      else
+        home_page+=$(basename "$url_noquery")
+      fi
+      [ "$linkchecker_check_external" = "yes" ] && linkchecker_options+=( --check-extern )
+      $linkchecker_cmd "${linkchecker_options[@]}" "$home_page" > "$links_errors_file"
+      # Carry out analysis on error file
+      errors_local=$(grep -o "$linkchecker_errors_match_file" "$links_errors_file" | wc -l)
+      errors_remote=$(grep -o "$linkchecker_errors_match_http" "$links_errors_file" | wc -l)
+      links_error_flag=
+      if [ "$linkchecker_check_external" = "no" ]; then
+        if (( errors_local == 0 )); then
+          msg_linkcheck+="No broken links found"
+        else
+          msg_linkcheck+="$msg_error: $errors_local broken links found"
+          links_error_flag=on
+        fi
+        msg_linkcheck+=" (only local links were checked)"
+      else
+        if (( errors_local == 0 )) && (( errors_remote == 0 )); then
+          msg_linkcheck+="No broken links found (both local and remote links were checked)"
+        elif (( errors_local == 0 )); then
+          msg_linkcheck+="$msg_error: No local broken links, but $errors_remote remote broken links found"
+          links_error_flag=on
+        elif (( errors_local == 1 )) && (( errors_remote == 1 )); then
+          msg_linkcheck+="$msg_error: $errors_local local and $errors_remote remote broken links found"
+          links_error_flag=on
+        else
+          msg_linkcheck+="$msg_error: $errors_local local broken links, though no remote broken links found"
+          links_error_flag
+        fi
+      fi
+      [ "$links_error_flag" != "" ] & msg_linkcheck+=". Details are in the file $links_errors_file"
+      msg_linkcheck+=". Done."
+      echolog "$msg_linkcheck"
+    fi
+  fi
+
+  # Rename Wget temporary files (option)
   if [ "$rename_wget_tmps" = "yes" ]; then
     find ./ -depth -type f -name "*.tmp.html" -exec sh -c 'mv "$1" "${1%.tmp.html}"' _ {} \;
   fi
