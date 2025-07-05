@@ -257,18 +257,41 @@ confirm_continue() {
 
 # Change directory (cd) command, including a check
 # Expected parameter: directory.
-# Optional parameter: custom error message.
+# Optional parameters, in order:
+#  - exit status (0: continue; anything else: abort)
+#  - custom error message.
+#  - custom continue/exit message.
 cd_check() {
   if [ -z ${1+x} ]; then
     echolog "$msg_error: Invalid call to cd_check() function - a parameter (directory) is required."
     return 1
   fi
-  if [ -n "${2+x}" ]; then
-    msg_cd_error="$2. "
-  else
-    msg_cd_error="$msg_error: Unable to change directory to $1. "
-  fi
-  cd "$1" || { echolog -n "$msg_cd_error"; return 1; }
+  cd "$1" || {
+    msg_cd_error="$msg_warning: "
+    msg_exit=
+    if [ -n "${4+x}" ]; then
+      msg_exit="$4"
+    fi
+    exit_status=0
+    if [ -n "${2+x}" ] && [ "$2" != "0" ]; then
+      exit_status=1
+      msg_cd_error="$msg_error: "
+      [ "$msg_exit" = "" ] && msg_exit="Aborting."
+    fi
+    if [ -n "${3+x}" ]; then
+      msg_cd_error+="$3 "
+    else
+      msg_cd_error+="Unable to change directory to $1. "
+    fi
+    echolog -n "$msg_cd_error"
+    msg_exit+=" "
+    echolog "$msg_exit";
+    if (( exit_status != 0 )); then
+      exit
+    else
+      return 1
+    fi
+  }
 }
 
 # Copy command (cp), including a check
