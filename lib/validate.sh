@@ -51,9 +51,11 @@ bash_check() {
 }
 
 cmd_check() {
-  [ -z ${1+x} ] && echolog "Checking command: $1" "$2"
-  if ! command -v "$1" 1> /dev/null; then
-    [ -z ${1+x} ] && echolog "There doesn't appear to be a valid command at $1"
+  [ -z ${1+x} ] && { echolog "No command was submitted, so cmd_check unable to validate."; return 1; }
+  cmd=($1)
+  echolog "Checking command: $1" "$2"
+  if ! command -v "$cmd" 1> /dev/null; then
+    echolog "There doesn't appear to be a valid command at $1"
     return 1
   fi
 }
