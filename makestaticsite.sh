@@ -23,7 +23,7 @@
 # Prerequisites
 # Bash 3 and write permissions in this directory and in the target deployment directories
 
-# shellcheck disable=SC2015,SC2154
+# shellcheck disable=SC2015,SC2119,SC2154
 
 SECONDS=0                  # start timer
 
@@ -2383,23 +2383,14 @@ clean_mirror() {
   if [ "$linkchecker" = "yes" ]; then
     linkchecker_options=()
     if ! cmd_check "$linkchecker_cmd" "1"; then
-      printf "Unable to run link checker (linkchecker_cmd is set to %s) - please check that it is installed according to instructions at %s. Skipping.\n" "$linkchecker_cmd" "$linkchecker_url";
+      printf "%s: Unable to run link checker (linkchecker_cmd is set to %s) - please check that it is installed according to instructions at %s. Skipping.\n" "$msg_error" "$linkchecker_cmd" "$linkchecker_url";
     else
       echolog "Checking links ... "
       msg_linkcheck=
       links_errors_file="$script_dir/$tmp_dir/${linkchecker_errors_file}-$myconfig.txt"
-      url_noquery=${url%\?*}
-      home_page="$url_path_dir"
-      [ "$url_path_dir" != "" ] && home_page+="/"
-      if [[ ${url_noquery:length-1:1} = "/" ]]; then
-        home_page+="index.html"
-      elif [[ ${url_noquery:length-4:4} != ".htm" ]] && [[ ${url_noquery:length-5:5} != ".html" ]]; then
-        home_page+=$(basename "$url_noquery")".html"
-      else
-        home_page+=$(basename "$url_noquery")
-      fi
+      get_home_page
       [ "$linkchecker_check_external" = "yes" ] && linkchecker_options+=( --check-extern )
-      $linkchecker_cmd "${linkchecker_options[@]}" "$home_page" > "$links_errors_file"
+      $linkchecker_cmd "${linkchecker_options[@]}" "$home_page_path" > "$links_errors_file"
       # Carry out analysis on error file
       errors_local=$(grep -o "$linkchecker_errors_match_file" "$links_errors_file" | wc -l)
       errors_remote=$(grep -o "$linkchecker_errors_match_http" "$links_errors_file" | wc -l)
@@ -2714,15 +2705,55 @@ cut_mss_dirs() {
   fi
 }
 
+add_pagefind_search(){
+  cd_check "$mirror_dir" 0 "Unable to enter directory $mirror_dir"$'\n'"Skipping the addition of Pagefind search." || { return; }
+  echolog "Running Pagefind to build a search ... "
+  if ! cmd_check "$pagefind_cmd" "1"; then
+    printf "%s: Unable to run Pagefind (pagefind_cmd is set to %s) - please check that it is installed according to instructions at %s. Skipping.\n" "$msg_error" "$pagefind_cmd" "$pagefind_url";
+  else
+    echolog "Starting ... "
+  fi
+  pagefind_options=()
+  pagefind_options+=("${pagefind_options_glob[@]}")
+  pagefind_options+=(--site "$working_mirror_dir")
+  if [ "$pagefind_serve" = "yes" ]; then
+    pagefind_options+=(--serve)
+    $pagefind_cmd "${pagefind_options[@]}" &
+  else
+    $pagefind_cmd "${pagefind_options[@]}"
+  fi
+
+  # Add a search box
+  if [ "$pagefind_pages" = "home" ]; then
+    if [ "$pagefind_home_page" != "" ]; then
+      home_page="$pagefind_home_page"
+    else
+      [ -z "${home_page+x}" ] && get_home_page
+    fi
+    sed_subs=('s|\('"$pagefind_insert_before"'\)|'"$pagefind_code\1"'|' "$working_mirror_dir/$home_page") 
+    sed "${sed_options[@]}" "${sed_subs[@]}"
+  elif [ "$pagefind_pages" = "all" ]; then
+    while IFS= read -r -d '' opt
+    do
+      sed_subs=('s|\('"$pagefind_insert_before"'\)|'"$pagefind_code\1"'|' "$opt")
+      sed "${sed_options[@]}" "${sed_subs[@]}"
+    done <   <(for file_ext in "${html_file_exts[@]}"; do find "$working_mirror_dir" -type f -name "$file_ext" -print0; done)    
+  fi
+}
+
 site_layout(){
   # MSS cut directories
   if [ "$mss_cut_dirs" = "yes" ] || [ "$wayback_url" = "yes" ]; then
     cut_mss_dirs
   fi
-  # Create sitemap, where necessary
+  # Create sitemap (optional)
   if [ "$sitemap_create" = "yes" ]; then
     sitemap_creation
   fi
+  # Add Pagefind search facility (optional)
+  if [ "$pagefind" = "yes" ]; then
+    add_pagefind_search
+  fi  
 }
 
 create_zip() {

@@ -354,7 +354,6 @@ remote_command_prefix() {
   fi
 }
 
-
 wget_error_check() {
   # expects one parameters: error level (integer)
   if [ "$wget_error_level" -le "$1" ]; then
@@ -454,6 +453,28 @@ assets_search_string() {
   fi
   [ "$url_path" != "" ] && url_path="${url_path:1}" # Remove the first separator character using parameter expansion
   echolog "$url_path"
+}
+
+# Determine a URL's home page and path 
+# One parameter (optional): URL
+get_home_page() {
+  local url2
+  if [ -z "${1+x}" ]; then
+    url2="$url"
+  else
+    url2="$1"
+  fi
+  url_noquery=${url2%\?*}
+  home_page_path="$url_path_dir"
+  [ "$url_path_dir" != "" ] && home_page_path+="/"
+  if [[ ${url_noquery:length-1:1} = "/" ]]; then
+    home_page="index.html"
+  elif [[ ${url_noquery:length-4:4} != ".htm" ]] && [[ ${url_noquery:length-5:5} != ".html" ]]; then
+    home_page=$(basename "$url_noquery")".html"
+  else
+    home_page=$(basename "$url_noquery")
+  fi
+  home_page_path+="$home_page"
 }
 
 # Generate a list of web pages matching grep criteria

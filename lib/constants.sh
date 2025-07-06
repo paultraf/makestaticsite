@@ -22,8 +22,8 @@
 ################################################
 # MakeStaticSite info
 ################################################
-version=0.31.9-alpha2
-version_date='5 July 2025'
+version=0.31.9-beta1
+version_date='6 July 2025'
 version_header="MakeStaticSite version $version, released on $version_date."
 mss_license="GNU Affero General Public License version 3"
 mss_site="https://makestaticsite.sh"
@@ -400,6 +400,24 @@ linkchecker_options=() # Other command line options for link checker (array).
 
 
 ################################################
+# Pagefind (static search) settings
+################################################
+pagefind=n                      # Use Pagefind to generate a site search (y/n)?
+pagefind_cmd=pagefind           # [Path to] Pagefind binary or Node wrapper (npx -y pagefind)
+pagefind_url=https://pagefind.app/ # URL of Pagefind project
+pagefind_options_glob=(--glob "**/*.(?i){HTM,HTML}") # Glob options (see https://pagefind.app/docs/config-options/#glob)
+pagefind_serve=n                # Allow Pagefind to launch a web server for the site (y/n)? 
+pagefind_path_prefix="/"        # Path prefix (to support installation of Pagefind in a subdirectory) 
+pagefind_home_page=             # A specific home page for embedding the search box - usually leave this empty to 
+                                # use the page given in the URL, but for a frameset may be useful to specify a frame page. 
+pagefind_pages=home             # Which pages to add Pagefind search box to
+                                #  - 'home' will just add to the page corresponding to the original URL
+                                #  - 'all' will add to every web page (not recommended for frames)
+pagefind_insert_before='</head>' # Where to insert Pagefind's code to insert the search box.
+pagefind_code="<link href=\"${pagefind_path_prefix}pagefind/pagefind-ui.css\" rel=\"stylesheet\"><script src=\"${pagefind_path_prefix}pagefind/pagefind-ui.js\"></script><div id=\"search\"></div><script>    window.addEventListener('DOMContentLoaded', (event) => { new PagefindUI({ element: \"#search\", showSubResults: true }); });</script>"
+
+
+################################################
 # Display settings
 ################################################
 # Ink colours supported on all displays, using standard labels:
@@ -669,11 +687,11 @@ htmltidy="(htmltidy_cmd htmltidy_options)"
 options_min=(url)               # Level 0 options
 options_std=(url local_sitename wp_cli site_path wp_helper_plugins add_search use_snippets upload_zip zip_filename zip_download_folder deploy deploy_domain deploy_remote deploy_remote_rsync deploy_host deploy_user deploy_path htmltidy add_extras) # Level 1 options
 options_allow_empty=(asset_domains page_element_domains wget_extra_options input_urls_file) # Options that can have empty/null values
-options_check_cmd=(wget_cmd htmltidy_cmd linkchecker_cmd) # Command line applications that need to be checked for existence
+options_check_cmd=(wget_cmd htmltidy_cmd linkchecker_cmd pagefind_cmd) # Command line applications that need to be checked for existence
 options_check_dir=(site_path)   # Directories that need to be checked for existence
 options_check_url=(url)         # URLs that need to be validated
-options_check_yesno=(ssl_checks require_login wget_extra_urls site_post_processing archive wp_cli wp_cli_remote wp_helper_plugins add_search wp_restore_settings prune_query_strings use_snippets upload_zip deploy deploy_remote deploy_remote_rsync htmltidy linkchecker linkchecker_check_external host_dir_mode mss_cut_dirs add_extras wget_span_subdomains url_wildcard_capture cors_enable prune_filename_extensions_querystrings warc_output wget_url_candidates_optimisation wayback_cli use_wayback_id wayback_memento_check wayback_mementos_only wayback_anchors_original_host wayback_links_relative_rewrite wayback_merge_httphttps wayback_host_original_dir wayback_host_original_sitemap wayback_code_clean wayback_folders_clean wayback_comments_clean wget_protocol_relative_urls extra_assets_allow_query_strings zip_omit_download clean_query_extensions credentials_cleanup wget_cookies_nullify_user_agent rename_wget_tmps relativise_host_assets web_print_runtime_data wayback_code_clean) # Options that take yes/no values
+options_check_yesno=(ssl_checks require_login wget_extra_urls site_post_processing archive wp_cli wp_cli_remote wp_helper_plugins add_search wp_restore_settings prune_query_strings use_snippets upload_zip deploy deploy_remote deploy_remote_rsync htmltidy linkchecker linkchecker_check_external pagefind pagefind_serve host_dir_mode mss_cut_dirs add_extras wget_span_subdomains url_wildcard_capture cors_enable prune_filename_extensions_querystrings warc_output wget_url_candidates_optimisation wayback_cli use_wayback_id wayback_memento_check wayback_mementos_only wayback_anchors_original_host wayback_links_relative_rewrite wayback_merge_httphttps wayback_host_original_dir wayback_host_original_sitemap wayback_code_clean wayback_folders_clean wayback_comments_clean wget_protocol_relative_urls extra_assets_allow_query_strings zip_omit_download clean_query_extensions credentials_cleanup wget_cookies_nullify_user_agent rename_wget_tmps relativise_host_assets web_print_runtime_data wayback_code_clean) # Options that take yes/no values
 options_check_remote=(site_path) # options that need to be checked on a remote server
 options_credentials=(site_user) # credentials that may/should be encrypted
 
-options_nodeps_load=(offline_file_system add_search deploy deploy_remote use_snippets upload_zip ssl_checks url asset_domains page_element_domains require_login local_sitename wget_extra_urls_depth wget_wayback_max_redirects wget_span_subdomains url_wildcard_capture input_urls_file site_post_processing prune_query_strings archive web_source_exclude_dirs htmltidy linkchecker linkchecker_check_external host_dir_mode mss_cut_dirs add_extras wp_cli site_path zip_filename zip_download_folder deploy_path deploy_domain cors_enable prune_filename_extensions_querystrings warc_output wget_url_candidates_optimisation warc_header_format wayback_cli use_wayback_id wayback_memento_check wayback_mementos_only wayback_anchors_original_host wayback_links_relative_rewrite wayback_relative_links_clean wayback_merge_httphttps wayback_host_original_dir wayback_host_original_sitemap wayback_code_clean wayback_folders_clean wayback_comments_clean extra_assets_allow_query_strings zip_omit_download clean_query_extensions credentials_cleanup wget_protocol_relative_urls wget_cookies_nullify_user_agent rename_wget_tmps relativise_host_assets web_print_runtime_data wayback_code_clean) # Options that are not dependent on others
+options_nodeps_load=(offline_file_system add_search deploy deploy_remote use_snippets upload_zip ssl_checks url asset_domains page_element_domains require_login local_sitename wget_extra_urls_depth wget_wayback_max_redirects wget_span_subdomains url_wildcard_capture input_urls_file site_post_processing prune_query_strings archive web_source_exclude_dirs htmltidy linkchecker linkchecker_check_external pagefind pagefind_serve pagefind_home_page pagefind_pages host_dir_mode mss_cut_dirs add_extras wp_cli site_path zip_filename zip_download_folder deploy_path deploy_domain cors_enable prune_filename_extensions_querystrings warc_output wget_url_candidates_optimisation warc_header_format wayback_cli use_wayback_id wayback_memento_check wayback_mementos_only wayback_anchors_original_host wayback_links_relative_rewrite wayback_relative_links_clean wayback_merge_httphttps wayback_host_original_dir wayback_host_original_sitemap wayback_code_clean wayback_folders_clean wayback_comments_clean extra_assets_allow_query_strings zip_omit_download clean_query_extensions credentials_cleanup wget_protocol_relative_urls wget_cookies_nullify_user_agent rename_wget_tmps relativise_host_assets web_print_runtime_data wayback_code_clean) # Options that are not dependent on others
