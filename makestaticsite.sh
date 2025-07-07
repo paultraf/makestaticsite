@@ -2385,15 +2385,15 @@ clean_mirror() {
     if ! cmd_check "$linkchecker_cmd" "1"; then
       printf "%s: Unable to run link checker (linkchecker_cmd is set to %s) - please check that it is installed according to instructions at %s. Skipping.\n" "$msg_error" "$linkchecker_cmd" "$linkchecker_url";
     else
-      echolog "Checking links ... "
+      links_log_file="$script_dir/$tmp_dir/${linkchecker_log_file}-$myconfig.txt"
+      echolog "Checking links (logging in $linkchecker_log_file) ... "
       msg_linkcheck=
-      links_errors_file="$script_dir/$tmp_dir/${linkchecker_errors_file}-$myconfig.txt"
       get_home_page
       [ "$linkchecker_check_external" = "yes" ] && linkchecker_options+=( --check-extern )
-      $linkchecker_cmd "${linkchecker_options[@]}" "$home_page_path" > "$links_errors_file"
-      # Carry out analysis on error file
-      errors_local=$(grep -o "$linkchecker_errors_match_file" "$links_errors_file" | wc -l)
-      errors_remote=$(grep -o "$linkchecker_errors_match_http" "$links_errors_file" | wc -l)
+      $linkchecker_cmd "${linkchecker_options[@]}" "$home_page_path" > "$links_log_file"
+      # Carry out error analysis on log file
+      errors_local=$(grep -o "$linkchecker_errors_match_file" "$links_log_file" | wc -l)
+      errors_remote=$(grep -o "$linkchecker_errors_match_http" "$links_log_file" | wc -l)
       links_error_flag=
       if [ "$linkchecker_check_external" = "no" ]; then
         if (( errors_local == 0 )); then
@@ -2417,7 +2417,7 @@ clean_mirror() {
           links_error_flag
         fi
       fi
-      [ "$links_error_flag" != "" ] && msg_linkcheck+=". Details are in the file $links_errors_file"
+      [ "$links_error_flag" != "" ] && msg_linkcheck+=". Details are in the file $links_log_file"
       msg_linkcheck+=". Done."
       echolog "$msg_linkcheck"
     fi
@@ -2707,14 +2707,19 @@ cut_mss_dirs() {
 
 add_pagefind_search(){
   cd_check "$mirror_dir" 0 "Unable to enter directory $mirror_dir"$'\n'"Skipping the addition of Pagefind search." || { return; }
-  echolog "Running Pagefind to build a search ... "
+  pagefind_log_file="$script_dir/$tmp_dir/${pagefind_log_file}-$myconfig.txt"
+  echolog -n "Running Pagefind to build a search (logging in $pagefind_log_file) ... "
   if ! cmd_check "$pagefind_cmd" "1"; then
-    printf "%s: Unable to run Pagefind (pagefind_cmd is set to %s) - please check that it is installed according to instructions at %s. Skipping.\n" "$msg_error" "$pagefind_cmd" "$pagefind_url";
-  else
-    echolog "Starting ... "
+    echolog " "
+    echolog "$msg_error: Unable to run Pagefind (pagefind_cmd is set to $pagefind_cmd) - please check that it is installed according to instructions at $pagefind_url. Skipping.\n"; return 1;
   fi
   pagefind_options=()
-  pagefind_options+=("${pagefind_options_glob[@]}")
+  pagefind_options+=(-l "$pagefind_log_file")
+  [ "$output_level" = 'quiet' ] && pagefind_options+=(-q)
+  [ "$output_level" = 'silent' ] && pagefind_options+=(-s)
+  [ "$output_level" = 'verbose' ] && pagefind_options+=(-v)
+#  pagefind_options+=("${pagefind_options_glob[@]}")
+  pagefind_options+=(--glob "$pagefind_options_glob")
   pagefind_options+=(--site "$working_mirror_dir")
   if [ "$pagefind_serve" = "yes" ]; then
     pagefind_options+=(--serve)
@@ -2737,8 +2742,15 @@ add_pagefind_search(){
     do
       sed_subs=('s|\('"$pagefind_insert_before"'\)|'"$pagefind_code\1"'|' "$opt")
       sed "${sed_options[@]}" "${sed_subs[@]}"
-    done <   <(for file_ext in "${html_file_exts[@]}"; do find "$working_mirror_dir" -type f -name "$file_ext" -print0; done)    
+    done <   <(for file_ext in "${html_file_exts[@]}"; do find "$working_mirror_dir" -type f -name "$file_ext" -print0; done)
+  elif [[ $pagefind_pages == *,* ]]; then
+    IFS=',' read -ra list <<< "$pagefind_pages"
+    for opt in "${list[@]}"; do
+      sed_subs=('s|\('"$pagefind_insert_before"'\)|'"$pagefind_code\1"'|' "$working_mirror_dir/$opt")
+      sed "${sed_options[@]}" "${sed_subs[@]}"
+    done
   fi
+  echolog "Done."
 }
 
 site_layout(){
