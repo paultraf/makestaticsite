@@ -2730,18 +2730,18 @@ add_pagefind_search(){
     else
       [ -z "${home_page+x}" ] && get_home_page
     fi
-    sed_subs=('s|\('"$pagefind_insert_before"'\)|'"$pagefind_code\1"'|' "$working_mirror_dir/$home_page") 
+    sed_subs=('s|\('"$pagefind_insert_after_re"'\)|'"\1$pagefind_code"'|' "$working_mirror_dir/$home_page") 
     sed "${sed_options[@]}" "${sed_subs[@]}"
   elif [ "$pagefind_pages" = "all" ]; then
     while IFS= read -r -d '' opt
     do
-      sed_subs=('s|\('"$pagefind_insert_before"'\)|'"$pagefind_code\1"'|' "$opt")
+      sed_subs=('s|\('"$pagefind_insert_after_re"'\)|'"\1$pagefind_code"'|' "$opt")
       sed "${sed_options[@]}" "${sed_subs[@]}"
     done <   <(for file_ext in "${html_file_exts[@]}"; do find "$working_mirror_dir" -type f -name "$file_ext" -print0; done)
   elif [[ $pagefind_pages == *,* ]]; then
     IFS=',' read -ra list <<< "$pagefind_pages"
     for opt in "${list[@]}"; do
-      sed_subs=('s|\('"$pagefind_insert_before"'\)|'"$pagefind_code\1"'|' "$working_mirror_dir/$opt")
+      sed_subs=('s|\('"$pagefind_insert_after_re"'\)|'"\1$pagefind_code"'|' "$working_mirror_dir/$opt")
       sed "${sed_options[@]}" "${sed_subs[@]}"
     done
   fi
@@ -2934,7 +2934,7 @@ conclude() {
       echolog -n $'\n'"Launching a local web server for previewing the site... "$'\n'
       cd_check "$working_mirror_dir"
       $webserver_preview_cmd & pid=$!
-      webserver_port=$(echo "$webserver_preview_cmd" | sed 's|[^0-9]||g')
+      webserver_port=${webserver_preview_cmd//[![:digit:]]/}
       echolog "The web server is running and your site should be accessible. Try http://localhost:$webserver_port."
       echolog "To stop the server, run: kill -TERM $pid"
       cd_check "$mirror_dir"

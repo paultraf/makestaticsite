@@ -22,7 +22,7 @@
 ################################################
 # MakeStaticSite info
 ################################################
-version=0.31.9-beta3
+version=0.31.9-beta4
 version_date='7 July 2025'
 version_header="MakeStaticSite version $version, released on $version_date."
 mss_license="GNU Affero General Public License version 3"
@@ -414,7 +414,7 @@ pagefind_pages=home             # Which pages to add Pagefind search box to
                                 #  - 'home' will just add to the page corresponding to the original URL
                                 #  - 'all' will add to every web page (not recommended for frames)
                                 #  - a comma-separated list to specify a certain set of web pages.
-pagefind_insert_before='</head>' # Where to insert Pagefind's code to insert the search box.
+pagefind_insert_after_re="<body[^>]*>" # Where to insert Pagefind's code to generate the search box.
 pagefind_code="<link href=\"${pagefind_path_prefix}pagefind/pagefind-ui.css\" rel=\"stylesheet\"><script src=\"${pagefind_path_prefix}pagefind/pagefind-ui.js\"></script><div id=\"search\"></div><script>    window.addEventListener('DOMContentLoaded', (event) => { new PagefindUI({ element: \"#search\", showSubResults: true }); });</script>"
 
 
