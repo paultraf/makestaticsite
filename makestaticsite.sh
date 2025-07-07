@@ -404,7 +404,7 @@ initialise_variables() {
 
   # Check we now have a valid config file and display it
   check_config_file "$myconfig"
-  printf "Reading custom configuration data from config/%s ... " "$myconfig.cfg"
+  printf "Reading custom configuration data from config/%s ...\n" "$myconfig.cfg"
 
   # Assign option variables for those that have no dependencies
   assign_option_variables "options_nodeps_load"
@@ -427,10 +427,10 @@ initialise_variables() {
 
   # Check system requirements for cURL, Wget and SSL
   msg_checking="Checking your system for Wget and other essential components ... "
-  cmd_check "curl" || { printf "%s%s: Unable to find binary: curl ("'$'"PATH contains %s).\nThis command is essential for checking connectivity.  It may be downloaded from https://curl.se/.\nAborting.\n" "$msg_checking" "$msg_error" "$PATH"; exit; }
+  cmd_check "curl" || { printf "%s%s: Unable to find binary: curl ("'$'"PATH contains %s).\nThis command is essential for checking connectivity. It may be downloaded from https://curl.se/.\nAborting.\n" "$msg_checking" "$msg_error" "$PATH"; exit; }
   cmd_check "$wget_cmd" "1" || { printf "%s: Unable to carry out a snapshot\nPlease review the value of the wget_cmd option.\nAborting.\n" "$msg_error"; exit; }
   echolog "OK" "1"
-  echo $'\n'"$msg_checking"
+  echo "$msg_checking"
   wget_cmd_version="$(which_version "$wget_cmd" "GNU Wget")"
   version_status=
   version_check "$wget_cmd_version" "$wget_version_atleast" || { version_status=error; echo "$msg_warning The version of $wget_cmd is $wget_cmd_version, which is old, so some functionality may be lost. Version $wget_version_atleast or later is recommended for full functionality.";}
@@ -2718,15 +2718,10 @@ add_pagefind_search(){
   [ "$output_level" = 'quiet' ] && pagefind_options+=(-q)
   [ "$output_level" = 'silent' ] && pagefind_options+=(-s)
   [ "$output_level" = 'verbose' ] && pagefind_options+=(-v)
-#  pagefind_options+=("${pagefind_options_glob[@]}")
   pagefind_options+=(--glob "$pagefind_options_glob")
   pagefind_options+=(--site "$working_mirror_dir")
-  if [ "$pagefind_serve" = "yes" ]; then
-    pagefind_options+=(--serve)
-    $pagefind_cmd "${pagefind_options[@]}" &
-  else
-    $pagefind_cmd "${pagefind_options[@]}"
-  fi
+  $pagefind_cmd "${pagefind_options[@]}"
+  echolog "Running $pagefind_cmd with options ${pagefind_options[*]}"
 
   # Add a search box
   if [ "$pagefind_pages" = "home" ]; then
@@ -2751,6 +2746,7 @@ add_pagefind_search(){
     done
   fi
   echolog "Done."
+  msg_pagefind="A search facility has been added, created using Pagefind."
 }
 
 site_layout(){
@@ -2765,7 +2761,7 @@ site_layout(){
   # Add Pagefind search facility (optional)
   if [ "$pagefind" = "yes" ]; then
     add_pagefind_search
-  fi  
+  fi
 }
 
 create_zip() {
@@ -2924,9 +2920,27 @@ conclude() {
   if [ "$warc_output" = "yes" ] && [ -n "${msg_warc+x}" ]; then
     echolog $'\n'"$msg_warc"
   fi
+  if [ "$pagefind" = "yes" ] && [ -n "${msg_pagefind+x}" ]; then
+    echolog $'\n'"$msg_pagefind"
+  fi
   if [ -n "${msg_deploy+x}" ]; then
     echolog $'\n'"$msg_deploy"
   fi
+
+  if [ "$webserver_preview" = "yes" ]; then
+    if ! cmd_check "$webserver_preview_cmd" "1"; then
+      echolog "$msg_error: Unable to launch a local web server (webserver_preview_cmd is set to $webserver_preview_cmd) - please review. Skipping.\n"
+    else
+      echolog -n $'\n'"Launching a local web server for previewing the site... "$'\n'
+      cd_check "$working_mirror_dir"
+      $webserver_preview_cmd & pid=$!
+      webserver_port=$(echo "$webserver_preview_cmd" | sed 's|[^0-9]||g')
+      echolog "The web server is running and your site should be accessible. Try http://localhost:$webserver_port."
+      echolog "To stop the server, run: kill -TERM $pid"
+      cd_check "$mirror_dir"
+    fi
+  fi
+
   echolog $'\n'"Thank you for using MakeStaticSite, free software released under the $mss_license. The latest version is available from $mss_download".  
   echolog " "
   timestamp_end=$(timestamp "$timezone")
