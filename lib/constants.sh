@@ -22,7 +22,7 @@
 ################################################
 # MakeStaticSite info
 ################################################
-version=0.31.9-beta4
+version=0.31.9
 version_date='7 July 2025'
 version_header="MakeStaticSite version $version, released on $version_date."
 mss_license="GNU Affero General Public License version 3"
@@ -393,7 +393,7 @@ linkchecker=n                   # Use link checker (y/n)?
 linkchecker_cmd=linkchecker     # [Path to] Link checker binary
 linkchecker_url=https://linkchecker.github.io/linkchecker/ # URL of link checker (LinkChecker) project
 linkchecker_log_file=log_linkchecker # Link checker log file stem
-linkchecker_check_external=n    # Check external URLs
+linkchecker_check_external=n    # Check external URLs (y/n)?
 linkchecker_errors_match_file="Real URL   file" # match pattern for error output on local files
 linkchecker_errors_match_http="Real URL   http" # match pattern for error output on remote URLs
 linkchecker_options=() # Other command line options for link checker (array).

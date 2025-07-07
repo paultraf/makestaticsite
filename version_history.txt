@@ -19,6 +19,37 @@
 ##########################################################################
 
 
+0.31.9 (released on 2025-07-07)
+     * Feature enhancements and refinements. *
+      [lib/constants.sh]
+       Added constants for a local web server site preview: webserver_preview
+       and webserver_preview_cmd.
+       Added constants for link checking: linkchecker, linkchecker_cmd,
+       linkchecker_url, linkchecker_log_file, linkchecker_check_external,
+       linkchecker_errors_match_file, linkchecker_errors_match_http,
+       linkchecker_options.
+       Added constants for Pagefind: pagefind, pagefind_cmd, pagefind_url,
+       pagefind_log_file, pagefind_options_glob, pagefind_path_prefix,
+       pagefind_home_page, pagefind_insert_after_re, pagefind_code.       
+      [lib/general.sh]
+       cd_check() reworked to make usage simpler and more consistent.
+       Added parameter for exit status (0) will issue warnings and continue,
+       whereas anything else will issue errors and exit the program.
+       Added function get_home_page() to determine a URL's home page and path.
+      [lib/mod_wayback.sh]
+       Modified the definition of primary host span regular expressions to
+       ensure that they are appropriate for use in sed replacements for
+       absolute link conversions.
+       Bug fixes: modified definition of definition of subdomain spanning
+       regex for use in absolute link conversions, ensuring dots properly
+       escaped.
+      [makestaticsite.sh]
+       clean_mirror(): Added routine to carry out link checking and reporting.
+       Added function add_pagefind_search() to augment the site with a static
+       search facility using Pagefind.
+       conclude(): Added routine to launch a local web server with a site
+       preview, based on value of webserver_preview.
+
 0.31.8.1 (released on 2025-07-03)
      * Bug fix *
       [makestaticsite.sh]
@@ -26,11 +57,11 @@
        file_candidates array is empty, wget_extra_urls() is duly exited also.
 
 0.31.8 (released on 2025-07-03)
-     * Performance enhancdements and refinements. *
+     * Performance enhancements and refinements. *
       [lib/constants.sh]
        Added switch constant, wget_url_candidates_optimisation.
        Some cosmetic re-ordering; created new subsection for Wget-related
-       phase 3 and subsequent processing. 
+       phase 3 and subsequent processing.
       [lib/general.sh]
        Added function arraydiff() to compute the difference between two
        arrays, using awk.
