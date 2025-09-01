@@ -619,7 +619,7 @@ consolidate_assets() {
         this_folder_path="$imports_directory/$this_host/"
       elif [ "$url_path_original_dir" != "" ]; then
         # First substitute on any match under url_path_original
-        sed_subs1=('s|'"$snapshot_src_path/$url_path_original/"'|'""'|g' "$opt") # first convert assets that are underneath the trunk
+        sed_subs1=('s|'"$snapshot_src_path/$url_path_original_dir/"'|'""'|g' "$opt") # first convert assets that are underneath the trunk
         sed "${sed_options[@]}" "${sed_subs1[@]}"
         this_folder_path="$assets_directory/"
       fi
