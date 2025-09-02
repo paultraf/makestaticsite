@@ -840,7 +840,7 @@ process_asset_anchors() {
       url_stem_timeless="$url_base_regex$url_stem_timeless_nodomain"
 
       sed_subs1=('s|'"$url_stem_timeless$item"'|'"$pathpref$prefix_replace$item2"'|g' "$opt")
-      sed_subs2=('s|\([\"'\'']\)\('"$url_stem_timeless_nodomain$item"'\)|'"\1$pathpref$prefix_replace$item2"'|g' "$opt")
+      sed_subs2=('s|\([\"'\''(]\)\('"$url_stem_timeless_nodomain$item"'\)|'"\1$pathpref$prefix_replace$item2"'|g' "$opt")
       sed "${sed_options[@]}" "${sed_subs1[@]}"
       sed "${sed_options[@]}" "${sed_subs2[@]}"
 
@@ -886,10 +886,22 @@ process_asset_anchors() {
     for item in "${webpaths_output2[@]}"; do
       item=$(regex_escape "$item")
       [[ ${item:length-1:1} != "/" ]] && item+="/"
-      sed_subs1=('s|\('"$url_timeless"'\)\('"$item"'\)\([\"'\'']\)|'"$pathpref\2index.html\3"'|g' "$opt")
-      sed_subs2=('s|\([\"'\'']\)\('"$url_timeless_nodomain"'\)\('"$item"'\)\([\"'\'']\)|'"\1$pathpref\3index.html\4"'|g' "$opt")
-      sed "${sed_options[@]}" "${sed_subs1[@]}"
-      sed "${sed_options[@]}" "${sed_subs2[@]}"
+      if [ -f "${item}index.html" ]; then
+        echolog "File ${item}index.html found - carry out sed replacements on $item." "1"
+        sed_subs1=('s|\('"$url_timeless"'\)\('"$item"'\)\([\"'\'']\)|'"$pathpref\2index.html\3"'|g' "$opt")
+        sed_subs2=('s|\([\"'\'']\)\('"$url_timeless_nodomain"'\)\('"$item"'\)\([\"'\'']\)|'"\1$pathpref\3index.html\4"'|g' "$opt")
+        sed "${sed_options[@]}" "${sed_subs1[@]}"
+        sed "${sed_options[@]}" "${sed_subs2[@]}"
+      else
+        item0=${item::-1}
+        if [ -f "$item0.html" ]; then
+          echolog "File $item0.html found - carry out sed replacements on $item." "1"
+          sed_subs1=('s|\('"$url_timeless"'\)\('"$item0"'\)/\?\([\"'\'']\)|'"$pathpref\2.html\3"'|g' "$opt")
+          sed_subs2=('s|\([\"'\'']\)\('"$url_timeless_nodomain"'\)\('"$item0"'\)/\?\([\"'\'']\)|'"\1$pathpref\3.html\4"'|g' "$opt")
+          sed "${sed_options[@]}" "${sed_subs1[@]}"
+          sed "${sed_options[@]}" "${sed_subs2[@]}"
+        fi 
+      fi
     done
     (( count++ ))
   done
