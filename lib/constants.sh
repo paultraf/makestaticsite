@@ -22,8 +22,8 @@
 ################################################
 # MakeStaticSite info
 ################################################
-version=0.31.10-alpha1
-version_date='2 September 2025'
+version=0.31.10-alpha2
+version_date='3 September 2025'
 version_header="MakeStaticSite version $version, released on $version_date."
 mss_license="GNU Affero General Public License version 3"
 mss_site="https://makestaticsite.sh"
@@ -188,7 +188,7 @@ static_webpage_file_extensions="html,htm,xhtm,xhtml" # A list of common static w
 webpage_file_extensions="$static_webpage_file_extensions,dhtml,cgi,php,php2,php4,phtml,asp,aspx,jsp,cfm,cfml" # A list of common web page file extensions, including those for server-side scripts. Not exhaustive.
 
 # Specification of assets eligible for downloading by Wget in phase 3.
-web_source_extensions="htm,html,xml,txt,css" # list of web document file extensions intended for assets search
+web_source_extensions="$static_webpage_file_extensions,xml,txt,css" # list of web document file extensions intended for assets search
 web_source_exclude_dirs=        # list of directories to exclude from search and replace (relative to working mirror directory - prefix will be determined automatically). Dev note: this ought to be refined to be extension dependent
 web_element_extensions="js,css,svg,map,ico" # list of file extensions for standard Web page components 
 font_extensions="cff,ttf,eot,woff,woff2" # list of file extensions for Web fonts 
@@ -434,6 +434,13 @@ ink_info=lime
 ################################################
 # Cleanup settings
 ################################################
+clean_javascript_embeds=no      # Remove external functionality embedded in <script> tags?
+                                #  - 'all' to remove all designated embeds
+                                #  - 'analytics' to remove analytics embeds only
+                                #  - 'no' (or any other value) to keep as is
+analytics_domains=googletagmanager.com,google-analytics.com,analytics.google.com,app-analytics-services.com,app-analytics-services-att.com # List of primary domains used for analytics
+non_analytics_domains=apis.google.com # List of primary domains used for other purposes such as APIs
+clean_all_domains="$analytics_domains,$non_analytics_domains" # Consolidated list of primary domains for cleaning
 clean_query_extensions=no       # Remove query strings from filenames (yes/no)
 system_files_cleanup=Thumbs.db,.DS_Store # List of unwanted system files, to be removed from mirror output
 web_print_runtime_data=no       # Append MakeStaticSite runtime session data summary to web pages (yes/no)?
@@ -693,8 +700,8 @@ options_allow_empty=(asset_domains page_element_domains wget_extra_options input
 options_check_cmd=(wget_cmd htmltidy_cmd linkchecker_cmd pagefind_cmd) # Command line applications that need to be checked for existence
 options_check_dir=(site_path)   # Directories that need to be checked for existence
 options_check_url=(url)         # URLs that need to be validated
-options_check_yesno=(ssl_checks require_login wget_extra_urls site_post_processing archive wp_cli wp_cli_remote wp_helper_plugins add_search wp_restore_settings prune_query_strings use_snippets upload_zip deploy deploy_remote deploy_remote_rsync htmltidy linkchecker linkchecker_check_external pagefind host_dir_mode mss_cut_dirs add_extras wget_span_subdomains url_wildcard_capture cors_enable prune_filename_extensions_querystrings warc_output wget_url_candidates_optimisation wayback_cli use_wayback_id wayback_memento_check wayback_mementos_only wayback_anchors_original_host wayback_links_relative_rewrite wayback_merge_httphttps wayback_host_original_dir wayback_host_original_sitemap wayback_code_clean wayback_folders_clean wayback_comments_clean wget_protocol_relative_urls extra_assets_allow_query_strings zip_omit_download webserver_preview clean_query_extensions credentials_cleanup wget_cookies_nullify_user_agent rename_wget_tmps relativise_host_assets web_print_runtime_data wayback_code_clean) # Options that take yes/no values
+options_check_yesno=(ssl_checks require_login wget_extra_urls site_post_processing archive wp_cli wp_cli_remote wp_helper_plugins add_search wp_restore_settings prune_query_strings use_snippets upload_zip deploy deploy_remote deploy_remote_rsync htmltidy linkchecker linkchecker_check_external pagefind host_dir_mode mss_cut_dirs add_extras wget_span_subdomains url_wildcard_capture cors_enable prune_filename_extensions_querystrings warc_output wget_url_candidates_optimisation wayback_cli use_wayback_id wayback_memento_check wayback_mementos_only wayback_anchors_original_host wayback_links_relative_rewrite wayback_merge_httphttps wayback_host_original_dir wayback_host_original_sitemap wayback_code_clean wayback_folders_clean wayback_comments_clean wget_protocol_relative_urls extra_assets_allow_query_strings zip_omit_download webserver_preview clean_javascript_embeds clean_query_extensions credentials_cleanup wget_cookies_nullify_user_agent rename_wget_tmps relativise_host_assets web_print_runtime_data wayback_code_clean) # Options that take yes/no values
 options_check_remote=(site_path) # options that need to be checked on a remote server
 options_credentials=(site_user) # credentials that may/should be encrypted
 
-options_nodeps_load=(offline_file_system add_search deploy deploy_remote use_snippets upload_zip ssl_checks url asset_domains page_element_domains require_login local_sitename wget_extra_urls_depth wget_wayback_max_redirects wget_span_subdomains url_wildcard_capture input_urls_file site_post_processing prune_query_strings archive web_source_exclude_dirs htmltidy linkchecker linkchecker_check_external pagefind pagefind_options_glob pagefind_home_page pagefind_pages host_dir_mode mss_cut_dirs add_extras wp_cli site_path zip_filename zip_download_folder deploy_path deploy_domain cors_enable prune_filename_extensions_querystrings warc_output wget_url_candidates_optimisation warc_header_format wayback_cli use_wayback_id wayback_memento_check wayback_mementos_only wayback_anchors_original_host wayback_links_relative_rewrite wayback_relative_links_clean wayback_merge_httphttps wayback_host_original_dir wayback_host_original_sitemap wayback_code_clean wayback_folders_clean wayback_comments_clean extra_assets_allow_query_strings zip_omit_download webserver_preview clean_query_extensions credentials_cleanup wget_protocol_relative_urls wget_cookies_nullify_user_agent rename_wget_tmps relativise_host_assets web_print_runtime_data wayback_code_clean) # Options that are not dependent on others
+options_nodeps_load=(offline_file_system add_search deploy deploy_remote use_snippets upload_zip ssl_checks url asset_domains page_element_domains require_login local_sitename wget_extra_urls_depth wget_wayback_max_redirects wget_span_subdomains url_wildcard_capture input_urls_file site_post_processing prune_query_strings archive web_source_exclude_dirs htmltidy linkchecker linkchecker_check_external pagefind pagefind_options_glob pagefind_home_page pagefind_pages host_dir_mode mss_cut_dirs add_extras wp_cli site_path zip_filename zip_download_folder deploy_path deploy_domain cors_enable prune_filename_extensions_querystrings warc_output wget_url_candidates_optimisation warc_header_format wayback_cli use_wayback_id wayback_memento_check wayback_mementos_only wayback_anchors_original_host wayback_links_relative_rewrite wayback_relative_links_clean wayback_merge_httphttps wayback_host_original_dir wayback_host_original_sitemap wayback_code_clean wayback_folders_clean wayback_comments_clean extra_assets_allow_query_strings zip_omit_download webserver_preview clean_javascript_embeds clean_query_extensions credentials_cleanup wget_protocol_relative_urls wget_cookies_nullify_user_agent rename_wget_tmps relativise_host_assets web_print_runtime_data wayback_code_clean) # Options that are not dependent on others

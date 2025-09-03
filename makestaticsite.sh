@@ -2344,6 +2344,36 @@ sitemap_creation() {
 clean_mirror() {
   cd_check "$working_mirror_dir" 1
 
+  # Clean JavaScript embeds, as appropriate    
+  if [ "$clean_javascript_embeds" != "no" ]; then
+    if [ "$clean_javascript_embeds" = "all" ]; then
+      echolog "Delete JavaScript code for all designated embeds ... " "1"
+      IFS="," read -ra clean_domains_array <<< "$clean_all_domains"
+    else
+      echolog "Delete JavaScript code for analytics embeds ... " "1"
+      IFS="," read -ra clean_domains_array <<< "$analytics_domains"
+    fi
+    if [ "$wayback_url" = "yes" ]; then
+      clean_dir="$working_mirror_dir/$url_path_dir"
+    else
+      clean_dir="$working_mirror_dir"
+    fi
+    webpages_clean=()
+    while IFS= read -r line; do webpages_clean+=("$line"); done <<<"$(for file_ext in "${html_file_exts[@]}"; do find "$clean_dir" -type f \( -name "$file_ext" -o -name "$file_ext"\?\* -o -name "$file_ext"@\* \) "${asset_exclude_dirs[@]}" -print; done)"
+    for opt in "${webpages_clean[@]}"; do
+      tmp_file="$opt.tmp"
+      for clean_domain in "${clean_domains_array[@]}"; do
+        # Two cases:
+        # (i) domain is a parameter inside the <script> tag
+        embed_code_re1='<script[^>]*'$clean_domain'[^<]*<\/script>'
+        # (ii) domain is not a parameter inside the <script> tag, but is in the body
+        embed_code_re2='<script[^>]*>[^>]*'"$clean_domain"'[^>]*<\/script>'
+        awk -v RS='\x7' '{sub(/'"$embed_code_re1"'/,""); print}' "$opt" > "$tmp_file" && mv "$tmp_file" "$opt"
+        awk -v RS='\x7' '{sub(/'"$embed_code_re2"'/,""); print}' "$opt" > "$tmp_file" && mv "$tmp_file" "$opt"
+      done
+    done
+  fi
+
   # Reconstruct the canonical URL and replace index.html, the default output from Wget
   url_base_deploy="$protocol://$deploy_domain"
   printf "Updating canonical URLs in document headers ... "
