@@ -2363,13 +2363,14 @@ clean_mirror() {
     for opt in "${webpages_clean[@]}"; do
       tmp_file="$opt.tmp"
       for clean_domain in "${clean_domains_array[@]}"; do
+        clean_domain=$(regex_escape "$clean_domain" "BRE")
         # Two cases:
         # (i) domain is a parameter inside the <script> tag
-        embed_code_re1='<script[^>]*'$clean_domain'[^<]*<\/script>'
+        embed_code_re1='<script[^>]*'"$clean_domain"'[^<]*<\/script>'
         # (ii) domain is not a parameter inside the <script> tag, but is in the body
         embed_code_re2='<script[^>]*>[^>]*'"$clean_domain"'[^>]*<\/script>'
-        awk -v RS='\x7' '{sub(/'"$embed_code_re1"'/,""); print}' "$opt" > "$tmp_file" && mv "$tmp_file" "$opt"
-        awk -v RS='\x7' '{sub(/'"$embed_code_re2"'/,""); print}' "$opt" > "$tmp_file" && mv "$tmp_file" "$opt"
+        awk -v RS='\x7' '{sub(/'"$embed_code_re1"'/,""); printf("%s",$0);}' "$opt" > "$tmp_file" && mv "$tmp_file" "$opt"
+        awk -v RS='\x7' '{sub(/'"$embed_code_re2"'/,""); printf("%s",$0);}' "$opt" > "$tmp_file" && mv "$tmp_file" "$opt"
       done
     done
   fi
