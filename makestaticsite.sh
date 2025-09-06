@@ -2344,6 +2344,29 @@ sitemap_creation() {
 clean_mirror() {
   cd_check "$working_mirror_dir" 1
 
+  # Pages to clean
+  if [ "$wayback_url" = "yes" ]; then
+    clean_dir="$working_mirror_dir/$url_path_dir"
+  else
+    clean_dir="$working_mirror_dir"
+  fi
+  webpages_clean=()
+  while IFS= read -r line; do webpages_clean+=("$line"); done <<<"$(for file_ext in "${html_file_exts[@]}"; do find "$clean_dir" -type f \( -name "$file_ext" -o -name "$file_ext"\?\* -o -name "$file_ext"@\* \) "${asset_exclude_dirs[@]}" -print; done)"
+    
+  # Remove all characters preceding <!DOCTYPE> or <html>, as appropriate
+  if [ "$clean_before_doctype" = "yes" ]; then
+    echolog "Delete all characters before document declaration ... " "1"
+    for opt in "${webpages_clean[@]}"; do
+      tmp_file="$opt.tmp"
+      # if file contains DOCTYPE declaration of <html> tag then remove everything that preceeds the first match
+      doc_pattern='<html|<!DOCTYPE'
+      if grep -E "$doc_pattern" "$opt" > /dev/null; then
+        awk -v var="$doc_pattern" '$0 ~ var {f=1;print;next} f' "$opt" > "$tmp_file" && mv "$tmp_file" "$opt"
+        confirm_continue
+      fi
+    done
+  fi
+  
   # Clean JavaScript embeds, as appropriate    
   if [ "$clean_javascript_embeds" != "no" ]; then
     if [ "$clean_javascript_embeds" = "all" ]; then
@@ -2353,13 +2376,6 @@ clean_mirror() {
       echolog "Delete JavaScript code for analytics embeds ... " "1"
       IFS="," read -ra clean_domains_array <<< "$analytics_domains"
     fi
-    if [ "$wayback_url" = "yes" ]; then
-      clean_dir="$working_mirror_dir/$url_path_dir"
-    else
-      clean_dir="$working_mirror_dir"
-    fi
-    webpages_clean=()
-    while IFS= read -r line; do webpages_clean+=("$line"); done <<<"$(for file_ext in "${html_file_exts[@]}"; do find "$clean_dir" -type f \( -name "$file_ext" -o -name "$file_ext"\?\* -o -name "$file_ext"@\* \) "${asset_exclude_dirs[@]}" -print; done)"
     for opt in "${webpages_clean[@]}"; do
       tmp_file="$opt.tmp"
       for clean_domain in "${clean_domains_array[@]}"; do
