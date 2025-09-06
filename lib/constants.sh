@@ -22,7 +22,7 @@
 ################################################
 # MakeStaticSite info
 ################################################
-version=0.31.10-beta1
+version=0.31.10
 version_date='6 September 2025'
 version_header="MakeStaticSite version $version, released on $version_date."
 mss_license="GNU Affero General Public License version 3"
@@ -434,7 +434,7 @@ ink_info=lime
 ################################################
 # Cleanup settings
 ################################################
-clean_before_doctype=yes         # Remove everything preceding <!DOCTYPE> or <html> tags (y/n)?
+clean_before_doctype=no         # Remove everything preceding <!DOCTYPE> or <html> tags (y/n)?
                                 #  - 'yes' to remove
                                 #  - 'no' (or any other value) to keep as is
 clean_javascript_embeds=no      # Remove external functionality embedded in <script> tags?

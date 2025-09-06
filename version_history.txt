@@ -19,6 +19,28 @@
 ##########################################################################
 
 
+0.31.10 (released on 2025-09-06)
+     * Output refinements and tidying. *
+      [lib/constants.sh]
+       Added constant clean_before_doctype for removing anything before a
+       documentation type declaration and constants clean_javascript_embeds,
+       analytics_domains, non_analytics_domains, clean_all_domainsfor for
+       removing JavaScript functionality embedded from external domains.
+       Modified web_source_extensions to include static_webpage_file_extensions
+       rather than an ad hoc list.
+      [lib/mod_wayback.sh]
+       consolidate_assets(): Bug fix for Wayback link conversions: replaced
+       url_path_original with url_path_original_dir in sed expression.
+       process_asset_anchors(): Modified the conversion of Wayback paths
+       without file extensions to check for existence of replacement path and
+       take account of Wget behaviour for directories lacking trailing slash,
+       with corresponding sed expressions. Matches logged.
+      [makestaticsite.sh]
+       clean_mirror(): Added routines - to remove all characters preceding
+       <!DOCTYPE> or <html> depending on value of clean_before_doctype; and to
+       remove JavaScript embeds depending on value of clean_javascript_embeds,
+       with the scope set by values of analytics_domains or clean_all_domains.
+
 0.31.9 (released on 2025-07-07)
      * Feature enhancements and refinements. *
       [lib/constants.sh]
