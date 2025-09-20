@@ -22,8 +22,8 @@
 ################################################
 # MakeStaticSite info
 ################################################
-version=0.31.10
-version_date='6 September 2025'
+version=0.31.11-alpha1
+version_date='20 September 2025'
 version_header="MakeStaticSite version $version, released on $version_date."
 mss_license="GNU Affero General Public License version 3"
 mss_site="https://makestaticsite.sh"
@@ -186,6 +186,8 @@ url_grep_search_pattern="[^\\\"'<) ]" # URL terminating characters in grep searc
 url_max_chars=2048              # Maximum number of characters permitted in a URL (for use in processing)
 static_webpage_file_extensions="html,htm,xhtm,xhtml" # A list of common static web page file extensions. (Note that any file extension in this document assume a preceding dot '.')
 webpage_file_extensions="$static_webpage_file_extensions,dhtml,cgi,php,php2,php4,phtml,asp,aspx,jsp,cfm,cfml" # A list of common web page file extensions, including those for server-side scripts. Not exhaustive.
+mime_types_path=/etc/mime.types # Path to file listing MIME content types (as used by Apache, etc.) 
+media_file_stem=webasset        # File stem for multimedia assets (with extensions determined by file's MIME type).
 
 # Specification of assets eligible for downloading by Wget in phase 3.
 web_source_extensions="$static_webpage_file_extensions,xml,txt,css" # list of web document file extensions intended for assets search
