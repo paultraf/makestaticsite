@@ -217,6 +217,31 @@ which_version() {
   "$1" --version | grep "$2" | grep -o -m 1 -- "[0-9]\{1,2\}\.[0-9]\{1,2\}\(\.[0-9]\{1,2\}\)*[ \-]" | head -1 | tr -d '[:space:]-'
 }
 
+# Generates the file extension for a given file
+# based on the MIME type
+# Expects one parameter: file path
+get_mime_type_extension() {
+  if [ -z ${1+x} ]; then
+    echolog "$msg_error: Invalid call to get_mime_type_extension() function - a parameter (file path) is required."
+    return 1
+  fi
+  if [ ! -f "$1" ]; then
+    echolog "$msg_error: No file exists at $1."
+    return 1
+  fi
+  if [ ! -f "$mime_types_path" ]; then
+    echolog "$msg_error: No directory of MIME types found at $mime_types_path. Please check the setting for mime_types_path in lib/constants.sh"
+    return 1
+  fi 
+  mime_type="$(file -b --mime-type "$1")"
+  ext="$(grep "$mime_type" "$mime_types_path" | awk '{print $2}')"
+  if [ "$ext" = "" ]; then
+    echolog "$msg_error: No file extension specified in $mime_types_path for MIME type $mime_type."
+    return 1
+  fi
+  printf "%s" "$ext"
+}
+
 # Optional parameters:
 #  - default setting (y/n) for 'yes' or 'no'
 #  - message to display on not continuing
