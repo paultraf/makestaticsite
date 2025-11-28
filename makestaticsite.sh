@@ -104,7 +104,7 @@ read_config() {
     case "$option" in
       f)
         batch_file="$OPTARG"
-        [ -f "$batch_file" ] || { printf "%s\n" "$msg_error: Sorry, unable to read from the batch file, $batch_file; it doesn't appear to exist.  Please try again."; exit; }
+        [ -f "$batch_file" ] || { printf "%s\n" "$msg_error: Sorry, unable to read from the batch file, $batch_file; it doesn't appear to exist.  Please try again."; exit 1; }
         mss_batch; exit
         ;;
       u)
@@ -163,7 +163,7 @@ read_config() {
       : )
         echo "Invalid option: $OPTARG requires an argument" 1>&2
         echo "Please try again."
-        exit
+        exit 1
         ;;
       \? )
         echo "Invalid option: $OPTARG" 1>&2
@@ -178,7 +178,7 @@ read_config() {
         echo " -v                 Display MakeStaticSite version number."
         echo " -h                 Display help."
         echo "Please try again."
-        exit
+        exit 1
       ;;
     esac
   done
@@ -285,7 +285,7 @@ initialise_mirror_archive_dir() {
     else
       msg_compare=" (and also why $working_mirror_dir doesn't exist)"
     fi
-    echolog "$msg_error: Directory $working_mirror_dir/$url_path_dir not found. Please check $myconfig.cfg$msg_compare, especially that the value of url ($url) is compatible. If there was originally a URL redirect involved, then url should be assigned that value.  Aborting"; exit 
+    echolog "$msg_error: Directory $working_mirror_dir/$url_path_dir not found. Please check $myconfig.cfg$msg_compare, especially that the value of url ($url) is compatible. If there was originally a URL redirect involved, then url should be assigned that value.  Aborting"; exit 1
   fi
   
   zip_archive="$mirror_archive_dir.zip"
@@ -363,12 +363,12 @@ initialise_variables() {
   session_data+=("Run on|$timestamp_human")
 
   # Read phase details
-  validate_range 0 "$max_phase_num" "$phase" || { echolog "Sorry, the phase number is out of range (it should be between 0 and $max_phase_num).  Please try again."; exit; }
+  validate_range 0 "$max_phase_num" "$phase" || { echolog "Sorry, the phase number is out of range (it should be between 0 and $max_phase_num).  Please try again."; exit 1; }
 
   # Read phase details
-  validate_range 1 "$max_phase_num" "$end_phase" || { echolog "Sorry, the phase number for exiting the program is out of range (it should be between 1 and $max_phase_num).  Please try again."; exit; }
+  validate_range 1 "$max_phase_num" "$end_phase" || { echolog "Sorry, the phase number for exiting the program is out of range (it should be between 1 and $max_phase_num).  Please try again."; exit 1; }
 
-  ((phase>end_phase)) && { printf "%s: The (start) phase number cannot be greater than the end phase number.\nPlease rerun the program." "$msg_error"; exit; }
+  ((phase>end_phase)) && { printf "%s: The (start) phase number cannot be greater than the end phase number.\nPlease rerun the program." "$msg_error"; exit 1; }
 
   # If the phase is nonzero, then check for -m option
   if ((phase > minvalue)) && [ "$mirror_id_flag" = "off" ]; then
@@ -393,7 +393,7 @@ initialise_variables() {
        sh -c "ls -d */ | sed 's/\///'"
        echolog "Please choose one from the list and rerun with -m option."
        cd_check "$script_dir" 1
-       exit
+       exit 1
      else
        echolog "Found mirror archive at $mirror_dir/$mirror_archive_dir"
      fi
@@ -434,8 +434,8 @@ initialise_variables() {
 
   # Check system requirements for cURL, Wget and SSL
   msg_checking="Checking your system for Wget and other essential components ... "
-  cmd_check "curl" || { printf "%s%s: Unable to find binary: curl ("'$'"PATH contains %s).\nThis command is essential for checking connectivity. It may be downloaded from https://curl.se/.\nAborting.\n" "$msg_checking" "$msg_error" "$PATH"; exit; }
-  cmd_check "$wget_cmd" "1" || { printf "%s: Unable to carry out a snapshot\nPlease review the value of the wget_cmd option.\nAborting.\n" "$msg_error"; exit; }
+  cmd_check "curl" || { printf "%s%s: Unable to find binary: curl ("'$'"PATH contains %s).\nThis command is essential for checking connectivity. It may be downloaded from https://curl.se/.\nAborting.\n" "$msg_checking" "$msg_error" "$PATH"; exit 1; }
+  cmd_check "$wget_cmd" "1" || { printf "%s: Unable to carry out a snapshot\nPlease review the value of the wget_cmd option.\nAborting.\n" "$msg_error"; exit 1; }
   echolog "OK" "1"
   echo "$msg_checking"
   wget_cmd_version="$(which_version "$wget_cmd" "GNU Wget")"
@@ -479,7 +479,7 @@ initialise_variables() {
   invalid_http_reason= # initialise reason for failure (initially none)
   validate_url_range "$url" "url"
   if [ "$invalid_http_reason" != "" ]; then
-    echolog "$invalid_http_reason Aborting."; exit
+    echolog "$invalid_http_reason Aborting."; exit 1
   fi
 
   # Wayback Machine support
@@ -558,7 +558,7 @@ initialise_variables() {
   # For backwards-compatibility check whether URL defined instead in url_base
   if [ "$url_hostname" = "example.com" ]; then
     url="$(config_get url_base "$myconfig")"
-    if [ "$url" = "" ]; then { printf "\n%s: Unable to determine a URL. Please check the arguments you have supplied at the command line and then the value of url in %s.cfg (if it's example.com, then it needs to be changed!)\nAborting.\n" "$msg_error" "$myconfig"; exit; }
+    if [ "$url" = "" ]; then { printf "\n%s: Unable to determine a URL. Please check the arguments you have supplied at the command line and then the value of url in %s.cfg (if it's example.com, then it needs to be changed!)\nAborting.\n" "$msg_error" "$myconfig"; exit 1; }
     fi
   fi
 
@@ -856,7 +856,7 @@ wget_error_codes() {
     "1")
       echolog "Wget $msg_error code 1: Generic error.  Check the command line options:"
       wget_error_check 1
-      exit
+      exit 1
       ;;
   esac
 }
@@ -868,13 +868,13 @@ wget_process_credentials() {
   credentials_path="$credentials_home/$credentials_insert_path"
   if [ "$credentials_storage_mode" = "encrypt" ]; then
     if [ -z ${pass_check+x} ]; then
-      cmd_check "$credentials_manage_cmd" || { printf "\n%s: Unable to find binary: $credentials_manage_cmd ("'$'"PATH contains %s).\nThis command is essential for working with encrypted credentials.  It may be downloaded from %s.  Alternatively,  modify the value of credentials_storage_mode in constants.sh to 'plain', and re-run the setup, but with less security. \nAborting.\n" "$msg_error" "$PATH" "$credentials_manage_cmd_url"; exit; }
+      cmd_check "$credentials_manage_cmd" || { printf "\n%s: Unable to find binary: $credentials_manage_cmd ("'$'"PATH contains %s).\nThis command is essential for working with encrypted credentials.  It may be downloaded from %s.  Alternatively,  modify the value of credentials_storage_mode in constants.sh to 'plain', and re-run the setup, but with less security. \nAborting.\n" "$msg_error" "$PATH" "$credentials_manage_cmd_url"; exit 1; }
       pass_check=1
     fi
     if [ ! -f "$credentials_path.$credentials_extension" ]; then
       input_encrypted_password "HTTP authentication: a password for $wget_http_user is required to access the web server"
     fi
-    wget_http_password=$(pass show "$credentials_insert_path" 2>/dev/null) || { echolog "$msg_error: Unable to retrieve the password from the credentials store at $credentials_insert_path. Aborting."; exit; }
+    wget_http_password=$(pass show "$credentials_insert_path" 2>/dev/null) || { echolog "$msg_error: Unable to retrieve the password from the credentials store at $credentials_insert_path. Aborting."; exit 1; }
   elif [ "$credentials_storage_mode" = "plain" ]; then
     if [ ! -f "$credentials_path" ]; then
       # Get user input for credentials (expected to be requested during setup; basically copy that code here)
@@ -986,7 +986,7 @@ wget_mirror() {
     msg_error="Unable to connect to $url_base.  Please check: the spelling of the domain, the web server status (is it running?) and access restrictions, particularly if any http authentication credentials are required. "
     msg_error+="Aborting."
     echolog "$msg_error"
-    exit
+    exit 1
   fi
 
   # Input file for Wget (generated)
@@ -1067,7 +1067,7 @@ wget_mirror() {
       if [ ! -f "$credentials_path.$credentials_extension" ]; then
         input_encrypted_password "The website login requires a password for $site_user"
       fi
-      site_password=$(pass show "$credentials_insert_path" 2>/dev/null) || { echolog "$msg_error: $credentials_insert_path is not in the password store. Aborting."; exit; }
+      site_password=$(pass show "$credentials_insert_path" 2>/dev/null) || { echolog "$msg_error: $credentials_insert_path is not in the password store. Aborting."; exit 1; }
     elif [ "$credentials_storage_mode" = "plain" ]; then
       if [ ! -f "$credentials_path" ]; then
         # Get login password (usually entered during setup)
@@ -1086,14 +1086,14 @@ wget_mirror() {
     elif [ "$credentials_storage_mode" = "config" ]; then
       site_password="$(config_get site_password "$myconfig")"
     else
-      printf "\n%s: A login is required, but unable to determine the username for Wget.\nAborting.\n" "$msg_error"; exit;
+      printf "\n%s: A login is required, but unable to determine the username for Wget.\nAborting.\n" "$msg_error"; exit 1;
     fi
 
     # Generate a temporary file with credentials
     wget_post+="-${myconfig}_${timestamp_start}.txt"
     post_tmppath="$tmp_dir_path/$wget_post"; touchmod "$post_tmppath"
 
-    printf "%s=%s&%s=%s&testcookie=1" "$login_user_field" "$site_user" "$login_pwd_field" "$site_password" > "$post_tmppath" || { printf "\n%s: Unable to prepare credentials for Wget.\nAborting.\n" "$msg_error"; exit; }
+    printf "%s=%s&%s=%s&testcookie=1" "$login_user_field" "$site_user" "$login_pwd_field" "$site_password" > "$post_tmppath" || { printf "\n%s: Unable to prepare credentials for Wget.\nAborting.\n" "$msg_error"; exit 1; }
 
     # Now log in with supplied credentials
     wget_credentials=(--post-file="$post_tmppath")
@@ -1190,7 +1190,7 @@ mirror_site() {
       echolog "Running Wayback Machine Downloader on $url ... "
       if [ "$host_wayback_machine" != "web.archive.org" ]; then
         echolog "$msg_error: The Wayback Machine Downloader only supports web.archive.org.  You might be able to retrieve some files by setting wayback_cli=no in constants.sh (to treat like any other site) and then re-running, though file retrieval is currently limited to the specified Wayback Machine timestamp. Aborting."
-        exit
+        exit 1
       else
         wmd_args=("$url")
         if [ "$wayback_date_from" != "" ]; then
@@ -1201,7 +1201,7 @@ mirror_site() {
       fi
     else
       echolog "$msg_error: Wayback Machine Downloader not found (wayback_machine_downloader_cmd is set to $wayback_machine_downloader_cmd) - please check that it is installed according to instructions at $wayback_machine_downloader_url. Aborting."
-      exit
+      exit 1
     fi
   else
     wget_mirror
@@ -1964,7 +1964,7 @@ process_assets() {
           asset_move="$mirror_extra_dir to $mirror_imports_directory/"
           # Move only if mirror_imports_directory is not a subdirectory of mirror_extra_dir
           if [[ ! $mirror_imports_directory/ = $mirror_extra_dir/* ]]; then
-            mv "$mirror_extra_dir" "$mirror_imports_directory/" || { echolog "$msg_error: Unable to move $asset_move."; exit; }
+            mv "$mirror_extra_dir" "$mirror_imports_directory/" || { echolog "$msg_error: Unable to move $asset_move."; exit 1; }
             echolog "Moved $asset_move." "1"
           fi
         fi
@@ -2083,7 +2083,7 @@ process_assets() {
           fi
           # Move only if mirror_assets_directory/$extra_dir_stem is not a subdirectory of mv_dir
           if [[ ! $mirror_assets_directory/$extra_dir_stem = $mv_dir/* ]]; then
-            mv "$mv_dir" "$mirror_assets_directory/$extra_dir_stem" || { echolog "$msg_error: Unable to move $asset_move."; exit; }
+            mv "$mv_dir" "$mirror_assets_directory/$extra_dir_stem" || { echolog "$msg_error: Unable to move $asset_move."; exit 1; }
             echolog "Moved directory: $asset_move." "1"
           fi
         fi
@@ -2612,7 +2612,7 @@ clean_mirror() {
         echolog "$msg_warning: Unable to rename the working mirror directory to $working_mirror_dir."
       fi
     else
-      echolog "$msg_error: Expected either a $hostname/ or $hostname_original/ directory inside $mirror_dir/$mirror_archive_dir, but neither found. Aborting."; exit
+      echolog "$msg_error: Expected either a $hostname/ or $hostname_original/ directory inside $mirror_dir/$mirror_archive_dir, but neither found. Aborting."; exit 1
     fi
   fi
 
@@ -2887,7 +2887,7 @@ prep_rsync() {
     echolog "Use of rsync aborted."
     echolog "Static archive created, but not deployed remotely using rsync."
     echolog "$msg_signoff"
-    exit
+    exit 1
   else
     dest=$deploy_user'@'$deploy_host':'$deploy_path'/'
     echolog "Sync to remote server"
@@ -2923,7 +2923,7 @@ deploy() {
     fi
   fi
 
-  cmd_check "rsync" "1" || { echolog "$msg_error: the rsync command is not available."$'\n'"Check that it is installed and is within PATH."$'\n'"Aborting."; exit; }
+  cmd_check "rsync" "1" || { echolog "$msg_error: the rsync command is not available."$'\n'"Check that it is installed and is within PATH."$'\n'"Aborting."; exit 1; }
 
   src="$working_mirror_dir"
   comment_status=0   # Host entry commented out? (0 for no, 1 for yes)

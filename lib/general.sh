@@ -234,7 +234,7 @@ get_mime_type_extension() {
     return 1
   fi 
   mime_type="$(file -b --mime-type "$1")"
-  ext="$(grep "$mime_type" "$mime_types_path" | awk '{print $2}')"
+  ext="$(grep "$mime_type" "$mime_types_path" | awk '{print $2}')" # Assume default separator is one or more whitespace characters
   if [ "$ext" = "" ]; then
     echolog "$msg_error: No file extension specified in $mime_types_path for MIME type $mime_type."
     return 1
@@ -312,7 +312,7 @@ cd_check() {
     msg_exit+=" "
     echolog "$msg_exit";
     if (( exit_status != 0 )); then
-      exit
+      exit 1
     else
       return 1
     fi
@@ -384,7 +384,7 @@ wget_error_check() {
   if [ "$wget_error_level" -le "$1" ]; then
     confirm_continue
   else
-    echolog "Aborting due to wget_error_level setting in constants.sh. To allow continuation, please set its value to $1 or less and rerun."; exit
+    echolog "Aborting due to wget_error_level setting in constants.sh. To allow continuation, please set its value to $1 or less and rerun."; exit 1
   fi
 }
 
@@ -417,7 +417,7 @@ wget_level_comment() {
 # Add Wget WARC options  
 wget_warc_entry() {
   if [ -z ${1+x} ]; then
-    echolog "$msg_error: missing a parameter required in wget_warc_entry().  Aborting"; exit
+    echolog "$msg_error: missing a parameter required in wget_warc_entry().  Aborting"; exit 1
   fi
   case "$1" in
     "option")
@@ -529,7 +529,7 @@ print_to_file() {
   ((last_idx=${#a[@]} - 1))
   local output_file=${a[last_idx]}
   unset 'a[last_idx]'
-  touch "$output_file" || { echolog "ERROR: Unable to write to file at $output_file. Please check the directory and file permissions."; exit; }
+  touch "$output_file" || { echolog "ERROR: Unable to write to file at $output_file. Please check the directory and file permissions."; exit 1; }
 #  printf "%s\n" "${a[@]}" | sort -u > "$output_file"
   printf "%s\n" "${a[@]}" > "$output_file"
 }
@@ -577,7 +577,7 @@ comment_uncomment() {
     fi
   fi
 
-  < "$edited_file" $sudo_tee "$myfile" > /dev/null || { print "Error: unable to copy $edited_file to $myfile.\nPlease check that file permissions.  Aborting"; exit; }
+  < "$edited_file" $sudo_tee "$myfile" > /dev/null || { print "Error: unable to copy $edited_file to $myfile.\nPlease check that file permissions.  Aborting"; exit 1; }
   #  backup_file="$backup_dir/${file_name}.backup"
   toggle_flag=$(( 1 - toggle_flag ))
   comment_status=$(( 1 - comment_status ))
@@ -621,7 +621,7 @@ hosts_toggle() {
       if [ "$confirm" == "y" ] || [ "$confirm" == "Y" ]; then
         echolog "OK. Stopping here."; exit
       elif [ "$site_path" = "$deploy_path" ]; then
-        printf "WARNING: The paths appear to be the same - would mean overwriting the source folder with the static mirror!\nAborting."; exit
+        printf "WARNING: The paths appear to be the same - would mean overwriting the source folder with the static mirror!\nAborting."; exit 1
       else
         printf "The paths appear to be distinct, so deployment should not overwrite\nContinuing without commenting out the entry."
       fi

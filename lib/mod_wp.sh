@@ -31,7 +31,7 @@
 
 # Check whether WP-CLI is installed and whether to run locally
 wp_cli_check() {
-  command -v wp cli &> /dev/null || { printf "ERROR.  WP-CLI is not installed.\nPlease follow the installation instructions at %s and then try again.\n" "$wp_cli_install"; exit; }
+  command -v wp cli &> /dev/null || { printf "ERROR.  WP-CLI is not installed.\nPlease follow the installation instructions at %s and then try again.\n" "$wp_cli_install"; exit 1; }
   wp_cli_msg="WP-CLI is installed"
   [ "${wp_cli_remote}" != "yes" ] && wp_cli_msg+=" and will be run locally"
   echolog "$wp_cli_msg"
@@ -49,7 +49,7 @@ wp_option_set() {
 # Streamline the WP install ahead of being crawled by wget
 wp_clean() {
   # Check that there is a WP site at the relevant WP directory (not http)
-  wp core is-installed "$wp_location" || { printf "ERROR: No WordPress site found at %s\nAborting." "$wp_location"; exit; }
+  wp core is-installed "$wp_location" || { printf "ERROR: No WordPress site found at %s\nAborting." "$wp_location"; exit 1; }
   [ "$source_protocol" = '' ] && echolog "Found WordPress site at $site_path" || echolog "Found WordPress site at $wp_location"
 
   # Ensure that no-follow option is disabled
@@ -83,7 +83,7 @@ wp_clean() {
         echolog "including file permissions for $USER."
         echolog "Alternatively, install and activate the plugin through the dashboard."
         echolog "Aborting."
-        exit
+        exit 1
       fi
     else
       echolog "Perform plugin is already installed." "1"
@@ -165,7 +165,7 @@ wp_install_search() {
 # main WordPress preparation loop
 wp_prep() {
   # Check that we have the necessary command line interfaces and versions
-  cmd_check "php" "1" || { printf "ERROR.  A PHP command line interpreter (CLI) is needed to support the use of WP-CLI, but could not be found.\nPlease check that you have PHP installed (at least version %s) and that it is available in your PATH.  An installation guide for various platforms is available from %s.\nAborting.\n" "$php_version_atleast" "$php_tutorial_install"; exit; }
+  cmd_check "php" "1" || { printf "ERROR.  A PHP command line interpreter (CLI) is needed to support the use of WP-CLI, but could not be found.\nPlease check that you have PHP installed (at least version %s) and that it is available in your PATH.  An installation guide for various platforms is available from %s.\nAborting.\n" "$php_version_atleast" "$php_tutorial_install"; exit 1; }
   php_cli_version="$(which_version "php" "PHP ")" 
   version_check "$php_cli_version" "$php_version_atleast" || { echo "$msg_checking";  printf "WARNING. The version of %s is %s, which is old, so some functionality may be lost.  Version %s or later is recommended.\n" "PHP" "$php_cli_version" "$php_version_atleast";}
   wp_cli_check  

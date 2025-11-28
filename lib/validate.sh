@@ -227,7 +227,7 @@ validate_http() {
     echolog "$msg_error: File not found (HTTP response code $status). The server was unable to find any resource at this URL."
     return 1
   elif [ "$run_unattended" = "yes" ]; then
-    echolog "$msg_error: failed to connect; the HTTP response code was $status (exit code: $?). Aborting.  Please check the URL and your network connectivity."; exit
+    echolog "$msg_error: failed to connect; the HTTP response code was $status (exit code: $?). Aborting.  Please check the URL and your network connectivity."; exit 1
   else
     echolog -n "$msg_error: Unable to connect to $1. The response code was $status (exit code: $?). "
     ! validate_internet && echolog -n "There doesn't appear to be any Internet connectivity. Is the server up and running? Perhaps you are offline? "
@@ -309,7 +309,7 @@ validate_input() {
       validate_url_range "$input_value" "input_value"
       if [ "$invalid_http_reason" != "" ]; then
         if [ "$run_unattended" = "yes" ]; then
-          echo "$invalid_http_reason Aborting."; exit
+          echo "$invalid_http_reason Aborting."; exit 1
         else
           echo "$invalid_http_reason"; continue
         fi

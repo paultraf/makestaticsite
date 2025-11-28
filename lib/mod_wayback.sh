@@ -64,7 +64,7 @@ validate_wayback_dates() {
     else
       error_notice="The 'to' date, $wayback_date_to, in the range $wayback_date_from_to, is invalid. "
     fi
-    echolog $'\n'"$msg_error: $error_notice It needs to be a string of digits in the format: YYYYMMDDhhmmss (substrings starting with YYYY are allowed). Aborting."; exit
+    echolog $'\n'"$msg_error: $error_notice It needs to be a string of digits in the format: YYYYMMDDhhmmss (substrings starting with YYYY are allowed). Aborting."; exit 1
   fi
 
   if ! validate_timestamp "$wayback_date_from"; then
@@ -73,17 +73,17 @@ validate_wayback_dates() {
     else
       error_notice="The 'from' date, $wayback_date_from, in the range $wayback_date_from_to, is invalid."
     fi
-    echolog $'\n'"$msg_error: $error_notice It needs to be a string of digits in the format: YYYYMMDDhhmmss (substrings starting with YYYY are allowed). Aborting."; exit
+    echolog $'\n'"$msg_error: $error_notice It needs to be a string of digits in the format: YYYYMMDDhhmmss (substrings starting with YYYY are allowed). Aborting."; exit 1
   fi
 
   if [ "$wayback_timestamp_policy" = "range" ] && (( wayback_date_from_earliest > wayback_date_from )); then
-    echolog $'\n'"$msg_error: the 'from' date specified by wayback_date_from_earliest, $wayback_date_from_earliest, in constants.sh, should not be later than the 'from' date, $wayback_date_from, in the URL range entered!  Aborting."; exit
+    echolog $'\n'"$msg_error: the 'from' date specified by wayback_date_from_earliest, $wayback_date_from_earliest, in constants.sh, should not be later than the 'from' date, $wayback_date_from, in the URL range entered!  Aborting."; exit 1
   fi
 
   if [ "$wayback_date_to" != "" ]; then
     (( wayback_date_to_latest > wayback_date_to )) && wayback_date_to_latest="$wayback_date_to"
     if (( wayback_date_from > wayback_date_to )); then
-      echolog $'\n'"$msg_error: the 'from' date, $wayback_date_from, should not be later than the 'to' date, $wayback_date_to!  Aborting."; exit
+      echolog $'\n'"$msg_error: the 'from' date, $wayback_date_from, should not be later than the 'to' date, $wayback_date_to!  Aborting."; exit 1
     fi
   fi
 }
@@ -96,7 +96,7 @@ process_wayback_url() {
   if [ -z ${1+x} ]; then
     echolog "$msg_error: URL not supplied. Unable to check Wayback dates."
     echolog "Aborting."
-    exit
+    exit 1
   else
     local url_stem_dates=${1%http*}
     local url_slashes=${url_stem_dates//[!\/]};
@@ -123,7 +123,7 @@ process_wayback_url() {
       printf "%s: The extracted URL, %s, is considered invalid.\n" "$msg_error" "$url_original"
       printf "It is recommended that you modify the value of 'url' and re-run\n."
       echolog "Aborting."
-      exit
+      exit 1
     fi
     hostname_original=$(printf "%s\n" "$url_original" | awk -F/ '{print $3}' | awk -F: '{print $1}')
   fi
@@ -172,7 +172,7 @@ initialise_wayback() {
       echolog "$msg_warning: $msg_wayback_notice  If you proceed, the resulting mirror may likewise contain content captured on a date outside this range."
       confirm_continue
     else
-      echolog "$msg_error: $msg_wayback_notice  Please review.  Aborting"; exit
+      echolog "$msg_error: $msg_wayback_notice  Please review.  Aborting"; exit 1
     fi
   fi
   if [ "$wayback_assets_mode" = "original" ]; then
@@ -191,7 +191,7 @@ initialise_wayback() {
     if (( phase < 4 )) && ! validate_internet; then
       echolog " "; echolog "$msg_error: Unable to establish Internet access. Please check your network connectivity."
       echolog "Aborting."
-      exit
+      exit 1
     fi
     use_wayback_cli=yes
     wget_extra_urls=no
