@@ -644,6 +644,7 @@ initialise_variables() {
   if (( phase < 3 )); then
     echo > "$input_file_extra_all" # Initialise as an empty file
   fi
+  wget_core_options=("${wget_mirror_options[@]}" "${wget_further_options[@]}")
   wget_extra_options_tmp=$(wget_canonical_options "$(config_get wget_extra_options "$myconfig")")
 
   # If URL contains one or more directories, then ensure --no-parent option, subject to option settings
@@ -974,6 +975,12 @@ wget_process_credentials() {
 wget_mirror() {
   echolog "Will capture snapshot from $url using $wget_cmd."
 
+  if [ "$wget_reject_regex" != "" ]; then
+    wget_rejex_option=(--reject-regex "$wget_reject_regex")
+  else
+    wget_rejex_option=()
+  fi
+
   # Test whether source host is available
   wget_test_options=(-q "$wget_ssl")
   if [ "$wget_user_agent" != "" ] && [ "$wget_user_agent" != "wget" ]; then
@@ -1138,7 +1145,7 @@ wget_mirror() {
 
   # Main run of Wget #
   printf "%s\n" "$msg_mirror_start"
-  echolog "Running Wget with options:" "${wget_core_options[@]}" "${wget_extra_options_print[@]}" "${wget_options[@]}"
+  echolog "Running Wget with options:" "${wget_core_options[@]}" "${wget_rejex_option[@]}" "${wget_extra_options_print[@]}" "${wget_options[@]}"
 
   # Remove previous zip upload
   zip_archive_old="$working_mirror_dir/$zip_download_folder/$zip_filename"
@@ -1168,7 +1175,8 @@ wget_mirror() {
   if [ "$warc_output" = "yes" ]; then
     echolog "$msg_warning: The progress bars may display oddly, as dots and spaces. This is a known technical issue when supplying Wget with both the -q (quiet) option and WARC options."
   fi
-  $wget_cmd "${wget_core_options[@]}" "${wget_progress_indicator[@]}" "${wget_extra_options[@]}" "${wget_options[@]}"
+  $wget_cmd "${wget_core_options[@]}" "${wget_rejex_option[@]}" "${wget_progress_indicator[@]}" "${wget_extra_options[@]}" "${wget_options[@]}"
+
   wget_error_codes "$?"
   error_set -e
 }
@@ -1630,7 +1638,7 @@ wget_extra_urls() {
     xargs -a "$input_file_extra" -n 1 -P $wget_threads $wget_cmd "${wget_extra_core_options[@]}" "${wget_progress_indicator[@]}" "${wget_extra_options[@]}" "${wget_asset_options[@]}"
   else
     wget_asset_options+=(--input-file="$input_file_extra")
-    $wget_cmd "${wget_extra_core_options[@]}" "${wget_progress_indicator[@]}" "${wget_extra_options[@]}" "${wget_asset_options[@]}"
+    $wget_cmd "${wget_extra_core_options[@]}" "${wget_rejex_option[@]}" "${wget_progress_indicator[@]}" "${wget_extra_options[@]}" "${wget_asset_options[@]}"
   fi
   wget_error_codes "$?"
   error_set -e
