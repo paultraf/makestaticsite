@@ -3,7 +3,7 @@
 ##########################################################################
 #
 # MakeStaticSite --- a shell script to create and deploy static websites
-# Copyright 2022-2025 Paul Trafford <pt@ptworld.net>
+# Copyright 2022-2026 Paul Trafford <pt@ptworld.net>
 #
 # setup.sh - set up the config for MakeStaticSite
 # This file is part of MakeStaticSite.
