@@ -204,13 +204,6 @@ initialise_include_excludes() {
   for item in "${list[@]}"; do
     asset_exclude_dirs+=( -not -path "${working_mirror_dir}/$item/"\* ) # this needs to be a full path
   done
-
-  # Generate list of web pages that will be cleaned (various phases)
-  if [ "$wayback_url" = "yes" ]; then
-    clean_dir="$working_mirror_dir/$url_path_dir"
-  else
-    clean_dir="$working_mirror_dir"
-  fi
 }
 
 initialise_mirror_archive_dir() {
@@ -2387,8 +2380,17 @@ clean_mirror() {
   cd_check "$working_mirror_dir" 1
 
   webpages_clean=()
+  # Directory to clean
+  if [ "$wayback_url" = "yes" ]; then
+    clean_dir="$working_mirror_dir/$url_path_dir"
+  elif [ -d "$working_mirror_dir" ]; then
+    clean_dir="$working_mirror_dir"
+  else
+    clean_dir="$mirror_dir/$mirror_archive_dir"
+  fi
+
   while IFS= read -r line; do webpages_clean+=("$line"); done <<<"$(for file_ext in "${html_file_exts[@]}"; do find "$clean_dir" -type f \( -name "$file_ext" -o -name "$file_ext"\?\* -o -name "$file_ext"@\* \) "${asset_exclude_dirs[@]}" -print; done)"
-  
+
   # Remove all characters preceding <!DOCTYPE> or <html>, as appropriate
   if [ "$clean_before_doctype" = "yes" ]; then
     echolog "Delete all characters before document declaration ... " "1"
