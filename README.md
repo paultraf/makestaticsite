@@ -31,7 +31,7 @@ MakeStaticSite provides a convenient means to set up and manage the automated cr
 
 It delivers a version of the site that preserves content and look and feel, in a static format that is inherently fast and secure.  In this mode, MakeStaticSite is not intended as a strict archival tool as the output is not an exact mirror &mdash; for example, it has its own canonical layout and modifies internal links accordingly; further files may be added; RSS feeds are saved and then renamed with `.xml` extensions, and so on.
 
-Nevertheless, a couple of more recent developments have been concerned with archival. With the first, MakeStaticSite has been extended to provide native support for the Wayback Machine, focused mainly on the [Internet Archive Service](https://web.archive.org/).  Secondly, basic support has been added for generating [WARC (Web ARChive)](https://iipc.github.io/warc-specifications/) files (leveraging [Wget's support](https://www.gnu.org/software/wget/manual/wget.html#index-WARC)) with an option to concatenate multiple archives (one for each run of Wget) as a single compressed `.warc.gz` file.  The result can be played back with tools such as [ReplayWeb.page](https://replayweb.page/).
+Even so, some archival functions have been added, with native support for the Wayback Machine, focused mainly on the [Internet Archive service](https://web.archive.org/).  It can also generate [WARC (Web ARChive)](https://iipc.github.io/warc-specifications/) files (leveraging [Wget's support](https://www.gnu.org/software/wget/manual/wget.html#index-WARC)) with an option to concatenate multiple archives (one for each run of Wget) as a single compressed `.warc.gz` file.  The result can be played back with tools such as [ReplayWeb.page](https://replayweb.page/).
 
 The goal is for anyone who has a little familiarity with the command line to be able to use the tool to assist in maintaining their sites.  Similarly, a scripting-based approach has been chosen to make the code widely accessible for developers to further fine-tune;
 a number of refinements are already included that augment the standard use of [Wget](https://www.gnu.org/software/wget/), such as support for arbitrary attributes and, in the case of WordPress, the use of [WP-CLI](https://wp-cli.org/) to prepare sites beforehand.
@@ -59,7 +59,7 @@ Please note that the system is not designed for [Wget2](https://gitlab.com/gnuwg
 * Deep search for orphaned Web assets, later retrieved in further runs of Wget
 * Suitable for batch processes, allowing operations to be scaled up so that any or all of the sites are updated in one process.
 * Support for HTTP basic authentication and/or CMS login (experimental, only tested with WordPress)
-* Partial support for sites archived by the [Wayback Machine](https://web.archive.org/)
+* Partial support for sites archived by the [Wayback Machine](https://web.archive.org/), incrementally spanning as many snapshots as a crawl requires.
 * Basic support for generating WARC files (and also content indexes).
 * Runtime settings include verbosity (amount of information) for terminal output and logging to file
 * Option of a downloadable copy of the entire site (ZIP file) for offline use 
@@ -77,7 +77,7 @@ Please note that the system is not designed for [Wget2](https://gitlab.com/gnuwg
 * This is a _static_ HTML crawler that retrieves web content without running any JavaScript for client-side rendering, not a _dynamic_ crawler that can process the JavaScript on that page and then render it. Even so, the workflow architecture might support processing of web page outputs in this way.
 * It is not a good fit for sites that uses query strings extensively, as is the case for collections databases with a large inventory.  Whilst query strings are supported in the initial run of Wget, requests for URLs in the post-processing do not currently include query strings.
 * The script can only provide a snapshot of comments, discussions, surveys, etc. that are provided by the Website itself; the interactivity of such components is generally lost.  In this case, this kind of interactivity will need to be provided by third-parties, typically through the use of embedded JavaScript.
-* Performance: MakeStaticSite output is not instant.  It typically takes up to a few minutes to build a site, which, depending on usage scenario, may or may not be a significant duration.  Some acceleration is possible by running Wget threads in parallel (see the `wget_threads` option).
+* Performance: MakeStaticSite output is not instant.  It typically takes up to a few minutes to build a site, which, depending on usage scenario, may or may not be a significant duration. For Wayback Machine sites it is slower. Some acceleration is possible by running Wget threads in parallel (see the `wget_threads` option).
 * For WordPress sites, using WP-CLI remotely over ssh may not be fully supported by hosting providers running jailed shells for shared hosting. In that case, WordPress updates need to be done manually.
 
 ### Acknowledgements
@@ -122,6 +122,9 @@ Once extracted, to try it out for the first time, at the command line enter the 
 <pre>
 ./setup.sh -u <em>url</em>
 </pre>
+
+(where <em>url</em> can be a URL of a live site or a [Memento](https://mementoweb.org/guide/quick-intro/) of a Wayback Machine such as
+[https://web.archive.org/web/20250125054844/https://makestaticsite.sh/about/](https://web.archive.org/web/20250125054844/https://makestaticsite.sh/about/), a snapshot on the Internet Archive.)
 
 This will set up a configuration file with default options, which is then supplied to the main script `makestaticsite.sh` to generate the site. The terminal output will provide various information, including the location of the output. 
 
