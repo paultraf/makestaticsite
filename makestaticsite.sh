@@ -487,15 +487,29 @@ initialise_variables() {
     session_data+=("URL|$url")
   fi
 
-  if [ "$quota" = "on" ]; then
-    echolog -n "Running with a soft quota of "
-    if [ "$wayback_url" = "yes" ]; then
-      echolog -n "$quota_files_wayback" 
-    else
-      echolog -n "$quota_files" 
+  
+  [ "$quota" = "on" ] && { qs='s:'; es=(); } || { qs=' of'; es=(-n); } 
+  if [ "$quota" = "on" ] || [ "$quota" = "files" ] || [ "$quota" = "requests" ]; then
+    echolog "${es[@]}" "$msg_info: Running with soft quota$qs"
+    if [ "$quota" = "on" ] || [ "$quota" = "files" ]; then
+      if [ "$wayback_url" = "yes" ]; then
+        echolog -n " $quota_files_wayback" 
+      else
+        echolog -n " $quota_files" 
+      fi
+      echolog " files."    
     fi
-    echolog " files. (This setting may be changed in constants.sh)" 
+    if [ "$quota" = "on" ] || [ "$quota" = "requests" ]; then
+      if [ "$wayback_url" = "yes" ]; then
+        echolog -n " $quota_requests_wayback" 
+      else
+        echolog -n " $quota_requests" 
+      fi
+      echolog " Wget requests."
+    fi
+    echolog "(Settings may be changed in constants.sh)" 
   fi
+
   url_hostname=$(printf "%s\n" "$url" | awk -F/ '{print $3}' | awk -F: '{print $1}')
   url_path=$(printf "%s" "$url" | cut -d/ -f4- | sed s'|/$||')
   if [ "$url_path" = "" ]; then
@@ -1638,15 +1652,26 @@ wget_extra_urls() {
   error_set +e
   if (( wget_threads > 1 )); then
     xargs -a "$input_file_extra" -n 1 -P $wget_threads $wget_cmd "${wget_extra_core_options[@]}" "${wget_progress_indicator[@]}" "${wget_extra_options[@]}" "${wget_asset_options[@]}"
-  elif [ "$quota" = "on" ]; then
+  elif [ "$quota" = "on" ] || [ "$quota" = "files" ] || [ "$quota" = "requests" ]; then
     while read -r input_url; do
       $wget_cmd "${wget_extra_core_options[@]}" "${wget_rejex_option[@]}" "${wget_progress_indicator[@]}" "${wget_extra_options[@]}" "${wget_asset_options[@]}" "$input_url"
-      files_count=$(find "$working_mirror_dir" -type f -print | wc -l)
-      if { (( files_count > quota_files )) || { [ "$wayback_url" = "yes" ] && (( files_count > quota_files_wayback )); }; }; then
-        # File quota exceeded, so break out of loop
-        echolog "Have reached file quota, moving directly to postprocessing."
-        (( wget_extra_urls_count = wget_extra_urls_depth + 1 ))
-        break
+      if [ "$quota" = "on" ] || [ "$quota" = "files" ]; then
+        files_count=$(find "$working_mirror_dir" -type f -print | wc -l)
+        if { (( files_count > quota_files )) || { [ "$wayback_url" = "yes" ] && (( files_count > quota_files_wayback )); }; }; then
+          # File quota exceeded, so break out of loop
+          echolog "Have reached file quota, moving directly to postprocessing."
+          (( wget_extra_urls_count = wget_extra_urls_depth + 1 ))
+          break
+        fi
+      fi
+      if [ "$quota" = "on" ] || [ "$quota" = "requests" ]; then
+        (( requests_count++ ))
+        if { (( requests_count > quota_requests )) || { [ "$wayback_url" = "yes" ] && (( requests_count > quota_requests_wayback )); }; }; then
+          # Requests quota exceeded, so break out of loop
+          echolog "Have reached requests quota, moving directly to postprocessing."
+          (( wget_extra_urls_count = wget_extra_urls_depth + 1 ))
+          break
+        fi
       fi
     done < "$input_file_extra"
   else  
@@ -1704,9 +1729,10 @@ mirror_checks() {
 
 augment_mirror() {
   if [ "$wget_extra_urls" = "yes" ]; then
+    (( requests_count=0 )) # counter for number of calls to Wget 
     [ "$wget_url_candidates_optimisation" = "yes" ] && file_candidates0=()
     while (( wget_extra_urls_count <= wget_extra_urls_depth )); do
-      wget_extra_urls;
+      wget_extra_urls
     done
   fi
 

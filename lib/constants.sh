@@ -22,8 +22,8 @@
 ################################################
 # MakeStaticSite info
 ################################################
-version=0.31.12-alpha1
-version_date='7 February 2026'
+version=0.31.12-alpha2
+version_date='8 February 2026'
 version_header="MakeStaticSite version $version, released on $version_date."
 mss_license="GNU Affero General Public License version 3"
 mss_site="https://makestaticsite.sh"
@@ -454,11 +454,15 @@ web_print_runtime_data=no       # Append MakeStaticSite runtime session data sum
 ################################################
 # Other runtime settings
 ################################################
-quota=on                        # Runtime quota setting
-                                #  - 'on' to limit output (as below)
+quota=                          # Runtime quota setting for Wget runs in phase 3
+                                #  - 'on' to impose quotas for both types (as below)
+                                #  - 'files' to impose quotas for number of files only
+                                #  - 'requests' to impose quotas for number of Wget requests only
                                 #  - any other value to run unlimited
-quota_files=5000                # Files quota (for Phase 3) 
-quota_files_wayback=1000        # Wayback Machine files quota (for Phase 3)
+quota_files=5000                # Files quota
+quota_files_wayback=1000        # Wayback Machine files quota
+quota_requests=10000            # Wget requests quota 
+quota_requests_wayback=2000     # Wayback Machine Wget requests quota
 timezone=local                  # Time zone: local|utc|utclocal
 output_level=quiet              # stdout verbosity - silent|quiet|normal|verbose
 log_level=normal                # Log level: silent|quiet|normal|verbose
