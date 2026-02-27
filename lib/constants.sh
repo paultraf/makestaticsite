@@ -22,8 +22,8 @@
 ################################################
 # MakeStaticSite info
 ################################################
-version=0.31.12-alpha2
-version_date='8 February 2026'
+version=0.31.12-alpha3
+version_date='27 February 2026'
 version_header="MakeStaticSite version $version, released on $version_date."
 mss_license="GNU Affero General Public License version 3"
 mss_site="https://makestaticsite.sh"
@@ -324,9 +324,12 @@ wayback_folders_clean=yes       # Delete supporting directories created by the W
 wayback_folders=_static         # Comma-separated list of Wayback Machine directory names that may appear in the mirror
 wayback_comments_clean=yes      # Delete HTML comments inserted by Wayback Machine (y/n)?
 wayback_comments_re='[^</]*JAVASCRIPT APPENDED BY WAYBACK MACHINE.*load_resource.*' # Comments appended by the Wayback Machine (regular expression)
-wayback_links_clean=no          # Restore original URL links in web pages, removing Wayback prefixes (y/n)?
+wayback_prefixes_remove=no      # Restore original URL links in web pages, removing Wayback prefixes (y/n)?
                                 #  - 'yes' to remove all such links
-                                #  - 'no' (or any other value) to keep as is
+                                #  - 'no' (or any other value) to keep as is, apart from mailto: links, which will always be changed.
+wayback_sources_clean=yes       # Remove references to sources that Wayback has not downloaded, as referenced in link and script tags.
+                                #  - 'yes' to remove all such links
+                                #  - 'no' (or any other value) to keep as is.
 
 # Settings specifically for Wayback Machine downloader coded in Ruby
 # https://github.com/hartator/wayback-machine-downloader
@@ -719,4 +722,4 @@ options_check_yesno=(ssl_checks require_login wget_extra_urls site_post_processi
 options_check_remote=(site_path) # options that need to be checked on a remote server
 options_credentials=(site_user) # credentials that may/should be encrypted
 
-options_nodeps_load=(offline_file_system add_search deploy deploy_remote use_snippets upload_zip ssl_checks url asset_domains page_element_domains require_login local_sitename wget_mirror_options wget_further_options wget_extra_urls_depth wget_reject_regex wget_wayback_max_redirects wget_span_subdomains url_wildcard_capture input_urls_file site_post_processing prune_query_strings archive web_source_exclude_dirs htmltidy linkchecker linkchecker_check_external pagefind pagefind_options_glob pagefind_home_page pagefind_pages host_dir_mode mss_cut_dirs add_extras wp_cli site_path zip_filename zip_download_folder deploy_path deploy_domain cors_enable prune_filename_extensions_querystrings warc_output wget_url_candidates_optimisation warc_header_format wayback_cli use_wayback_id wayback_memento_check wayback_mementos_only wayback_anchors_original_host wayback_links_relative_rewrite wayback_relative_links_clean wayback_merge_httphttps wayback_host_original_dir wayback_host_original_sitemap wayback_code_clean wayback_folders_clean wayback_comments_clean extra_assets_allow_query_strings zip_omit_download webserver_preview clean_before_doctype clean_javascript_embeds clean_query_extensions credentials_cleanup quota quota_files quota_files_wayback output_level log_level wget_protocol_relative_urls wget_cookies_nullify_user_agent rename_wget_tmps relativise_host_assets web_print_runtime_data wayback_code_clean) # Options that are not dependent on others
+options_nodeps_load=(offline_file_system add_search deploy deploy_remote use_snippets upload_zip ssl_checks url asset_domains page_element_domains require_login local_sitename wget_mirror_options wget_further_options wget_extra_urls_depth wget_reject_regex wget_wayback_max_redirects wget_span_subdomains url_wildcard_capture input_urls_file site_post_processing prune_query_strings archive web_source_exclude_dirs htmltidy linkchecker linkchecker_check_external pagefind pagefind_options_glob pagefind_home_page pagefind_pages host_dir_mode mss_cut_dirs add_extras wp_cli site_path zip_filename zip_download_folder deploy_path deploy_domain cors_enable prune_filename_extensions_querystrings warc_output wget_url_candidates_optimisation warc_header_format wayback_cli use_wayback_id wayback_memento_check wayback_mementos_only wayback_anchors_original_host wayback_links_relative_rewrite wayback_relative_links_clean wayback_merge_httphttps wayback_host_original_dir wayback_host_original_sitemap wayback_code_clean wayback_folders_clean wayback_comments_clean extra_assets_allow_query_strings zip_omit_download webserver_preview clean_before_doctype clean_javascript_embeds clean_query_extensions credentials_cleanup quota quota_files quota_files_wayback quota_requests quota_requests_wayback output_level log_level wget_protocol_relative_urls wget_cookies_nullify_user_agent rename_wget_tmps relativise_host_assets web_print_runtime_data wayback_code_clean) # Options that are not dependent on others

@@ -950,7 +950,7 @@ wayback_output_clean() {
     search_pattern="$url_base_timeless_generic"
     replace_pattern=
     # or at least fix mailto: links
-    if [ "$wayback_links_clean" != "yes" ]; then 
+    if [ "$wayback_prefixes_remove" != "yes" ]; then 
        search_pattern+="mailto:"
        replace_pattern+="mailto:"
     fi
@@ -1012,6 +1012,29 @@ wayback_output_clean() {
       sed "${sed_options[@]}" "${sed_subs[@]}"
     done
     echolog "Converted residual Wayback Machine relative links to absolute links." "1"  
+  fi
+
+  if [ "$wayback_sources_clean" = "yes" ]; then
+    # Remove link and script tags with references to Wayback sources that have not been downloaded and processed.
+    echolog "Removing references in <link> and <script> tags to sources that Wayback has not downloaded ... " "1"
+    wayback_pattern="$url_base_timeless_generic"
+    wayback_pattern=$(sed_bre_unescape "$wayback_pattern")
+    wayback_pattern="${wayback_pattern//\\/\\\\}"     # escape backslashes
+    wayback_pattern="${wayback_pattern//\\\//\\\\\/}" # escape slashes
+
+    # Two internal cases:
+    # (i) Wayback URL is a parameter inside the tag
+    embed_code_script1="<script[^<]*src=['\"]?$wayback_pattern[^>]*>[^<]*</script>"
+    embed_code_link1="<link[^>]*['\"]?$wayback_pattern[^>]*/>"
+    # (ii) Wayback URL is not a parameter inside the <script> tag, but is in the body
+    embed_code_script2="<script[^>]*>[^>]*['\"]?$wayback_pattern[^>]*</script>"
+
+    for opt in "${webpages_clean[@]}"; do
+      tmp_file="$opt.tmp"
+      awk -v RS='\x7' -v var=$embed_code_script1 'BEGIN { re = var } {gsub(re,"<!-- script tag with Wayback prefix as attribute deleted -->"); printf("%s",$0);}' "$opt" > "$tmp_file" && mv "$tmp_file" "$opt"
+      awk -v RS='\x7' -v var=$embed_code_script2 'BEGIN { re = var } {gsub(re,"<!-- script tag with Wayback prefix in body deleted -->"); printf("%s",$0);}' "$opt" > "$tmp_file" && mv "$tmp_file" "$opt"
+      awk -v RS='\x7' -v var=$embed_code_link1 'BEGIN { re = var } {gsub(re,"<!-- link tag with Wayback prefix deleted -->"); printf("%s",$0);}' "$opt" > "$tmp_file" && mv "$tmp_file" "$opt"
+    done
   fi
 
   if [ "$num_webpages_clean" != "0" ]; then
