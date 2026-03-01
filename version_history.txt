@@ -19,6 +19,35 @@
 ##########################################################################
 
 
+0.31.12 (released on 2026-03-01)
+     * Introduction of quotas and other Wayback-specific refinements. *
+      [lib/constants.sh]
+       Added constants for quotas: set 'quota' to enable ('on' for both,
+       'files' for file count only, 'requests' for Wget requests count only);  
+       quota_files to set general files count; quota_files_wayback
+       to set Wayback Machine files count; quota_request for Wget requests
+       count; quota_files_wayback for Wget requests count for Wayback Machines.
+       Renamed wayback_links_clean to wayback_prefixes_remove to make explicit
+       the removal of Wayback prefixes.
+       Added constant wayback_sources_clean for the removal of references
+       to sources that Wayback has not downloaded, as referenced in <link> and
+       <script> tags.
+       Added js to query_prune_always_list
+      [lib/mod_wayback.sh]
+       wayback_output_clean(): added routine to remove link and script tags
+       with references to unprocessed Wayback sources and also to link tags
+       specifying DNS-prefetch and preconnect.
+       Fixed the deletion of Wayback host URL prefixes, adding support for
+       backslash escaping of forward slashes in script-embedded URLs.
+      [makestaticsite.sh]
+       initialise_variables(): added file quota notice, as applicable.
+       wget_extra_urls(): added routine to impose file and requests quotas,
+       using manual Wget loop rather than --input-file option.
+       clean_mirror(): tweaked definition of clean_dir to take account of
+       when host directory cut from output, moving definition from
+       initialise_include_excludes(); limited the reconstruction of the
+       canonical URL to non-Wayback sites.
+
 0.31.11 (released on 2026-01-07)
      * Maintenance and refinements. *
        Added exit code 1 for general unintended program terminations, usually
