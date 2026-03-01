@@ -487,7 +487,6 @@ initialise_variables() {
     session_data+=("URL|$url")
   fi
 
-  
   [ "$quota" = "on" ] && { qs='s:'; es=(); } || { qs=' of'; es=(-n); } 
   if [ "$quota" = "on" ] || [ "$quota" = "files" ] || [ "$quota" = "requests" ]; then
     echolog "${es[@]}" "$msg_info: Running with soft quota$qs"
@@ -2451,7 +2450,7 @@ clean_mirror() {
     done
   fi
   
-  # Clean JavaScript embeds, as appropriate    
+  # Clean JavaScript embeds, as appropriate
   if [ "$clean_javascript_embeds" != "no" ]; then
     if [ "$clean_javascript_embeds" = "all" ]; then
       echolog "Delete JavaScript code for all designated embeds ... " "1"
@@ -2475,23 +2474,25 @@ clean_mirror() {
     done
   fi
 
-  # Reconstruct the canonical URL and replace index.html, the default output from Wget
-  url_base_deploy="$protocol://$deploy_domain"
-  printf "Updating canonical URLs in document headers ... "
-  while IFS= read -r -d '' opt
-  do
-    url_canonical="${opt/\./${url_base_deploy}}"
+  # For non-Wayback sites, reconstruct the canonical URL and replace index.html, the default output from Wget
+  if [ "$wayback_url" != "yes" ]; then
+    url_base_deploy="$protocol://$deploy_domain"
+    printf "Updating canonical URLs in document headers ... "
+    while IFS= read -r -d '' opt
+    do
+      url_canonical="${opt/\./${url_base_deploy}}"
 
-    # with further tweak on the tail to ensure correct canonical url
-    if [ "$link_href_tail" = "" ] || [ "$link_href_tail" = "/" ]; then
-      url_canonical="${url_canonical/index\.html/}"
-    fi
+      # with further tweak on the tail to ensure correct canonical url
+      if [ "$link_href_tail" = "" ] || [ "$link_href_tail" = "/" ]; then
+        url_canonical="${url_canonical/index\.html/}"
+      fi
     url_canonical=$(sed_rhs_escape "$url_canonical")
-    sed_subs_canonical=('/<code>.*<\/code>/b
-     s|="canonical" href="index.html|="canonical" href="'"$url_canonical"'|g' "$opt")
-    sed "${sed_options[@]}" "${sed_subs_canonical[@]}"
-  done <   <(for file_ext in "${asset_find_names[@]}"; do find . -type f -name "$file_ext" -print0; done)
-  echolog "Done."
+      sed_subs_canonical=('/<code>.*<\/code>/b
+       s|="canonical" href="index.html|="canonical" href="'"$url_canonical"'|g' "$opt")
+      sed "${sed_options[@]}" "${sed_subs_canonical[@]}"
+    done <   <(for file_ext in "${asset_find_names[@]}"; do find . -type f -name "$file_ext" -print0; done)
+    echolog "Done."
+  fi
 
   # Run HTML Tidy (option)
   error_set +e

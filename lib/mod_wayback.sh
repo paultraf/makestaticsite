@@ -947,18 +947,22 @@ wayback_output_clean() {
 
   if [ "$num_webpages_clean" != "0" ]; then
     # Delete Wayback host URL prefix inserted by Wayback Machine
-    search_pattern="$url_base_timeless_generic"
-    replace_pattern=
     # or at least fix mailto: links
-    if [ "$wayback_prefixes_remove" != "yes" ]; then 
-       search_pattern+="mailto:"
-       replace_pattern+="mailto:"
+    if [ "$wayback_prefixes_remove" != "yes" ]; then
+      search_pattern="${url_base_timeless_generic}mailto:"
+      replace_pattern="mailto:"
+    else
+      search_pattern=${url_base_timeless_generic%http*}
+      replace_pattern=
     fi
+    search_pattern2=${search_pattern//\//\\\\\/} # For script-embedded URLs
     echolog "Delete Wayback host URL prefix inserted by Wayback Machine ... " "1"
     for opt in "${webpages_clean[@]}"; do
       if [ -f "$opt" ]; then
         sed_subs=('s|'"$search_pattern"'|'"$replace_pattern"'|g' "$opt")
+        sed_subs2=('s|'"$search_pattern2"'|'"$replace_pattern"'|g' "$opt")
         sed "${sed_options[@]}" "${sed_subs[@]}"
+        sed "${sed_options[@]}" "${sed_subs2[@]}"
       else
         echolog "$msg_warning: File $opt not found, so not running awk on it." "1"
       fi
