@@ -256,6 +256,7 @@ wayback_url_paths() {
   wayback_url_re0_sed='https\\?://[[:alnum:]][-[:alnum:]+\\.]*'
   url_timeless_nodomain_ere=${url_timeless_nodomain/\/${wayback_url_re0}/\/$primaryhost_ere_span}
   url_timeless_nodomain_ere=$(sed_bre_unescape "$url_timeless_nodomain_ere")
+  url_base_timeless_generic_stem=${url_base_timeless_generic%http*}
 }
 
 # Augment list of candidate URLs
@@ -952,7 +953,7 @@ wayback_output_clean() {
       search_pattern="${url_base_timeless_generic}mailto:"
       replace_pattern="mailto:"
     else
-      search_pattern=${url_base_timeless_generic%http*}
+      search_pattern="$url_base_timeless_generic_stem"
       replace_pattern=
     fi
     search_pattern2=${search_pattern//\//\\\\\/} # For script-embedded URLs
@@ -1021,8 +1022,7 @@ wayback_output_clean() {
   if [ "$wayback_sources_clean" = "yes" ]; then
     # Remove link and script tags with references to Wayback sources that have not been downloaded and processed.
     echolog "Removing references in <link> and <script> tags to sources that Wayback has not downloaded ... " "1"
-    wayback_pattern="$url_base_timeless_generic"
-    wayback_pattern=$(sed_bre_unescape "$wayback_pattern")
+    wayback_pattern=$(sed_bre_unescape "$url_base_timeless_generic")
     wayback_pattern="${wayback_pattern//\\/\\\\}"     # escape backslashes
     wayback_pattern="${wayback_pattern//\\\//\\\\\/}" # escape slashes
 
@@ -1033,11 +1033,20 @@ wayback_output_clean() {
     # (ii) Wayback URL is not a parameter inside the <script> tag, but is in the body
     embed_code_script2="<script[^>]*>[^>]*['\"]?$wayback_pattern[^>]*</script>"
 
+    # Two external network-related cases
+    wayback_pattern2=$(sed_bre_unescape "$url_base_timeless_generic_stem")
+    wayback_pattern2="${wayback_pattern2//\\/\\\\}"     # escape backslashes
+    wayback_pattern2="${wayback_pattern2//\\\//\\\\\/}" # escape slashes
+    embed_code_link2="<link[^>]*$wayback_pattern2[^>]*rel[^>]*['\"]?dns-prefetch[^>]*/>|<link[^>]*rel[^>]*['\"]?dns-prefetch[^>]*$wayback_pattern2[^>]*/>"
+    embed_code_link3="<link[^>]*$wayback_pattern2[^>]*rel[^>]*['\"]?preconnect[^>]*/>|<link[^>]*rel[^>]*['\"]?preconnect[^>]*$wayback_pattern2[^>]*/>"
+
     for opt in "${webpages_clean[@]}"; do
       tmp_file="$opt.tmp"
       awk -v RS='\x7' -v var=$embed_code_script1 'BEGIN { re = var } {gsub(re,"<!-- script tag with Wayback prefix as attribute deleted -->"); printf("%s",$0);}' "$opt" > "$tmp_file" && mv "$tmp_file" "$opt"
       awk -v RS='\x7' -v var=$embed_code_script2 'BEGIN { re = var } {gsub(re,"<!-- script tag with Wayback prefix in body deleted -->"); printf("%s",$0);}' "$opt" > "$tmp_file" && mv "$tmp_file" "$opt"
-      awk -v RS='\x7' -v var=$embed_code_link1 'BEGIN { re = var } {gsub(re,"<!-- link tag with Wayback prefix deleted -->"); printf("%s",$0);}' "$opt" > "$tmp_file" && mv "$tmp_file" "$opt"
+      awk -v RS='\x7' -v var=$embed_code_link1 'BEGIN { re = var } {gsub(re,"<!-- link tag with Wayback pattern deleted -->"); printf("%s",$0);}' "$opt" > "$tmp_file" && mv "$tmp_file" "$opt"
+      awk -v RS='\x7' -v var=$embed_code_link2 'BEGIN { re = var } {gsub(re,"<!-- link tag with DNS prefetch deleted -->"); printf("%s",$0);}' "$opt" > "$tmp_file" && mv "$tmp_file" "$opt"
+      awk -v RS='\x7' -v var=$embed_code_link3 'BEGIN { re = var } {gsub(re,"<!-- link tag with preconnect deleted -->"); printf("%s",$0);}' "$opt" > "$tmp_file" && mv "$tmp_file" "$opt"
     done
   fi
 
