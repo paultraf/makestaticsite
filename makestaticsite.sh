@@ -1902,7 +1902,7 @@ process_assets() {
     for opt in "${webpages[@]}"; do
 
       # but don't process XML files in guise of HTML files
-      if grep -q "<?xml version" "$opt"; then
+      if { grep -q "<?xml version" "$opt"; } && ! grep -iq '<html' "$opt"; then
         continue
       fi
 
@@ -2056,7 +2056,7 @@ process_assets() {
       print_progress "$count" "$num_webpages"; (( count++ ))
       # but don't process XML files in guise of HTML files
       # (assume document type specified in first non-empty line)
-      if grep -m 1 . "$opt" | grep -q "<?xml version"; then
+      if grep -m 1 . "$opt" | grep -q "<?xml version" && ! grep -iq '<html' "$opt";  then
         continue
       fi
       pathpref=
