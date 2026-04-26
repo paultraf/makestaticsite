@@ -803,6 +803,11 @@ initialise_variables() {
       confirm_continue "no" 
     fi
   fi
+  if [ "$mss_cut_dirs" = "yes" ] && { [ "$extra_assets_mode" = "" ] || [ "$extra_assets_mode" = "off" ]; } then
+    echo "$msg_warning: As mss_cut_dirs=yes, the output layout will cut directories. To support this, the value of extra_assets_mode is being changed from 'off' to 'contain', to allow page page requisites to be moved into an assets directory and linked accordingly. To prevent this behaviour set mss_cut_dirs=no and rerun."
+    confirm_continue
+    extra_assets_mode=contain
+  fi
 
   # Script sign-off message
   msg_signoff="Ending run of MakeStaticSite."
@@ -1828,8 +1833,12 @@ process_assets() {
     print_progress
   fi
 
-  echolog "Converting paths to become relative to imports and assets directories ... " 
-
+  if [ "$extra_assets_mode" != "no" ] && [ "$extra_assets_mode" != "off" ] && [ "$extra_assets_mode" != "" ]; then
+    echolog "Converting paths to become relative to imports and assets directories ... " 
+  else
+    echolog "Skipping path conversions relative to imports and assets directories as extra_assets_mode is off ... "
+    return
+  fi
   # Prepare adjustment for relative paths with assets directory
   if [ "$assets_directory" != "" ] && [ "$cut_dirs" = "0" ]; then
     assets_dir_suffix=/
@@ -2345,7 +2354,6 @@ site_postprocessing() {
       fi
     fi
   fi
-
   cd_check "$mirror_dir" 1
 }
 
@@ -2698,8 +2706,7 @@ clean_mirror() {
     for opt in "${webpages_final[@]}"; do
       printf "%b" "\n$makestaticsite_session_comment" >> "$opt"
     done
-  fi
-  
+  fi  
   cd_check "$mirror_dir" 1
 }
 

@@ -22,8 +22,8 @@
 ################################################
 # MakeStaticSite info
 ################################################
-version=0.31.12+1
-version_date='11 April 2026'
+version=0.31.13-alpha1
+version_date='26 April 2026'
 version_header="MakeStaticSite version $version, released on $version_date."
 mss_license="GNU Affero General Public License version 3"
 mss_site="https://makestaticsite.sh"
@@ -224,9 +224,9 @@ extra_assets_query_strings_limit=100000 # Only fetch URLs with query strings whe
 ################################################
 # Directory management of downloaded assets
 ################################################
-extra_assets_mode=contain       # how assets from extra domains should be incorporated
+extra_assets_mode=contain       # how assets outside the main trunk (both from the same and extra domains) should be incorporated following Wget crawls
                                 # - empty or 'off' to keep in separate directories under mirror ID
-                                # - 'contain' will move the directories inside the assets directory (see below)
+                                # - 'contain' will move all directories outside the main trunk into the assets directory (see below)
 assets_directory=webassets      # directory immediately under main host directory for storing extra assets - from parent directories and extra domains
                                 # (set empty to place assets in root, only if there is not an assets folder already)
 imports_directory=imports       # directory immediately inside assets_directory for storing assets imported for extra domains
@@ -239,7 +239,8 @@ external_dir_links=             # What to do with links to resources on same dom
                                 # - empty or 'off' to not make relative, only point to the deployment domain
                                 # - 'local' or anything other than empty or 'off' will make relative, to assets directory
 mss_cut_dirs=yes                # Option to cut directories.  When this is enabled, there is no need to specify Wget option --cut-dirs
-                                # - 'yes' or 'on' for a MakeStaticSite-specific cut that moves content of URL path to root
+                                # - 'yes' or 'on' for a MakeStaticSite-specific cut that moves content of URL path to root.
+                                # Note that for this to work, extra_assets_mode cannot be set to empty or 'off'
                                 # - empty, 'no' or 'off' to support Wget --cut-dirs and not carry out further MakeStaticSite-specific processing
                                 # - 'auto' to support Wget --cut-dirs and carry out further processing (not yet implemented)
 path_doubleslash_workaround=yes # Make adjustments for the way Wget handles URL paths containing '//', as with Wayback Machine (y/n)?
@@ -722,4 +723,4 @@ options_check_yesno=(ssl_checks require_login wget_extra_urls site_post_processi
 options_check_remote=(site_path) # options that need to be checked on a remote server
 options_credentials=(site_user) # credentials that may/should be encrypted
 
-options_nodeps_load=(offline_file_system add_search deploy deploy_remote use_snippets upload_zip ssl_checks url asset_domains page_element_domains require_login local_sitename wget_mirror_options wget_further_options wget_extra_urls_depth wget_reject_regex wget_wayback_max_redirects wget_span_subdomains url_wildcard_capture input_urls_file site_post_processing prune_query_strings archive web_source_exclude_dirs htmltidy linkchecker linkchecker_check_external pagefind pagefind_options_glob pagefind_home_page pagefind_pages host_dir_mode mss_cut_dirs add_extras wp_cli site_path zip_filename zip_download_folder deploy_path deploy_domain cors_enable prune_filename_extensions_querystrings warc_output wget_url_candidates_optimisation warc_header_format wayback_cli use_wayback_id wayback_memento_check wayback_mementos_only wayback_anchors_original_host wayback_links_relative_rewrite wayback_relative_links_clean wayback_merge_httphttps wayback_host_original_dir wayback_host_original_sitemap wayback_code_clean wayback_folders_clean wayback_comments_clean extra_assets_allow_query_strings zip_omit_download webserver_preview clean_before_doctype clean_javascript_embeds clean_query_extensions credentials_cleanup quota quota_files quota_files_wayback quota_requests quota_requests_wayback output_level log_level wget_protocol_relative_urls wget_cookies_nullify_user_agent rename_wget_tmps relativise_host_assets web_print_runtime_data wayback_code_clean) # Options that are not dependent on others
+options_nodeps_load=(offline_file_system add_search deploy deploy_remote use_snippets upload_zip ssl_checks url asset_domains page_element_domains require_login local_sitename wget_mirror_options wget_further_options wget_extra_urls_depth wget_reject_regex wget_wayback_max_redirects wget_span_subdomains url_wildcard_capture input_urls_file site_post_processing prune_query_strings archive web_source_exclude_dirs htmltidy linkchecker linkchecker_check_external pagefind pagefind_options_glob pagefind_home_page pagefind_pages host_dir_mode mss_cut_dirs add_extras wp_cli site_path zip_filename zip_download_folder deploy_path deploy_domain extra_assets_mode cors_enable prune_filename_extensions_querystrings warc_output wget_url_candidates_optimisation warc_header_format wayback_cli use_wayback_id wayback_memento_check wayback_mementos_only wayback_anchors_original_host wayback_links_relative_rewrite wayback_relative_links_clean wayback_merge_httphttps wayback_host_original_dir wayback_host_original_sitemap wayback_code_clean wayback_folders_clean wayback_comments_clean extra_assets_allow_query_strings zip_omit_download webserver_preview clean_before_doctype clean_javascript_embeds clean_query_extensions credentials_cleanup quota quota_files quota_files_wayback quota_requests quota_requests_wayback output_level log_level wget_protocol_relative_urls wget_cookies_nullify_user_agent rename_wget_tmps relativise_host_assets web_print_runtime_data wayback_code_clean) # Options that are not dependent on others
