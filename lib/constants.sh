@@ -22,8 +22,8 @@
 ################################################
 # MakeStaticSite info
 ################################################
-version=0.31.13-alpha1
-version_date='26 April 2026'
+version=0.31.13-alpha2
+version_date='27 April 2026'
 version_header="MakeStaticSite version $version, released on $version_date."
 mss_license="GNU Affero General Public License version 3"
 mss_site="https://makestaticsite.sh"

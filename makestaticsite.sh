@@ -1836,8 +1836,8 @@ process_assets() {
   if [ "$extra_assets_mode" != "no" ] && [ "$extra_assets_mode" != "off" ] && [ "$extra_assets_mode" != "" ]; then
     echolog "Converting paths to become relative to imports and assets directories ... " 
   else
-    echolog "Skipping path conversions relative to imports and assets directories as extra_assets_mode is off ... "
-    return
+    echolog "Converting absolute URLs to relative paths for additional page requisites ... " 
+    imports_directory="../"
   fi
   # Prepare adjustment for relative paths with assets directory
   if [ "$assets_directory" != "" ] && [ "$cut_dirs" = "0" ]; then
@@ -1855,7 +1855,7 @@ process_assets() {
   if [ "$imports_directory" != "" ]; then
     imports_dir_suffix=/
     # Also check for duplication of assets directory label
-    if [ "$(find . -name "$imports_directory" -type d -print)" != "" ]; then
+    if [ "$imports_directory" != "../" ] && [ "$(find . -name "$imports_directory" -type d -print)" != "" ]; then
       echolog -n "$msg_warning: website already contains a directory, $imports_directory.  To avoid confusion (and errors), a timestamp is being appended to the MakeStaticSite-generated imports directory, but it is recommended that you modify the imports_directory constant and re-run. ... "
       imports_directory="$imports_directory$timestamp"
     fi
@@ -2043,6 +2043,11 @@ process_assets() {
     done < "$input_long_filenames"
   fi
 
+  if [ "$extra_assets_mode" = "no" ] || [ "$extra_assets_mode" = "off" ] || [ "$extra_assets_mode" = "" ]; then
+    echolog "Skipping path conversions relative to imports and assets directories as extra_assets_mode is off ... "
+    return
+  fi
+  
   # Special case: mirroring a directory not a whole domain: readjust internal links
   if [ "$url_has_path" = "yes" ] && [ "$cut_dirs" = "0" ]; then
     IFS='/' read -ra url_path_dir_list <<< "$url_path_dir"
