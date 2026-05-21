@@ -30,6 +30,7 @@ source "lib/$mod_wayback";
 main() {
   # Step 0: Initialisation
   get_inks
+  whichos
   read_config "$@"
   print_welcome
   init_mssconfig
